@@ -10,3 +10,34 @@
     border-radius:50%;
     text-align: center;
 }
+.bilibili{
+    width: 12px;
+    height: 12px;
+}
+.hi{
+    text-align: center;
+}
+.wel{
+    text-align: center;
+}
+.url1{
+    text-align: center;
+}
+.url2{
+    text-align: center;
+}
+.url3{
+    text-align: center;
+}
+.e-mail{
+    text-align: center;
+    font-size: 25px;
+}
+.e-mail.hello{
+    text-align: center;
+    font-size: 50px;
+    color: hsl(212, 70%, 51%);
+}
+.e-mail.explain{
+    text-align: center;
+}
