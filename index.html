@@ -12,6 +12,31 @@
         .bilibili{
             font-size: 10px;
         }
+
+        nav {
+            background-color: #333;  /* 设置导航栏的背景颜色 */
+        }
+
+        nav ul {
+            list-style: none;  /* 去掉列表项的默认样式 */
+            margin: 0;  /* 去掉边距 */
+            padding: 0;  /* 去掉内边距 */
+            display: flex;  /* 设置为横向布局 */
+            justify-content: space-between;  /* 使菜单项之间的间距均匀 */
+        }
+
+        nav li {
+            flex-grow: 1;  /* 设置菜单项的宽度为平均分配 */
+            text-align: center;  /* 设置文本居中 */
+        }
+
+            nav a {
+            display: block;  /* 让超链接变成块级元素 */
+            padding: 10px;  /* 设置内边距 */
+            color: #fff;  /* 设置文字颜色 */
+            text-decoration: none;  /* 去掉下划线 */
+        }
+
     </style>
 
     <body> 
@@ -45,6 +70,7 @@
     </div>
 
     <div>
+        <nav>
             <ul>
                 <li>
                     <a href="https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0">
@@ -100,6 +126,7 @@
                     </a>
                 </li>
             </ul>
+        </nav>
     </div>
 
     <div>
