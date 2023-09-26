@@ -1,32 +1,56 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>404.. 页面没有找到!!!</title>
-    <style type="text/css">
-        body{ margin:0; padding:0; background:rgb(79, 190, 246); font-family:Georgia, Times, Verdana, Geneva, Arial, Helvetica, sans-serif; }
-        div#mother{ margin:0 auto; width:943px; height:572px; position:relative; }
-        div#errorText{ color:#39351e; padding:146px 0 0 446px }
-        div#errorText p{ width:303px; font-size:14px; line-height:26px; }
-        div.link{ /*background:#f90;*/ height:50px; width:145px; float:left; }
-        div#home{ margin:20px 0 0 444px;}
-        div#contact{ margin:20px 0 0 25px;}
-        h1{ font-size:40px; margin-bottom:35px; }
-    </style>
-</head>
-
+<!DOCTYPE HTML>
+<style type="text/css">
+    body{
+        font-family: 'Courgette', cursive;
+    }
+    body{
+        background:#f3f3e1;
+    }
+    .wrap{
+        margin:0 auto;
+        width:1000px;
+    }
+    .logo{
+        margin-top:50px;
+    }
+    .logo h1{
+        font-size:200px;
+        color:#8F8E8C;
+        text-align:center;
+        margin-bottom:1px;
+        text-shadow:1px 1px 6px #fff;
+    }
+    .logo p{
+        color:rgb(228, 146, 162);
+        font-size:20px;
+        margin-top:1px;
+        text-align:center;
+    }
+    .logo p span{
+        color:lightgreen;
+    }
+    .sub a{
+        color:white;
+        background:#8F8E8C;
+        text-decoration:none;
+        padding:7px 120px;
+        font-size:13px;
+        font-family: arial, serif;
+        font-weight:bold;
+        -webkit-border-radius:3em;
+        -moz-border-radius:.1em;
+        -border-radius:.1em;
+    }
+</style>
 <body>
-<div id="mother">
-    <div id="errorBox">
-        <div id="errorText">
-            <h1>抱歉...您访问的页面不存在!!!</h2>
-            <p>造成的原因可能是：</p>
-            您请求的页面不存在、或已被删除、或暂时不可用！！！<br>
-            请不要担心，这没事。如果该资源对你很重要，请与管理员联系。</br>
-            》》<a href="/xxxx默认的首页地址/" title="返回首页"> 返回首页</a><br><br>
-           》》<a style="color: rebeccapurple" title="返回上一页" onclick="history.back()">返回上一页面</a>
-        </div>
-    </div>
+<div class="wrap">
+<div class="logo">
+<h1>404</h1>
+<p>The Page not Found-找不到你要访问的页面</p>
+<div class="sub">
+<p><a href="/">Back</a></p>
+</div>
+</div>
 </div>
 </body>
-</html>
+
