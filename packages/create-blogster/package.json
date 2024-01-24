@@ -29,7 +29,7 @@
     "ora": "5",
     "package-json": "7",
     "rimraf": "^3.0.2",
-    "semver": "^7.3.8",
+    "semver": "^7.5.2",
     "terminal-link": "2"
   },
   "devDependencies": {
