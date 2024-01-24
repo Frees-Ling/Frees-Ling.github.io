@@ -4,7 +4,7 @@ import Hr from "./Hr.astro";
 import LinkButton from "./LinkButton.astro";
 
 export interface Props {
-  activeNav?: "posts" | "tags" | "about" | "search";
+  activeNav?: "posts" | "tags" | "friends" | "about" | "search";
 }
 
 const { activeNav } = Astro.props;
@@ -66,9 +66,36 @@ const { activeNav } = Astro.props;
             </a>
           </li>
           <li>
+            <a href="/friends" class={activeNav === "friends" ? "active" : ""}>
+              Friends
+            </a>
+          </li>
+          <li>
             <a href="/about" class={activeNav === "about" ? "active" : ""}>
               About
             </a>
+          </li>
+          <li>
+            <button id="travelling-btn" title="Travelling (Random Chinese Blog)" aria-label="travelling" class="group inline-block hover:text-skin-accent focus-outline p-3 sm:p-1">
+              <a href="https://www.travellings.cn/go.html" target="_blank">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="icon-tabler"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"><path
+                    stroke="none"
+                    d="M0 0h24v24H0z"
+                    fill="none"/><path
+                    d="M21 13c0 -3.87 -3.37 -7 -10 -7h-8" /><path
+                    d="M3 15h16a2 2 0 0 0 2 -2" /><path
+                    d="M3 6v5h17.5" /><path
+                    d="M3 10l0 4" /><path
+                    d="M8 11l0 -5" /><path
+                    d="M13 11l0 -4.5" /><path
+                    d="M3 19l18 0" /></svg>
+                  <span class="sr-only">Travelling</span>
+              </a>
+            </button>
           </li>
           <li>
             <LinkButton

@@ -3,34 +3,50 @@ layout: ../layouts/AboutLayout.astro
 title: "About"
 ---
 
-AstroPaper is a minimal, responsive and SEO-friendly Astro blog theme. I designed and crafted this based on [my personal blog](https://satnaing.dev/blog).
+I'm Alan Ye, a.k.a. \_Wr\_, a tech _(maybe)_ guy who loves coding.🧑‍💻
+I mainly speaks 中文, but also skills in English.
 
-This theme is aimed to be accessible out of the box. Light and dark mode are supported by
-default and additional color schemes can also be configured.
+This is my personal blog where I write about Web dev, Linux, and other tech or casual stuff.
 
-This theme is self-documented \_ which means articles/posts in this theme can also be considered as documentations. So, see the documentation for more info.
+## Table of contents
 
-<div>
-  <img src="/assets/dev.svg" class="sm:w-1/2 mx-auto" alt="coding dev illustration">
-</div>
+## My Interests / 个人兴趣
 
-## Tech Stack
+- Computer Science
+- Web Dev </>
+- Artificial Intelligence
+- Music
+- Foods ~~& Baking~~
+- Cats
+- etc.
 
-This theme is written in vanilla JavaScript (+ TypeScript for type checking) and a little bit of ReactJS for some interactions. TailwindCSS is used for styling; and Markdown is used for blog contents.
+If you have any interesting questions, ideas or projects, feel free to contact me via Telegram 💬 or E-mail ✉️.
+I'm always glad to hear from you.
 
-## Features
+## My Devices / 我的设备
 
-Here are certain features of this site.
+- Dell G15 5520 (2022)
+- iPhone 15 Pro
+- iPad Pro 10.5 inch (2017)
+- Apple Watch SE (1st Generation)
+- AirPods Pro 2 (Lightning)
+- GoPro Hero 11
+- Kindle Voyage
+- etc.
 
-- fully responsive and accessible
-- SEO-friendly
-- light & dark mode
-- fuzzy search
-- super fast performance
-- draft posts
-- pagination
-- sitemap & rss feed
-- highly customizable
+## About my blog / 关于我的博客之旅
 
-If you like this theme, you can star/contribute to the [repo](https://github.com/satnaing/astro-paper).  
-Or you can even give any feedback via my [email](mailto:contact@satnaing.dev).
+It has been a long journey since the first day I built my first website in 2015, and my first blog in 2017.
+From WordPress, to GitHub Pages, then WordPress... and finally right here, on Astro.
+
+I actually barely maintained my passion on writing blog posts, so it hasn't been a walk in the park.
+The main purpose of writing blogs is to remind me previous journeys, and to look forward.
+
+Every click on my links, every reaction, every comment, can make my day and help me maintain this interest.
+Thanks for your support! 🥰
+
+## Comments / 留言
+
+If you want to say anything to me, please send it in the comment section of this page.
+
+如果你希望留言的话，欢迎在本页的评论部分留言~

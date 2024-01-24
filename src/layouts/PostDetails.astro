@@ -7,6 +7,8 @@ import Datetime from "@components/Datetime";
 import type { CollectionEntry } from "astro:content";
 import { slugifyStr } from "@utils/slugify";
 import ShareLinks from "@components/ShareLinks.astro";
+import Comments from "@components/Comments.astro";
+import {SITE} from "../config";
 
 export interface Props {
   post: CollectionEntry<"blog">;
@@ -23,6 +25,7 @@ const {
   pubDatetime,
   modDatetime,
   tags,
+  language,
 } = post.data;
 
 const { Content } = await post.render();
@@ -34,7 +37,7 @@ const ogUrl = new URL(
 ).href;
 
 const layoutProps = {
-  title,
+  title: `${title} | ${SITE.title}`,
   author,
   description,
   pubDatetime,
@@ -42,6 +45,7 @@ const layoutProps = {
   canonicalURL,
   ogImage: ogUrl,
   scrollSmooth: true,
+  lang: language,
 };
 ---
 
@@ -56,7 +60,7 @@ const layoutProps = {
         ><path
           d="M13.293 6.293 7.586 12l5.707 5.707 1.414-1.414L10.414 12l4.293-4.293z"
         ></path>
-      </svg><span>Go back</span>
+      </svg><span>Back</span>
     </button>
   </div>
   <main id="main-content">
@@ -92,6 +96,7 @@ const layoutProps = {
 
       <ShareLinks />
     </div>
+    <Comments />
   </main>
   <Footer />
 </Layout>

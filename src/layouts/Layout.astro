@@ -25,6 +25,7 @@ const {
   pubDatetime,
   modDatetime,
   scrollSmooth = false,
+  lang = LOCALE.lang,
 } = Astro.props;
 
 const socialImageURL = new URL(
@@ -35,14 +36,16 @@ const socialImageURL = new URL(
 
 <!doctype html>
 <html
-  lang=`${LOCALE.lang ?? "en"}`
+  lang=`${lang ?? "en"}`
   class={`${scrollSmooth && "scroll-smooth"}`}
 >
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/assets/avatar_180x180.webp" />
+    <link rel="apple-touch-icon" href="/assets/avatar.png" />
     <link rel="canonical" href={canonicalURL} />
+    <link rel="me" href="https://mastodon.social/@wrye" />
     <meta name="generator" content={Astro.generator} />
 
     <!-- General Meta Tags -->
