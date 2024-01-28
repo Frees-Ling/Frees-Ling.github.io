@@ -1,0 +1,220 @@
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole blog, values
+# which you are expected to set up once and rarely need to edit after that.
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'jekyll serve'. If you change this file, please restart the server process.
+
+# Site settings
+title:  猿java
+subtitle: 爱技术，爱生活!
+name: 猿java
+email: yuanjava@qq.com
+description: 本站是猿java的技术分享博客。内容涵盖生活故事、Java后端技术、Spring Boot、Spring Cloud、Redis、数据库、微服务架构、分布式、大数据演进、高可用架构、中间件使用、系统监控等相关的研究与知识分享。
+keywords: 猿java,java分享,技术博客,个人博客,yuanjava,Spring,Spring Boot,Spring Cloud,Redis,Jvm,DDD,分布式,初级开发者,编程,中间件,IT网站,Java
+encoding: "utf-8"
+favicon: favicon.ico 
+
+repository: yuanjavar/yuanjava.github.io
+github_url: https://github.com/yuanjavar
+url: https://www.yuanjava.cn
+enforce_ssl: yuanjava.cn
+
+## Gem
+plugins:
+  - jekyll-paginate
+  - jekyll-geo-pattern
+  - rouge
+  - kramdown
+  - jekyll-github-metadata
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+lsi:         false
+excerpt_separator: "\n\n"
+
+source:      .
+destination: ./_site
+
+quiet:    false
+defaults: []
+
+kramdown:
+  input: GFM
+  enable_coderay: true
+  syntax_highlighter: rouge
+
+syntax_highlighter_opts:
+   coderay_line_numbers:  nil
+
+# Pagination
+paginate: 12
+paginate_path: 'page:num'
+
+# Navigation. top menu list
+menus:
+
+  - href: /link.html
+    label: 友链
+    target: _self
+  -
+    href: /about.html
+    label: 关于
+    target: _self
+
+
+
+# Navigation. main menu list
+navs:
+
+  -
+    href: /
+    label: 主页
+
+  -
+    href: /
+    label: java
+    target: _self
+    subnav:
+
+      -
+        subHref: /java.html
+        subLabel: java
+
+      -
+        subHref: /jvm.html
+        subLabel: jvm
+        target: _blank
+
+  -
+    href: /
+    label: spring
+    target: _self
+    subnav:
+
+      -
+        subHref: /spring.html
+        subLabel: Spring
+      -
+        subHref: /spring-boot.html
+        subLabel: Spring Boot
+
+      -
+        subHref: /spring-cloud.html
+        subLabel: Spring Cloud
+
+
+  -
+    href: /
+    label: 数据库
+    target: _self
+    subnav:
+
+      -
+        subHref: /mysql.html
+        subLabel: mysql
+
+      -
+        subHref: /redis.html
+        subLabel: redis
+
+      -
+        subHref: /DynamoDB.html
+        subLabel: DynamoDB
+
+  -
+    href: /framework.html
+    label: 架构
+    target: _self
+
+  -
+    href: /interview.html
+    label: 面试
+    target: _self
+
+  - href: /archives.html
+    label: 归档
+    target: _self
+
+
+# labels. my blog key words
+labels:
+  -
+    href: /open-source.html
+    label: Code  
+    target: _blank
+
+  - href: /life.html
+    label: 生活
+    target: _blank
+
+  -
+    href: /linux.html
+    label: linux
+    target: _blank
+
+  - href: /common.html
+    label: 综合
+    target: _blank
+
+# selected articles
+classes:
+
+  -
+    href: /cartoon.html
+    name: 视频课程
+    describe: 精益求精，不断创新。
+
+
+
+
+
+
+# ---------------- #
+#       RSS        #
+# ---------------- #
+subscribe_rss: /feed.xml
+
+# Sidebar to show popular repo
+side_bar_repo_limit: 6 # Number of repos to show
+
+# Google Analytics
+# analytics :
+# provider : google
+#   google :
+#     tracking_id : ''  # ex. UA-72165600-X
+
+
+# For about.html. Fell free to create your own!
+skill_software_keywords: [Java, MySQL, Oracle, Design Patterns]
+skill_j2ee_keywords: [Spring, Struct, Hibernet, MyBatis, JSP]
+skill_web_keywords: [HTML, CSS, JS, JQuery, Ajax, NodeJS, ExpressJS, MongoDB, Redis, PHP,  Boostrap]
+skill_mobile_app_keywords: [vuejs, hyhird app]
+
+
+# ---------------- #
+#      Comments    #
+# ---------------- #
+# support provider: disqus, gitment, gitalk
+comments_provider: gitalk
+# !!!重要!!! 请修改下面这些信息为你自己申请的
+# !!!Important!!! Please modify infos below to yours
+# https://disqus.com
+disqus:
+    username: yuanjavar
+# https://imsun.net/posts/gitment-introduction/
+gitment:
+    owner: yuanjavar
+    repo: blog-comments
+    oauth:
+        client_id: fa95b554228717e1a08b
+        client_secret: 232d4311e802a9a6471f5587f7f2766e85e825e7
+# https://github.com/gitalk/gitalk#install
+gitalk:
+    owner: yuanjavar
+    repo: blog-comments
+    clientID: fa95b554228717e1a08b
+    clientSecret: 232d4311e802a9a6471f5587f7f2766e85e825e7
+# 在使用其它评论组件时可点击显示 Disqus
+lazy_load_disqus : false
