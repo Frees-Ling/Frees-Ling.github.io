@@ -1,4 +1,4 @@
-# Blog of Wr
+# Blog of FL
 
 My personal blog on [https://Frees-Ling.github.io](https://Frees-Ling.github.io)
 
