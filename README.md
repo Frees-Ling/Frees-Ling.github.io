@@ -1,6 +1,6 @@
 # Blog of Wr
 
-My personal blog on [wrye.dev](https://wrye.dev)
+My personal blog on [https://Frees-Ling.github.io](https://Frees-Ling.github.io)
 
 ## Abstract
 

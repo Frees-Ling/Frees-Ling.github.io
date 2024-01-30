@@ -26,9 +26,9 @@ If your site meets the above requirements, **then welcome**! Please apply with y
 ## Info about this website
 
 - Title: `Blog of Wr`
-- URL: `https://wrye.dev/`
+- URL: `https://Frees-Ling.github.io`
 - Desc: `Web dev, Linux, and other tech or casual stuff.`
-- Avatar: `https://wrye.dev/assets/avatar.webp`
+- Avatar: `https://i0.hdslb.com/bfs/new_dyn/2c153098a656c80e53975a96d9407d071066292128.jpg@1048w_!web-dynamic.avif`
 
 ## Note
 
