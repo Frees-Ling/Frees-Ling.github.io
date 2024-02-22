@@ -7,6 +7,7 @@ import LinkButton from "@components/LinkButton.astro";
 import Hr from "@components/Hr.astro";
 import Card from "@components/Card";
 import Socials from "@components/Socials.astro";
+import SearchBar from "@components/Search";
 import getSortedPosts from "@utils/getSortedPosts";
 import { SOCIALS } from "@config";
 
@@ -17,13 +18,21 @@ const featuredPosts = sortedPosts.filter(({ data }) => data.featured);
 const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
 
 const socialCount = SOCIALS.filter(social => social.active).length;
+
+// List of items to search in (from search.astro)
+const searchList = sortedPosts.map(({ data, slug }) => ({
+  title: data.title,
+  description: data.description,
+  data,
+  slug,
+}));
 ---
 
 <Layout>
   <Header />
   <main id="main-content">
     <section id="hero">
-      <h1>Mingalaba</h1>
+      <h1>@_Wr_</h1>
       <a
         target="_blank"
         href="/rss.xml"
@@ -42,20 +51,12 @@ const socialCount = SOCIALS.filter(social => social.active).length;
       </a>
 
       <p>
-        AstroPaper is a minimal, responsive, accessible and SEO-friendly Astro
-        blog theme. This theme follows best practices and provides accessibility
-        out of the box. Light and dark mode are supported by default. Moreover,
-        additional color schemes can also be configured.
+        A Tech guy, Wiki editor, Web developer, and a student.
       </p>
       <p>
-        Read the blog posts or check
-        <LinkButton
-          className="underline decoration-dashed underline-offset-4 hover:text-skin-accent"
-          href="https://github.com/satnaing/astro-paper#readme"
-        >
-          README
-        </LinkButton> for more info.
+        This is my personal blog where I write about Web dev, Linux, and other tech or casual stuff.
       </p>
+
       {
         // only display if at least one social link is enabled
         socialCount > 0 && (
@@ -65,8 +66,10 @@ const socialCount = SOCIALS.filter(social => social.active).length;
           </div>
         )
       }
+      <div style="margin-top: 0.5rem;">
+      <SearchBar client:load searchList={searchList} />
+      </div>
     </section>
-
     <Hr />
 
     {
@@ -77,7 +80,7 @@ const socialCount = SOCIALS.filter(social => social.active).length;
             <ul>
               {featuredPosts.map(({ data, slug }) => (
                 <Card
-                  href={`/posts/${slug}/`}
+                  href={`/posts/${slug}`}
                   frontmatter={data}
                   secHeading={false}
                 />
@@ -98,7 +101,7 @@ const socialCount = SOCIALS.filter(social => social.active).length;
               ({ data, slug }, index) =>
                 index < 4 && (
                   <Card
-                    href={`/posts/${slug}/`}
+                    href={`/posts/${slug}`}
                     frontmatter={data}
                     secHeading={false}
                   />
@@ -110,7 +113,7 @@ const socialCount = SOCIALS.filter(social => social.active).length;
     }
 
     <div class="all-posts-btn-wrapper">
-      <LinkButton href="/posts/">
+      <LinkButton href="/posts">
         All Posts
         <svg xmlns="http://www.w3.org/2000/svg"
           ><path
