@@ -5,3 +5,15 @@ jobs:
      - name: Clean up old artifacts
         run: |
           rm -rf ./github-pages
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: my-artifact-1
+        path: path/to/artifact1
+
+    - name: Upload more artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: my-artifact-2
+        path: path/to/artifact2
