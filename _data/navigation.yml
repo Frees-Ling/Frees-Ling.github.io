@@ -57,9 +57,9 @@ header:
     url: https://github.com/Frees-Ling
 
   - titlle:
-      en      : &EN  Sonic the hedgehog
+      en      : &EN        Sonic the hedgehog
     url: /sonic.html
 
   - title:
-      en : &EN Friends
+      en      : &EN        Friends
     url: /friend.html
