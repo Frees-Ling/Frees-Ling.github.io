@@ -56,10 +56,3 @@ header:
       zh-Hans : &ZH_HANS   Github
     url: https://github.com/Frees-Ling
 
-  - titlle:
-      en      : &EN        Sonic the hedgehog
-    url: /sonic.html
-
-  - title:
-      en      : &EN        Friends
-    url: /friend.html
