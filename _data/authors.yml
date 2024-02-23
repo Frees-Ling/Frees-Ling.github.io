@@ -1,0 +1,22 @@
+FL:
+  type      : person # "person" (default), "organization"
+  name      : Frees-Ling
+  url       : Frees-Ling.github.io
+  avatar    : https://i0.hdslb.com/bfs/new_dyn/2c153098a656c80e53975a96d9407d071066292128.jpg@1048w_!web-dynamic.avif # path or url of avatar image (square)
+  bio       : I’m Frees-Ling, a.k.a. FL, a tech (maybe) guy who loves coding.I mainly speaks 中文, but also skills in English.
+  email     : freesling496@gmail.com
+  facebook  : # "user_name" the last part of your profile url, e.g. https://www.facebook.com/user_name
+  twitter   : https://twitter.com/LingFrees23428 # "user_name" the last part of your profile url, e.g. https://twitter.com/user_name
+  weibo     : # "user_id"   the last part of your profile url, e.g. https://www.weibo.com/user_id/profile?...
+  googleplus: # "user_id"   the last part of your profile url, e.g. https://plus.google.com/u/0/user_id
+  telegram  : https://t.me/Frees_Ling_bot # "user_name" the last part of your profile url, e.g. https://t.me/user_name
+  medium    : # "user_name" the last part of your profile url, e.g. https://medium.com/user_name
+  zhihu     : # "user_name" the last part of your profile url, e.g. https://www.zhihu.com/people/user_name
+  douban    : # "user_name" the last part of your profile url, e.g. https://www.douban.com/people/user_name
+  linkedin  : # "user_name" the last part of your profile url, e.g. https://www.linkedin.com/in/user_name
+  github    : https://github.com/Frees-Ling # "user_name" the last part of your profile url, e.g. https://github.com/user_name
+  npm       : # "user_name" the last part of your profile url, e.g. https://www.npmjs.com/~user_name
+  youtube   : https://www.youtube.com/channel/UCwcOc0G4P2yd1zpk0qbfrbw
+  mastodon  : https://mastodon.social/@Free_keys
+  bilibili  : https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0
+  steam     : https://steamcommunity.com/profiles/76561199468186322/

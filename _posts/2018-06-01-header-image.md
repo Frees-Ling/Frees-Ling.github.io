@@ -1,12 +1,21 @@
 ---
-title: Post with Header Image
+title: Hello world!
+lang: 'en', 'zh'
+author: FL
+show_title: true
+show_tags: true
 tags: TeXt
-article_header:
+date: 2024-2-23 10:57PM
+show_date: true
+article_header: 
   type: cover
   image:
-    src: /screenshot.jpg
+    src: /text.png
+sharing: true
+show_author_profile: true
+show_subscribe: true
 ---
 
-A Post with Header Image, See [Page layout](https://kitian616.github.io/jekyll-TeXt-theme/samples.html#page-layout) for more examples.
+This is my first blog!
 
 <!--more-->
