@@ -50,3 +50,8 @@ header:
       tr      : &TR       Hakkında
       # @end locale config
     url: /about.html
+  
+  - titles:
+      en      : &EN        Github
+      zh-Hans : &ZH_HANS   Github
+    url: https://github.com/Frees-Ling
