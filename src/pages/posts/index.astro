@@ -1,4 +1,14 @@
 ---
+astro:
+  collections:
+    blog:
+      fields:
+        - title
+        - date
+        - slug
+        - content
+---
+
 import { getCollection } from "astro:content";
 import Posts from "@layouts/Posts.astro";
 import getSortedPosts from "@utils/getSortedPosts";
@@ -13,6 +23,5 @@ const pagination = getPagination({
   page: 1,
   isIndex: true,
 });
----
 
 <Posts {...pagination} />
