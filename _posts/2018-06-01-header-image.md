@@ -9,5 +9,6 @@ description: Hello again, on my new blog.
 ---
 
 This is my first blog!
+欢迎！
 
 <!--more-->
