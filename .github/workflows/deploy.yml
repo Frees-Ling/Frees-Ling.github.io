@@ -4,7 +4,8 @@ jobs:
     steps: 
      - name: Clean up old artifacts
         run: |
-          rm -rf ./github-pages
+          rm -rf ./path/to/artifact1
+          rm -rf ./path/to/artifact2
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
