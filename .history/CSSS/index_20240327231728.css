@@ -1,0 +1,27 @@
+.intro
+{
+    text-align: center;
+    color: red;
+}
+.wel
+{
+    text-align: center;
+}
+.navbar {
+    overflow: hidden;
+    background-color: #333; /* 导航栏背景色 */
+  }
+  
+  .navbar a {
+    float: left;
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 20px; /* 每个导航链接的上下左右填充 */
+    text-decoration: none;
+  }
+  
+  .navbar a:hover {
+    background-color: #ddd; /* 鼠标悬停时的背景色 */
+    color: black;
+  }

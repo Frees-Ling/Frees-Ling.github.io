@@ -1,0 +1,6 @@
+索尼克头像：https://i1.hdslb.com/bfs/new_dyn/f9e2a99097e7b456dc121688d56136e91066292128.jpg@560w_560h_1e_1c.avif
+Internet Explorer 浏览器问题
+解决办法
+<!--[if lt IE 9]>
+  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->

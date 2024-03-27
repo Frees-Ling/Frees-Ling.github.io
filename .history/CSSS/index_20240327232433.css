@@ -1,0 +1,39 @@
+.intro
+{
+    text-align: center;
+    color: red;
+}
+.wel
+{
+    text-align: center;
+}
+.navbar
+{
+    overflow: hidden;
+    background-color: rgb(0, 47, 255); /* 导航栏背景色 */
+  }
+  
+  .navbar a 
+  {
+    float: left;
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 20px; /* 每个导航链接的上下左右填充 */
+    text-decoration: none;
+  }
+  
+  .navbar a:hover 
+  {
+    background-color: #ddd; /* 鼠标悬停时的背景色 */
+    color: black;
+  }
+  .avatar {
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center;
+    width: 250px;
+    height: 250px;
+    border-radius: 50%; /* 使图片呈现圆形 */
+    overflow: hidden; /* 防止图片溢出圆形区域 */
+  }

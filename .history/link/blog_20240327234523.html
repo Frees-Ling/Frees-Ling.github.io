@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog</title>
+<!-- 导入Showdown.js库 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+<style>
+/* 样式可以根据需要自行调整 */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.blog-post {
+  margin-bottom: 20px;
+}
+
+.pagination {
+  margin-top: 20px;
+}
+
+.search-bar {
+  margin-bottom: 20px;
+}
+
+/* 夜间模式 */
+body.dark-mode {
+  background-color: #333;
+  color: #fff;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="Search...">
+    <button onclick="searchBlog()">Search</button>
+  </div>
+
+  <div id="blog-posts">
+    <!-- 博客文章将在此显示 -->
+  </div>
+
+  <div class="pagination">
+    <!-- 分页导航将在此显示 -->
+  </div>
+
+  <div class="mode-switch">
+    <label for="mode-toggle">Dark Mode:</label>
+    <input type="checkbox" id="mode-toggle" onchange="toggleDarkMode()">
+  </div>
+
+</div>
+
+<script>
+// 模拟的博客数据，每个对象包含title和content属性
+var blogPosts = [
+  { title: "Title 1", content: "Content 1" },
+  { title: "Title 2", content: "Content 2" },
+  // 更多博客文章...
+];
+
+// 分页显示博客文章
+function showBlogPosts(pageNumber) {
+  var postsPerPage = 10;
+  var startIndex = (pageNumber - 1) * postsPerPage;
+  var endIndex = startIndex + postsPerPage;
+  var postsToShow = blogPosts.slice(startIndex, endIndex);
+
+  var blogPostsContainer = document.getElementById('blog-posts');
+  blogPostsContainer.innerHTML = '';
+
+  postsToShow.forEach(function(post) {
+    var article = document.createElement('div');
+    article.className = 'blog-post';
+    article.innerHTML = '<h2>' + post.title + '</h2>' + '<p>' + post.content + '</p>';
+    blogPostsContainer.appendChild(article);
+  });
+}
+
+// 初始化显示第一页的博客文章
+showBlogPosts(1);
+
+// 分页导航
+function generatePagination() {
+  var totalPages = Math.ceil(blogPosts.length / 10);
+  var paginationContainer = document.querySelector('.pagination');
+  paginationContainer.innerHTML = '';
+
+  for (var i = 1; i <= totalPages; i++) {
+    var pageLink = document.createElement('a');
+    pageLink.href = '#';
+    pageLink.textContent = i;
+    pageLink.onclick = function() {
+      showBlogPosts(parseInt(this.textContent));
+    };
+    paginationContainer.appendChild(pageLink);
+  }
+}
+
+// 初始化分页导航
+generatePagination();
+
+// 搜索博客文章
+function searchBlog() {
+  var searchTerm = document.getElementById('search-input').value.toLowerCase();
+  var filteredPosts = blogPosts.filter(function(post) {
+    return post.title.toLowerCase().includes(searchTerm) || post.content.toLowerCase().includes(searchTerm);
+  });
+
+  var blogPostsContainer = document.getElementById('blog-posts');
+  blogPostsContainer.innerHTML = '';
+
+  filteredPosts.forEach(function(post) {
+    var article = document.createElement('div');
+    article.className = 'blog-post';
+    article.innerHTML = '<h2>' + post.title + '</h2>' + '<p>' + post.content + '</p>';
+    blogPostsContainer.appendChild(article);
+  });
+
+  // 更新分页导航
+  generatePagination();
+}
+
+// 夜间模式切换
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+}
+</script>
+
+</body>
+</html>
