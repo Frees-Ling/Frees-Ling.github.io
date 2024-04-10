@@ -22,23 +22,28 @@ export async function getStaticPaths() {
     const totalPages = getPageNumbers(tagPosts.length);
 
     return totalPages.map(page => ({
-      params: { tag, page },
+      params: { tag, page: page.toString() },
       props: { tag, tagName },
     }));
   });
 }
 
-const { page } = Astro.params;
-const { tag, tagName } = Astro.props;
-
-const posts = await getCollection("blog", ({ data }) => !data.draft);
-
-const postsByTag = getPostsByTag(posts, tag);
-
-const pagination = getPagination({
-  posts: postsByTag,
-  page,
-});
+export function getStaticProps({ params }) {
+  const { tag, page } = params;
+  const { data: posts } = getCollection("blog", ({ data }) => !data.draft);
+  const tagPosts = getPostsByTag(posts, tag);
+  const pagination = getPagination({
+    posts: tagPosts,
+    page: parseInt(page),
+  });
+  return {
+    props: {
+      ...pagination,
+      tag,
+      tagName: tagPosts.length > 0 ? tagPosts[0].tag : "",
+    },
+  };
+}
 ---
 
-<TagPosts {...pagination} {tag} {tagName} />
+<TagPosts {...pagination} tag={tag} tagName={tagName} />

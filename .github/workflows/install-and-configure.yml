@@ -1,0 +1,41 @@
+name: Install and Configure
+
+on:
+  push:
+    branches:
+      - main  # 可以根据您的实际情况修改为其他分支
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7  # 可以根据您的项目的实际需求修改为其他版本
+
+    - name: Install dependencies and configure Faraday
+      run: |
+        gem install faraday-retry
+        # 在这里添加您的Faraday配置命令
+        require 'faraday'
+        require 'faraday_middleware' # 如果需要的话，还可以引入其他的Faraday中间件
+
+        # 创建一个Faraday连接
+        @conn = Faraday.new(url: 'http://example.com') do |faraday|
+          # 将faraday-retry中间件添加到Faraday连接中
+          faraday.use FaradayMiddleware::Retry, exceptions: [Faraday::TimeoutError, Faraday::ConnectionFailed]
+          # 在这里您还可以添加其他的中间件或做其他的配置
+        end
+
+
+    - name: Commit and push changes
+      run: |
+        git config --global user.email "you@example.com"
+        git config --global user.name "Your Name"
+        git commit -am "Add faraday-retry gem and configure Faraday"
+        git push
