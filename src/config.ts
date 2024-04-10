@@ -1,19 +1,20 @@
 import type { Site, SocialObjects } from "./types";
 
 export const SITE: Site = {
-  website: "https://astro-paper.pages.dev/", // replace this with your deployed domain
-  author: "Sat Naing",
-  desc: "A minimal, responsive and SEO-friendly Astro blog theme.",
-  title: "AstroPaper",
-  ogImage: "astropaper-og.jpg",
+  website: "https://frees-ling.github.io/", // replace this with your deployed domain
+  author: "_FL_",
+  desc: "As a young science and chemistry enthusiast, I am particularly passionate about photography, conducting chemical experiments, and coding. Welcome to my first blog!",
+  title: "A blog of FL",
+  ogImage:
+    "https://i0.hdslb.com/bfs/new_dyn/f9e2a99097e7b456dc121688d56136e91066292128.jpg@1048w_!web-dynamic.avif",
   lightAndDarkMode: true,
-  postPerPage: 3,
+  postPerPage: 8,
   scheduledPostMargin: 15 * 60 * 1000, // 15 minutes
 };
 
 export const LOCALE = {
   lang: "en", // html lang code. Set this empty and default will be "en"
-  langTag: ["en-EN"], // BCP 47 Language Tags. Set this empty [] to use the environment default
+  langTag: ["en-EN,zh-CH"], // BCP 47 Language Tags. Set this empty [] to use the environment default
 } as const;
 
 export const LOGO_IMAGE = {
