@@ -1,5 +1,5 @@
 # Site settings
-title: Frees Ling Blog
+title: _FL_ Blog
 SEOTitle: 泠的博客 | Frees Ling Blog
 header-img: img/post-bg-desk.jpg
 email: Frees-Ling@gmail.com
@@ -21,9 +21,9 @@ RSS: false
 weibo_username:     Frees_Ling
 zhihu_username:     Frees-Ling
 github_username:    Frees-Ling
-#facebook_username:  baiying.qiu.7
-#jianshu_username:   e71990ada2fd
-#twitter_username:   @LingFrees23428
+# facebook_username:  baiying.qiu.7
+# jianshu_username:   e71990ada2fd
+# twitter_username:   @LingFrees23428
 
 
 
@@ -57,7 +57,7 @@ kramdown:
 
 # 评论系统
 # Disqus（https://disqus.com/）
-# disqus_username: Frees-Ling
+disqus_username: Frees-Ling
 
 # Gitalk
 gitalk:
@@ -97,18 +97,18 @@ service-worker: true
 
 
 # Friends
-#friends: [
-    {
-        title: "WY",
-        href: "http://zhengwuyang.com"
-    },{
-        title: "简书·BY",
-        href: "http://www.jianshu.com/u/e71990ada2fd"
-    },{
-        title: "Apple",
-        href: "https://apple.com"
-    },{
-        title: "Apple Developer",
-        href: "https://developer.apple.com/"
-    }
-]
+# #friends: [
+#     {
+#         title: "WY",
+#         href: "http://zhengwuyang.com"
+#     },{
+#         title: "简书·BY",
+#         href: "http://www.jianshu.com/u/e71990ada2fd"
+#     },{
+#         title: "Apple",
+#         href: "https://apple.com"
+#     },{
+#         title: "Apple Developer",
+#         href: "https://developer.apple.com/"
+#     }
+# ]
