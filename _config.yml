@@ -1,7 +1,7 @@
 # Site settings
-title: _FL_ Blog
+title: Frees_Ling Blog
 SEOTitle: 泠的博客 | Frees Ling Blog
-header-img: img/post-bg-desk.jpg
+header-img: "https://i0.hdslb.com/bfs/new_dyn/19a838acea5e0f79efc5eab21b1b53051066292128.jpg@1052w_!web-dynamic.avif"
 email: Frees-Ling@gmail.com
 description: "This is my own blog!That's it!"
 keyword: "Frees,Frees-Ling,Frees_Ling,developer,develop,泠,泠的博客,Fyrry,furry"
@@ -12,7 +12,7 @@ github_repo: "https://github.com/Frees-Ling/Frees-Ling.github.io.git" # you code
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
 sidebar-about-description: "The priority is friendship!may friendship endure!"
-sidebar-avatar: /img/about-BY-gentle.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-avatar: "https://i0.hdslb.com/bfs/new_dyn/0f56ba44f00c3eb83eb88f4f26efa6e61066292128.jpg@1052w_!web-dynamic.avif"      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
