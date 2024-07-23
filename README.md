@@ -1,68 +1,152 @@
-# Astro Starter Kit: Blog
+# 🧊 Frosti
 
-```sh
-npm create astro@latest -- --template blog
-```
+**A clean, elegant, and fast static blog template! Developed with [Astro](https://astro.build/)!**
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/blog)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/blog)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/blog/devcontainer.json)
+[**🖥️ Frosti Demo**](https://frosti.saroprock.com)&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;[**🌏 中文 README**](https://github.com/EveSunMaple/Frosti/blob/main/README.zh-CN.md)&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;[**❤️My Blog**](https://www.saroprock.com)
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+> [!NOTE]
+> For a better reading experience, please visit -> https://frosti.saroprock.com
 
-![blog](https://github.com/withastro/astro/assets/2244813/ff10799f-a816-4703-b967-c78997e8323d)
+## 🖥️ Preview
 
-Features:
+![view](https://frosti.saroprock.com/view.png)
 
-- ✅ Minimal styling (make it your own!)
-- ✅ 100/100 Lighthouse performance
-- ✅ SEO-friendly with canonical URLs and OpenGraph data
-- ✅ Sitemap support
-- ✅ RSS Feed support
-- ✅ Markdown & MDX support
+## ⏲️ performance
+
+![speed](./400-lighthouse.png)
+![speed](./400.png)
+
+## ✨ Features
+
+- ✅ Lighthouse 400
+- ✅ Blog content support
+- ✅ View transition animations
+- ✅ You can search your articles
+- ✅ **Light** / **Dark** mode available
+- ✅ Various components for enriching article content
+  - Diverse alerts
+  - Code block copy buttons
+  - More content supported by [daisyUI](https://daisyui.com/)……
+- ✅ Various components for enriching page content
+  - Timeline component
+  - Friends card component
+- ✅ Comment system built with [Waline](https://waline.js.org/)
+- ✅ Beautiful pages built with [Tailwind CSS](https://tailwindcss.com/) and [daisyUI](https://daisyui.com/)
+
+> [!NOTE]
+> The comment system needs to be configured by oneself, please refer to [Waline](https://waline.js.org/) Change `src\components\Comment.astro`.
 
 ## 🚀 Project Structure
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-├── public/
-├── src/
-│   ├── components/
-│   ├── content/
-│   ├── layouts/
-│   └── pages/
+```sh
+\Frosti
+├── 400.png
 ├── astro.config.mjs
-├── README.md
+├── categories.txt
+├── CHANGELOG.md
+├── LICENSE
+├── package-lock.json
 ├── package.json
+├── pnpm-lock.yaml
+├── public
+|  ├── favicon.ico
+|  ├── favicon.svg
+|  ├── fonts
+|  |  └── CascadiaCode.woff2
+|  ├── home.webp
+|  ├── profile.webp
+|  └── view.png
+├── README.md
+├── src
+|  ├── components
+|  |  ├── BaseCard.astro
+|  |  ├── BaseHead.astro
+|  |  ├── blog
+|  |  |  ├── error.astro
+|  |  |  ├── info.astro
+|  |  |  ├── success.astro
+|  |  |  └── warning.astro
+|  |  ├── Content.astro
+|  |  ├── Comment.astro
+|  |  ├── EnvelopeCard.astro
+|  |  ├── Footer.astro
+|  |  ├── FormattedDate.astro
+|  |  ├── Header.astro
+|  |  ├── HeaderMenu.astro
+|  |  ├── License.astro
+|  |  ├── page
+|  |  |  ├── LinkCard.astro
+|  |  |  ├── LinkThere.astro
+|  |  |  └── TimeLine.astro
+|  |  ├── ProfileCard.astro
+|  |  ├── ProfileCardFooter.astro
+|  |  ├── ProfileCardMenu.astro
+|  |  ├── ProjectCard.astro
+|  |  ├── ProjectJS.astro
+|  |  └── ThemeIcon.astro
+|  ├── consts.ts
+|  ├── content
+|  |  ├── blog
+|  |  |  ├── markdown-style-guide.md
+|  |  |  └── using-mdx.mdx
+|  |  └── config.ts
+|  ├── env.d.ts
+|  ├── layouts
+|  |  └── BaseLayout.astro
+|  ├── pages
+|  |  ├── about.mdx
+|  |  ├── blog
+|  |  |  ├── tag
+|  |  |  ├── [...page].astro
+|  |  |  └── [...slug].astro
+|  |  ├── friend.mdx
+|  |  ├── frosti.mdx
+|  |  ├── index.mdx
+|  |  ├── project.mdx
+|  |  └── rss.xml.js
+|  ├── scripts
+|  |  ├── copybutton.mjs
+|  |  └── time.mjs
+|  └── styles
+|     ├── global.scss
+|     └── waline.scss
+├── tailwind.config.js
 └── tsconfig.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## ✒️ Article Information
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+|    Name     |       Meaning       | Mandatory |
+| :---------: | :-----------------: | :-------: |
+|    title    |    Article title    |    Yes    |
+| description | Article description |    Yes    |
+|   pubDate   |    Article date     |    Yes    |
+|    image    |    Article cover    |    No     |
+|    tags     |    Article tags     |    No     |
+|    badge    |    Article badge    |    No     |
 
-The `src/content/` directory contains "collections" of related Markdown and MDX documents. Use `getCollection()` to retrieve posts from `src/content/blog/`, and type-check your frontmatter using an optional schema. See [Astro's Content Collections docs](https://docs.astro.build/en/guides/content-collections/) to learn more.
+## ⬇️ Usage
 
-Any static assets, like images, can be placed in the `public/` directory.
+Use Frosti by passing the `--template` parameter to the `create astro` command!
 
-## 🧞 Commands
+```sh
+npm create astro@latest -- --template EveSunMaple/Frosti
+```
 
-All commands are run from the root of the project, from a terminal:
+## 🎯 Plans
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+- [x] Add table of contents (done but CSS not written yet) ~~(Jul 13 2024)~~
+- [x] Add timeline component ~~(Apr 21, 2024)~~
+- [x] Add friends component ~~(Apr 21, 2024)~~
 
-## 👀 Want to learn more?
+## 👀 Issues
 
-Check out [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- [x] ~~`global.css` is too messy~~
+- [x] ~~**Light** / **Dark** mode transition ~~currently not implemented~~ `ENOUGH🛠️`
+- [x] ~~Website score has not reached 400 points yet~~ `GET IT✨`
 
-## Credit
+## 🎉 Thanks
 
-This theme is based off of the lovely [Bear Blog](https://github.com/HermanMartinus/bearblog/).
+@[Saicaca](https://github.com/saicaca) His inspiration was the main reason for me to create this theme.
+
+@[WRXinYue](https://github.com/WRXinYue) Helped me a lot when I was first starting out.
