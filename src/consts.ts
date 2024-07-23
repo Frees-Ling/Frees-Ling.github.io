@@ -2,8 +2,8 @@
 // You can import this data from anywhere in your site by using the `import` keyword.
 
 // Site title and description
-export const SITE_TITLE = "Frosti 🧊";
-export const SITE_DESCRIPTION = "A blog template";
+export const SITE_TITLE = "Frees Ling";
+export const SITE_DESCRIPTION = "An own blog web";
 export const DATE_FORMAT = "ddd MMM DD YYYY";
 
 // User profile information
@@ -49,13 +49,13 @@ export const socialIcons = [
     svg: "support",
   },
   {
-    href: "https://github.com/EveSunMaple",
+    href: "https://github.com/Frees-Ling",
     ariaLabel: "Github",
     title: "Github",
     svg: "github",
   },
   {
-    href: "https://space.bilibili.com/438392347",
+    href: "https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0",
     ariaLabel: "BiliBili",
     title: "BiliBili",
     svg: "bilibili",
