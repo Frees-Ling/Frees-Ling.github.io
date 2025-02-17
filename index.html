@@ -51,7 +51,7 @@
             <button onclick="aboutme()" style="background-color: red; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">关于我的一些介绍</button>
             <script>
                 function aboutme(){
-                    document.getElementById("anoutme").innerHTML = "我叫Frees Ling，是一个热衷于信息技术和化学的学生，并向着全栈开发方向努力。";
+                    document.getElementById("anoutme").innerHTML = "我叫Frees Ling，是一个热衷于信息技术,摄影和化学的学生，并向着全栈开发方向努力。";
                 }
             </script>
         </div>
@@ -71,7 +71,7 @@
             <button onclick="showContant()" style="background-color: green; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">如何联系我？</button>
             <script>
                 function showContant(){
-                    document.getElementById("showContant").innerHTML = "你可以通过以下方式联系我：<br>邮箱：195392515@qq.com<br>Gmail:freesling496@mail.com<br>QQ：195392515欢迎扩列~";
+                    document.getElementById("showContant").innerHTML = "你可以通过以下方式联系我：<br>邮箱：FLoffic@outlook.comr>Gmail:freesling496@mail.com";
                 }
             </script>
         </div>
@@ -81,7 +81,7 @@
             <button onclick="intertst()" style="background-color: purple; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">查看兴趣爱好</button>
             <script>
                 function intertst(){
-                    document.getElementById("intertst").innerHTML = "Furry控<br>热衷于摄影，拍摄，如果你想拍一些照片也可以找我哦<br>（关于兽设？）<br>想的是一只狼和狐狸的混合种，目前还在设想中~";
+                    document.getElementById("intertst").innerHTML = "Furry控<br>热衷于摄影，拍摄，如果你想拍一些照片也可以找我哦<br>（关于兽设？）<br>想的是一只狼和狐狸的混合种，目前已产出哦！";
                 }
             </script>
         </div>
@@ -89,12 +89,25 @@
         <div class="otherContant" id="otherContant">
             <i>关于平台的账号</i>
             <button onclick="otherContant()" style="background-color: yellow; color: black; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">查看</button>
-            <script>
-                function otherContant(){
-                    document.getElementById("otherContant").innerHTML = "Github：Frees-Ling<br>Bilibili:Frees_Ling<br>X:@LingFrees23428";
-                }
-            </script>
         </div>
+        
+        <script>
+            function otherContant() {
+                document.getElementById("otherContant").innerHTML = `
+                    <i>关于平台的账号</i><br>
+                    <a href="https://github.com/Frees-Ling" target="_blank" style="text-decoration: none; color: black;">
+                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" height="20"> Github：Frees-Ling
+                    </a><br>
+                    <a href="https://space.bilibili.com/1066292128" target="_blank" style="text-decoration: none; color: black;">
+                        <img src="https://www.bilibili.com/favicon.ico" width="20" height="20"> Bilibili: Frees_Ling
+                    </a><br>
+                    <a href="https://twitter.com/LingFrees23428" target="_blank" style="text-decoration: none; color: black;">
+                        <img src="https://abs.twimg.com/favicons/twitter.ico" width="20" height="20"> X: @LingFrees23428
+                    </a>
+                `;
+            }
+        </script>
+        
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/neruthes/pride.js@master/pride.js"></script>
