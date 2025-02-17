@@ -20,19 +20,12 @@
         <ul class="file-list" id="fileList"></ul>
     </div>
     <script>
-        const fileExtensions = {
-            pdf: 'application/pdf',
-            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            doc: 'application/msword',
-            jpg: 'image/jpeg',
-            png: 'image/png',
-            mp4: 'video/mp4',
-            avi: 'video/x-msvideo'
-        };
-        
-        fetch('/reouse/')
-            .then(response => response.text())
-            .then(text => {
+        async function fetchFiles() {
+            try {
+                const response = await fetch('/reouse');
+                if (!response.ok) throw new Error('无法获取文件列表');
+                
+                const text = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
                 const links = [...doc.querySelectorAll('a')];
@@ -40,26 +33,31 @@
                 
                 links.forEach(link => {
                     const fileName = link.getAttribute('href');
+                    if (!fileName) return;
                     const ext = fileName.split('.').pop().toLowerCase();
-                    const mimeType = fileExtensions[ext];
+                    const filePath = `reouse/${fileName}`;
+                    const listItem = document.createElement('li');
                     
-                    if (mimeType) {
-                        const listItem = document.createElement('li');
-                        listItem.innerHTML = `<a href="reouse/${fileName}" download>${fileName}</a>`;
-                        
-                        if (mimeType.startsWith('image/')) {
-                            listItem.innerHTML += `<br><img src="reouse/${fileName}" alt="${fileName}" width="200">`;
-                        } else if (mimeType.startsWith('video/')) {
-                            listItem.innerHTML += `<br><video controls width="300"><source src="reouse/${fileName}" type="${mimeType}"></video>`;
-                        } else if (mimeType === 'application/pdf') {
-                            listItem.innerHTML += `<br><iframe src="reouse/${fileName}" width="100%" height="400"></iframe>`;
-                        }
-                        
-                        fileList.appendChild(listItem);
+                    listItem.innerHTML = `<a href="${filePath}" download>${fileName}</a>`;
+                    
+                    if (["jpg", "png", "gif", "jpeg"].includes(ext)) {
+                        listItem.innerHTML += `<br><img src="${filePath}" alt="${fileName}" width="200">`;
+                    } else if (["mp4", "avi", "webm"].includes(ext)) {
+                        listItem.innerHTML += `<br><video controls width="300"><source src="${filePath}" type="video/${ext}"></video>`;
+                    } else if (ext === "pdf") {
+                        listItem.innerHTML += `<br><iframe src="${filePath}" width="100%" height="400"></iframe>`;
+                    } else if (["docx", "doc"].includes(ext)) {
+                        listItem.innerHTML += `<br><p>无法直接预览，请下载后查看。</p>`;
                     }
+                    
+                    fileList.appendChild(listItem);
                 });
-            })
-            .catch(error => console.error('文件列表获取失败:', error));
+            } catch (error) {
+                console.error('文件列表获取失败:', error);
+            }
+        }
+        
+        fetchFiles();
     </script>
 </body>
 </html>
