@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件下载与预览</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .file-list { list-style: none; padding: 0; }
+        .file-list li { margin: 10px 0; padding: 10px; border-radius: 8px; background: #f4f4f4; }
+        a { text-decoration: none; color: #007BFF; font-weight: bold; }
+        a:hover { color: #0056b3; }
+        iframe, video, img { max-width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>文件下载与预览</h2>
+        <ul class="file-list" id="fileList"></ul>
+    </div>
+    <script>
+        const fileExtensions = {
+            pdf: 'application/pdf',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            doc: 'application/msword',
+            jpg: 'image/jpeg',
+            png: 'image/png',
+            mp4: 'video/mp4',
+            avi: 'video/x-msvideo'
+        };
+        
+        fetch('reouse/')
+            .then(response => response.text())
+            .then(text => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const links = [...doc.querySelectorAll('a')];
+                const fileList = document.getElementById('fileList');
+                
+                links.forEach(link => {
+                    const fileName = link.getAttribute('href');
+                    const ext = fileName.split('.').pop().toLowerCase();
+                    const mimeType = fileExtensions[ext];
+                    
+                    if (mimeType) {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `<a href="reouse/${fileName}" download>${fileName}</a>`;
+                        
+                        if (mimeType.startsWith('image/')) {
+                            listItem.innerHTML += `<br><img src="reouse/${fileName}" alt="${fileName}" width="200">`;
+                        } else if (mimeType.startsWith('video/')) {
+                            listItem.innerHTML += `<br><video controls width="300"><source src="reouse/${fileName}" type="${mimeType}"></video>`;
+                        } else if (mimeType === 'application/pdf') {
+                            listItem.innerHTML += `<br><iframe src="reouse/${fileName}" width="100%" height="400"></iframe>`;
+                        }
+                        
+                        fileList.appendChild(listItem);
+                    }
+                });
+            })
+            .catch(error => console.error('文件列表获取失败:', error));
+    </script>
+</body>
+</html>

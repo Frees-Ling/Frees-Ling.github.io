@@ -71,7 +71,7 @@
             <button onclick="showContant()" style="background-color: green; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">如何联系我？</button>
             <script>
                 function showContant(){
-                    document.getElementById("showContant").innerHTML = "你可以通过以下方式联系我：<br>邮箱：FLoffic@outlook.comr>Gmail:freesling496@mail.com";
+                    document.getElementById("showContant").innerHTML = "你可以通过以下方式联系我：<br>邮箱：FLoffic@outlook.comr<br>Gmail:freesling496@mail.com";
                 }
             </script>
         </div>
@@ -87,8 +87,8 @@
         </div>
         <hr>
         <div class="otherContant" id="otherContant">
-            <i>关于平台的账号</i>
-            <button onclick="otherContant()" style="background-color: yellow; color: black; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">查看</button>
+            <i>关于平台的账号（可以点击图标来关注我！！）</i>
+            <button onclick="otherContant()" style="background-color: yellow; color: rgb(255, 253, 253); border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">查看</button>
         </div>
         
         <script>
@@ -107,7 +107,18 @@
                 `;
             }
         </script>
-        
+        <hr>
+        <div class="download" id="download">
+            <i>点击以进入下载页面</i>
+            
+            <button onclick="otherContant()" style="background-color: rgb(16, 110, 218); color: rgb(255, 255, 255); border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">查看</button>
+            <script>
+                function intertst(){
+                    document.getElementById("download").innerHTML = '<a href="/download.html target="_blank" style="text-decoration: none; color: black;">Click it！</a>'
+                }
+            </script>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/neruthes/pride.js@master/pride.js"></script>
