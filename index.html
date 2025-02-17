@@ -111,14 +111,10 @@
         
         <div class="download" id="download">
             <i>点击以进入下载页面</i>
-            <div class="is_error" id="is_error">
-                <i>如果链接失效，请点击</i>
-                <button onclick="is_error()" style="background-color: green; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">如何联系我？</button>
-            </div>
             <button onclick="download()" style="background-color: rgb(16, 110, 218); color: rgb(255, 255, 255); border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">查看</button>
             <script>
                 function intertst(){
-                    document.getElementById("download").innerHTML = '<a href="/download.html" target="_blank" style="text-decoration: none; color: black;">Click it！</a>'
+                    document.getElementById("download").innerHTML = '<a href="/download.html" target="_blank" style="text-decoration: none; color: black;">Click it！</a><br><div class="is_error" id="is_error"><i>如果链接失效，请点击</i><button onclick="is_error()" style="background-color: green; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">备用解决方案</button></div>'
                 }
                 function intertst(){
                     document.getElementById("is_error").innerHTML = '<a href="/reouse/四天默写内容.docx" download="download">四天默写内容.docx</a><br><a href="/reouse/提示词.docx" download="download">提示词.docx</a><br><a href="/reouse/deepseek_tech_photo.jpg" download="download">deepseek_tech_photo.jpg</a><br><a href="/reouse/test.jpg" download="download">test.jpg</a>'
