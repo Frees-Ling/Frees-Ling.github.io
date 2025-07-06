@@ -16,14 +16,14 @@ export const siteConfig: SiteConfig = {
 		fixed: false, // Hide the theme color picker for visitors
 	},
 	banner: {
-    enable: true,
-    src: 'assets/images/banner.jpg',   // Relative to the /src directory. Relative to the /public directory if it starts with '/'
-    position: 'center', // Equivalent to object-position, defaults center
-    credit: {
-      enable: true,
-      text: '星空 / Pentaro ペンたろう',
-      url: 'https://www.pixiv.net/artworks/121372573'
-    },
+        enable: true,
+        src: 'assets/images/banner.jpg',   // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+        position: 'center', // Equivalent to object-position, defaults center
+        credit: {
+            enable: true,
+            text: '星空 / Pentaro ペンたろう',
+            url: 'https://www.pixiv.net/artworks/121372573'
+        },
     },
 	toc: {
 		enable: true, // Display the table of contents on the right side of the post
