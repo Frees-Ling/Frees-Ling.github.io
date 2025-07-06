@@ -21,8 +21,8 @@ export const siteConfig: SiteConfig = {
         position: 'center', // Equivalent to object-position, defaults center
         credit: {
             enable: true,
-            text: '星空 / Pentaro ペンたろう',
-            url: 'https://www.pixiv.net/artworks/121372573'
+            text: 'live like it’s.',
+            url: 'https://www.pixiv.net/artworks/132358394'
         },
     },
 	toc: {
