@@ -47,12 +47,14 @@ lang: ''
 这里直接下载即可，下载完成后，打开LM studio界面将如下所示
 ![](https://vip.123pan.cn/1816365004/ymjew503t0m000d7w32xs7tz2nzlyn6iDIYPAqDzAIaOAcxvDdawDO==.png)
 打开后，请复制以下代码再回到LM studio（选择合适自己的进行复制）
+
 ```
 # gpt-oss-20b
 lms get openai/gpt-oss-20b
 # gpt-oss 120b
 lms get openai/gpt-oss-120b
 ```
+
 复制完成后应该会自动识别剪切板进行询问下载，如若没有显示，请打开左侧栏的发现，进去后搜索gpt-oss-20b（120b）直接下载即可，如下图
 ![](https://vip.123pan.cn/1816365004/ymjew503t0l000d7w32xa43anujzkv78DIYPAqDzAIaOAcxvDdawDO==.png)
 等待全部下载完成后，加载我们的模型就可以直接使用啦！
@@ -72,24 +74,29 @@ lms get openai/gpt-oss-120b
 ### 安装必备库
 
 由于模型的特殊性，这里我们需要借助Python进行安装和使用，本模型依赖Pytorch插件，所以请先下载相关库
+
 ```python
 pip install --upgrade diffusers transformers scipy
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 ```
+
 - diffusers：Hugging Face 提供的开源库，用来加载和运行扩散模型（Stable Diffusion 就是扩散模型）。
 - transformers：管理模型结构和相关任务的通用库。
 - scipy：科学计算库，扩散模型运行时可能用到。
 全部安装完成后，请在终端输入以下代码来检查显卡加速是否生效
+
 ```python
 python -c "import torch; print(torch.cuda.is_available())"
 ```
+
 若返回```True```即生效
 
 ### 首次使用操作方法
 
 __请一定要看完全部再按照以下文档再自己选择合适的方法操作__
 请在代码编辑器中新建py文档进行首次下载和测试
+
 ```python
 import torch
 from diffusers import StableDiffusionPipeline
@@ -120,6 +127,7 @@ if __name__ == "__main__":
 
 当然这里默认模型安装路径就是和python安装路径是一样的，如果你的python和我的一样是在C盘内，那么我们可以通过更改一下步骤进行换到其他盘里面去
 例如，我想把模型下载到D盘里面的Models文件夹，那么我们可以对刚刚的代码进行以下更改
+
 ```python
 import os
 import torch
@@ -148,15 +156,20 @@ if __name__ == "__main__":
     main()
 
 ```
+
 当然这里又出现了一个疑问，我们的生成的图像保存在哪里呢？
 注意这里
+
 ```python
 image.save("astronaut_rides_horse.png")
 ```
+
 如果我们想要保存在桌面，我们可以进行如下修改
+
 ```python
 image.save("XXX/Desktop/astronaut_rides_horse.png")
 ```
+
 这里的```astronaut_rides_horse.png```名称可以自定义
 
 初次运行会进行模型下载工作，这里我们只需要等待即可（需要梯子）
@@ -166,6 +179,7 @@ image.save("XXX/Desktop/astronaut_rides_horse.png")
 
 如果说我们再次运行上面的程序，那么就会造成二次下载，所以现在我们需要编写一个新程序进行后续长期的使用
 下面我将提供一套标准模板进行调用模型和使用（支持单次/多次使用）
+
 ```python
 import os
 import torch
@@ -216,9 +230,11 @@ for prompt_text, filename in prompts:
 print("All images generated!")
 
 ```
+
 请根据需求，适当修改上述代码
 当我们终于搞定时，去运行结果发现又报错了，这个原因是因为我们的初次下载的模型所在目录是有问题的，我们需要重新构建文件树
 首次下载的文件树是
+
 ```
 D:.
 ├─blobs
@@ -235,6 +251,7 @@ D:.
         ├─unet
         └─vae
 ```
+
 这个时候我们需要在同文件夹下（我原来下载在Models文件夹下，那么同样在Models里面新建一个```stable-diffusion-v1-4```文件夹，把```snapshots/133a221b8aa7292a167afc5127cb63fb5005638b/```下所有文件（夹）复制进去
 然后把这个新文件夹的路径设置为```Model Path```即可使用
 以下是示例生成图片
