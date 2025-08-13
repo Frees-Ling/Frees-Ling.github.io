@@ -32,10 +32,12 @@ lang: ''
 [ChatGPT oss-20B](https://huggingface.co/openai/gpt-oss-20b)
 [ChatGPT oss-120B](https://huggingface.co/openai/gpt-oss-120b)
 >什么是Hugging Face？
+>
 >Hugging Face是通用的AI源代码存储地，在这里你可以找到绝大多是开源AI
 
 下面是官方对于两类模型的简单介绍
 > ``gpt-oss-20b`` 适用于较低延迟和本地或特殊用例（210 亿个参数，其中 36 亿个活动参数）
+> 
 > ``gpt-oss-120b``适用于生产、通用、高推理用例，适合单个 80GB GPU（如 NVIDIA H100 或 AMD MI300X）（117B 参数，其中 5.1B 活动参数）
 
 这里我们选择LM studio作为载体来运行我们的AI，下面我将介绍LM studio的安装方法以及简单的配置下载
@@ -45,6 +47,7 @@ lang: ''
 你可以进入[LM studio](https://lmstudio.ai/)官网，你将会看到一下页面
 ![](https://vip.123pan.cn/1816365004/ymjew503t0l000d7w32xa42c9wjxlq99DIYPAqDzAIaOAcxvDdawDO==.png)
 这里直接下载即可，下载完成后，打开LM studio界面将如下所示
+
 ![](https://vip.123pan.cn/1816365004/ymjew503t0m000d7w32xs7tz2nzlyn6iDIYPAqDzAIaOAcxvDdawDO==.png)
 打开后，请复制以下代码再回到LM studio（选择合适自己的进行复制）
 
@@ -84,6 +87,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 - diffusers：Hugging Face 提供的开源库，用来加载和运行扩散模型（Stable Diffusion 就是扩散模型）。
 - transformers：管理模型结构和相关任务的通用库。
 - scipy：科学计算库，扩散模型运行时可能用到。
+
 全部安装完成后，请在终端输入以下代码来检查显卡加速是否生效
 
 ```python
