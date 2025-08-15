@@ -1,11 +1,11 @@
-import type {
-	ExpressiveCodeConfig,
-	LicenseConfig,
-	NavBarConfig,
-	ProfileConfig,
-	SiteConfig,
+import {
+    type ExpressiveCodeConfig,
+    type LicenseConfig,
+    LinkPreset,
+    type NavBarConfig,
+    type ProfileConfig,
+    type SiteConfig,
 } from "./types/config";
-import { LinkPreset } from "./types/config";
 
 export const siteConfig: SiteConfig = {
 	title: "Frees Ling",
@@ -44,6 +44,7 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Home,
 		LinkPreset.Archive,
 		LinkPreset.About,
+        LinkPreset.Friends,
 		{
 			name: "GitHub",
 			url: "https://github.com/Frees-Ling", // Internal links should not include the base path, as it is automatically added
@@ -74,6 +75,11 @@ export const profileConfig: ProfileConfig = {
 			icon: "fa6-brands:github",
 			url: "https://github.com/Frees-Ling",
 		},
+        {
+            name: "Telegram",
+            icon: "fa6-brands:telegram",
+            url: "https://t.me/Frees_Ling_bot",
+        }
 	],
 };
 
