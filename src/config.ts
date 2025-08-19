@@ -88,7 +88,7 @@ export const profileConfig: ProfileConfig = {
         {
             name:"Google Drive",
             icon: "fa6-brands:google-drive",
-            url: "https://drive.google.com/drive/folders/1GiEbcaV7DEAn9Q2n0LmSW58_H7gyMoVW?usp=sharing"
+            url: "Drive/index.html"
         }
 	],
 };
