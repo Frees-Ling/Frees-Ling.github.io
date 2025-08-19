@@ -79,6 +79,16 @@ export const profileConfig: ProfileConfig = {
             name: "Telegram",
             icon: "fa6-brands:telegram",
             url: "https://t.me/Frees_Ling_bot",
+        },
+        {
+            name:"Bilibili",
+            icon: "fa6-brands:bilibili",
+            url: "https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0",
+        },
+        {
+            name:"Google Drive",
+            icon: "fa6-brands:google-drive",
+            url: "https://drive.google.com/drive/folders/1GiEbcaV7DEAn9Q2n0LmSW58_H7gyMoVW?usp=sharing"
         }
 	],
 };
