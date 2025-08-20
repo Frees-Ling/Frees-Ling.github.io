@@ -2,20 +2,148 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>GitHub 文件浏览器</title>
-    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件资源管理</title>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.0.0/tsparticles.bundle.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        ul { list-style: none; padding-left: 1em; }
-        li { margin: 5px 0; }
-        .cursor-pointer { cursor: pointer; }
-        .text-blue-600 { color: #2563eb; }
-        .hover\\:underline:hover { text-decoration: underline; }
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            overflow: hidden;
+            font-family: "Microsoft Yahei", sans-serif;
+            position: relative;
+        }
+
+        /* 主体内容 */
+        .content {
+            text-align: center;
+            z-index: 2;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #ffffff;
+            backdrop-filter: blur(6px);
+            padding: 20px 40px;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        p {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-top: 15px;
+            animation: slideUp 2s ease-in-out;
+        }
+
+        /* 单色动态进度条 */
+        .progress-container {
+            margin: 25px auto 0 auto;
+            width: 300px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%);
+            background-size: 40px 40px;
+            animation: moveStripe 1s linear infinite;
+            border-radius: 10px;
+        }
+
+        @keyframes moveStripe {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+
+        /* 漂浮圆 */
+        .shape {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: floatRotate 15s infinite ease-in-out;
+        }
+
+        .shape:nth-child(1) { top: 15%; left: 10%; animation-duration: 12s; }
+        .shape:nth-child(2) { top: 65%; left: 20%; animation-duration: 14s; }
+        .shape:nth-child(3) { top: 35%; left: 70%; animation-duration: 10s; }
+        .shape:nth-child(4) { top: 80%; left: 60%; animation-duration: 13s; }
+        .shape:nth-child(5) { top: 50%; left: 50%; animation-duration: 16s; }
+
+        @keyframes floatRotate {
+            0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 0.5; }
+            25% { transform: translateY(-50px) scale(1.2) rotate(45deg); opacity: 0.3; }
+            50% { transform: translateY(0) scale(1) rotate(90deg); opacity: 0.5; }
+            75% { transform: translateY(50px) scale(0.8) rotate(135deg); opacity: 0.3; }
+            100% { transform: translateY(0) scale(1) rotate(180deg); opacity: 0.5; }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
-<h1>GitHub 文件浏览器</h1>
-<div id="file-tree"></div>
-<script src="script.js"></script>
+<!-- 粒子背景 -->
+<div id="tsparticles"></div>
+
+<!-- 动态圆形背景 -->
+<div class="shape"></div>
+<div class="shape"></div>
+<div class="shape"></div>
+<div class="shape"></div>
+<div class="shape"></div>
+
+<!-- 主体内容 -->
+<div class="content">
+    <h1>📂 文件资源管理</h1>
+    <p>尚在开发中，敬请期待 ✨</p>
+    <div class="progress-container">
+        <div class="progress-bar"></div>
+    </div>
+</div>
+
+<script>
+    tsParticles.load("tsparticles", {
+        particles: {
+            number: { value: 50, density: { enable: true, area: 800 } },
+            color: { value: "#ffffff" },
+            shape: { type: "circle" },
+            opacity: { value: 0.4, random: true },
+            size: { value: { min: 1, max: 3 } },
+            move: { enable: true, speed: 0.8, direction: "none", outModes: "out" },
+            links: { enable: true, distance: 120, color: "#ffffff", opacity: 0.2 }
+        },
+        interactivity: {
+            events: {
+                onHover: { enable: true, mode: "repulse" },
+                onClick: { enable: true, mode: "push" }
+            },
+            modes: {
+                repulse: { distance: 100 },
+                push: { quantity: 4 }
+            }
+        },
+        background: { color: "transparent" }
+    });
+</script>
 </body>
 </html>
