@@ -3,7 +3,7 @@ const config = {
     owner: "Frees-Ling",
     repo: "Frees-Ling.github.io",
     branch: "main",
-    path: "drive/Files"
+    path: "Drive/Files"
 };
 
 // --- 加密 token ---
