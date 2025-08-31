@@ -56,7 +56,8 @@ export const navBarConfig: NavBarConfig = {
 export const profileConfig: ProfileConfig = {
 	avatar: "assets/images/demo-avatar.png", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 	name: "Frees Ling",
-	bio: "欢迎来到Frees的博客！这是一个使用Astro构建的个人博客，旨在分享我的编程经验和技术见解，也会分享一些生活趣事。希望你能在这里找到有价值的内容！",
+	bio: "很高兴认识你呀！在这里记录一些生活和学习的点滴，欢迎哦", // Short bio, markdown is supported
+    // description: "欢迎来到我的小天地！这里是我分享生活点滴和
 	links: [
 		{
 			name: "Twitter",
