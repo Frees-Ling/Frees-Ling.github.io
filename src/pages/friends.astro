@@ -1,26 +1,22 @@
 ---
-
 import MainGridLayout from "../layouts/MainGridLayout.astro";
-
 import { getEntry } from 'astro:content'
-import {i18n} from "../i18n/translation";
-import I18nKey from "../i18n/i18nKey";
 import Markdown from "@components/misc/Markdown.astro";
 import SiteCard from "@components/misc/SiteCard.astro";
 
-const aboutPost = await getEntry('spec', 'friends')
-
-const { Content } = await aboutPost.render()
-
+const aboutPost = await getEntry('spec', 'friends');
+let Content;
+if (aboutPost?.rendered) {
+    Content = aboutPost.rendered;
+}
 ---
 <MainGridLayout title="Friends" description="此处存放着我的朋友们~">
     <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32">
         <div class="card-base z-10 px-9 py-6 relative w-full ">
             <Markdown class="mt-2">
-                <Content />
+                {Content && Content}
             </Markdown>
-
-            <SiteCard title="Alan" url="https://wrye.dev/" icon="https://vip.123pan.cn/1816365004/ymjew503t0m000d7w32xsahprs3yelkuDIYPAqDzAIaOAcxvDdawDO==.png" desc="一个可爱的人嘿嘿嘿"></SiteCard>
+            <SiteCard class="your-class" title="Alan" url="https://wrye.dev/" icon="https://vip.123pan.cn/1816365004/ymjew503t0m000d7w32xsahprs3yelkuDIYPAqDzAIaOAcxvDdawDO==.png" desc="一个可爱的人嘿嘿嘿" />
         </div>
     </div>
 </MainGridLayout>
