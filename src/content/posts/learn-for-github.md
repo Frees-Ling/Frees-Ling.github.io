@@ -3,7 +3,7 @@ title: Github入门
 published: 2025-09-24
 description: 'Github入门'
 image: ''
-tags: [Github，Learn]
+tags: [Github, Learn]
 category: 'Note'
 draft: false 
 lang: ''
