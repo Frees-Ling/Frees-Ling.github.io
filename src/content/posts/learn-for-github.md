@@ -10,68 +10,131 @@ lang: ''
 ---
 
 # Github入门
-受朋友的委托，特此写一篇Github入门教程，方便初学者快速上手。
 ## 什么是Github
 Github是一个基于Git的代码托管平台，允许开发者存储、管理和协作开发代码。它提供了版本控制、分支管理、问题跟踪等功能，是开源项目和团队协作的理想选择。
 ## 注册Github账号
-1. 访问[Github官网](https://github.com/)
-2. 点击右上角的“Sign up”按钮。
-3. 填写用户名、邮箱和密码，完成注册。
-4. 验证邮箱，激活账号。
-## 创建新仓库
-1. 登录Github账号。
-2. 点击右上角的“+”号，选择“New repository”。
-3. 填写仓库名称、描述（可选），选择公开或私有。
-4. 点击“Create repository”按钮，完成创建。
-## 克隆仓库到本地
-1. 打开终端或命令行工具。
+首先进入[Github官网](https://github.com/)，点击此可以进入，可以看到如下图的界面
 
-> 注意：一定要先针对本地需要克隆的文件夹进行初始化！
+![](https://vip.123pan.cn/1816365004/yk6baz03t0n000d7w33hcmcd3n7k6yleDIYPAqDzAIaOAcxvDdawDO==.png)
 
-2. 使用以下命令克隆仓库：
-   ```bash
-   git clone <仓库地址>
-   ```
-3. 进入克隆的仓库目录：
-   ```bash
-   cd <仓库名称>
-   ```
-## 提交代码到仓库
-1. 在本地修改或添加文件。
-2. 使用以下命令添加文件到暂存区：
-   ```bash
-   git add .
-   ```
-3. 提交更改：
-   ```bash
-   git commit -m "提交信息"
-   ```
-4. 推送更改到远程仓库：
-   ```bash
-   git push origin main
-   ```
-## 创建分支
-1. 创建新分支：
-   ```bash
-   git checkout -b <分支名称>
-   ```
-2. 切换分支：
-   ```bash
-   git checkout <分支名称>
-   ```
-3. 合并分支：
-   ```bash
-   git checkout main
-   git merge <分支名称>
-   ```
-## 提交Pull Request
-1. 在Github页面，切换到你的分支。
-2. 点击“New pull request”按钮。
-3. 填写标题和描述，点击“Create pull request”。
-4. 等待代码审查和合并。
+点击右上角的“Sign up”按钮进入注册界面
+
+![](https://vip.123pan.cn/1816365004/ymjew503t0m000d7w32xwj82f6qscvswDIYPAqDzAIaOAcxvDdawDO==.png)
+
+填写用户名、邮箱和密码，点击“Create account”按钮，然后按照教程一步一步创建账户，完成注册。
+
+![](https://vip.123pan.cn/1816365004/ymjew503t0l000d7w32xeuw6wnb6b6aeDIYPAqDzAIaOAcxvDdawDO==.png)
+
+当进入此界面时，恭喜你，注册成功了。此时点击右上角的头像，再点击Profile，就可以进入你的个人主页了。
+
+![](https://vip.123pan.cn/1816365004/ymjew503t0l000d7w32xeuw7dvb6caw9DIYPAqDzAIaOAcxvDdawDO==.png)
+
+## 配置个人资料
+
+配置个人资料可不是仅仅填写头像下面那个简介而已，作为优秀的“码农”，我们还需有自己的个性化介绍
+
+- 点击repositories，查看自己的仓库
+- 点击NEW，创建新的仓库
+- 这个仓库的名称需要与你注册账户时的账单名称一致，比如我叫Frees-Ling，那么我创建的仓库名称也必须是Frees-Ling
+- 完成后点击创建，如下图
+  ![](https://vip.123pan.cn/1816365004/ymjew503t0n000d7w32ybvlnh66fekbnDIYPAqDzAIaOAcxvDdawDO==.png)
+> 注意：这里我已经配置好了我的个人简介，所以你看到的界面会有所不同
+
+将你的个人简介写在README.md文件中，点击Commit new file，完成创建,你就可以在你的主页看到你的个人介绍了！
+
+### __恭喜你！Github入门了__
+
+# GitHub基本用法&团队协作
+## 一、项目初始化与克隆
+- 本地初始化（可选）
+```bash
+git init
+```
+- 从远程仓库克隆
+```bash
+git clone https://github.com/FURS-community/furs-community.github.io.git
+```
+## 二、日常开发流程（本地操作）
+- 新建功能分支
+```bash
+git checkout -b feat/describe
+```
+- 查看状态
+```bash
+git status
+```
+- 添加文件到暂存区
+```bash
+git add filename
+git add .
+```
+注意：空文件夹并不会被git跟踪
+- 提交变更
+```bash
+ git commit -m "feat: describe"
+```
+- 推送到远程
+```bash
+git push origin feat/describe
+```
+## 三、协作开发，自动合并
+- 切换主分支并拉取到最新代码
+```bash
+git checkout main
+git pull origin main
+```
+- 合并到主分支
+```bash
+git merge feat/describe
+```
+### 注意：如果出现冲突
+- - 使用VC code解决（其他也可以）
+- - 冲突解决后
+```bash
+git add .
+git commit
+```
+- 推送合并后的主分支
+```bash
+git push origin main
+```
+## 四、清理工作
+- 删除合并后的功能分支
+```bash
+#本地
+git branch -d feat/describe
+#远程
+git push origin --delete feat/describe
+```
+## 五、补充
+- 查看分支
+```bash
+#本地
+git branch
+#远程
+git branch -r
+```
+- 删除文件跟踪（保留本地）
+```bash
+git rm --cached filename
+```
+---
+## 后续提交方法（上述初始工作已完成）
+```bash
+git add .
+git commit -m "deacribe"
+git push origin main
+```
+### 注意：每次提交之后在群里说明
+
 
 # 使用 SSH 连接 GitHub 仓库
 本文档总结了从本地配置到远程连接 GitHub 仓库的完整 SSH 方法。
+
+先导：GitHub中创建自己的SSH密钥
+- 点击右上角头像 → Settings → SSH and GPG keys → New SSH key
+- 填写 Title，粘贴公钥内容，点击 Add SSH key 保存
+- （公钥内容可通过 `cat ~/.ssh/id_rsa.pub` 查看）
 
 ### 1\. 检查是否已有 SSH Key
 ```bash
