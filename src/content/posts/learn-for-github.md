@@ -58,7 +58,7 @@ git clone https://github.com/FURS-community/furs-community.github.io.git
 ## 二、日常开发流程（本地操作）
 - 新建功能分支
 ```bash
-git checkout -b feat/describe
+git checkout -b main
 ```
 - 查看状态
 ```bash
@@ -76,7 +76,7 @@ git add .
 ```
 - 推送到远程
 ```bash
-git push origin feat/describe
+git push origin main
 ```
 ## 三、协作开发，自动合并
 - 切换主分支并拉取到最新代码
@@ -86,7 +86,7 @@ git pull origin main
 ```
 - 合并到主分支
 ```bash
-git merge feat/describe
+git merge main
 ```
 ### 注意：如果出现冲突
 - - 使用VC code解决（其他也可以）
