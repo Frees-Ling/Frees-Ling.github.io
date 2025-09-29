@@ -53,6 +53,7 @@ git init
 - 从远程仓库克隆
 ```bash
 git clone https://github.com/FURS-community/furs-community.github.io.git
+# 仅作示例！！！！！请勿克隆此仓库
 ```
 ## 二、日常开发流程（本地操作）
 - 新建功能分支
@@ -104,7 +105,7 @@ git push origin main
 #本地
 git branch -d feat/describe
 #远程
-git push origin --delete feat/describe
+git push origin --delete main
 ```
 ## 五、补充
 - 查看分支
