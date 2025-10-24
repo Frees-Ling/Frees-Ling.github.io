@@ -32,7 +32,7 @@ lang: ''
 - ANI（Artificial Narrow Intelligence，弱AI）：专注于特定任务（eg：图像识别）
 - AGI（Artificial General Intelligence，强AI）：具备广泛认知能力（eg：ChatGPT）
 - ASI（Artificial Super Intelligence，超AI）：超越人类
-## 构建一个简单的AI模型（以二分类为例）
+# 构建一个简单的AI模型（以二分类为例）
 ### 实现步骤（理论）
 - 明确任务
 - 收集或构造数据：CSV,Excel,数据库
@@ -48,7 +48,7 @@ lang: ''
 > 混淆矩阵：二分类或多分类预测结果的计数表（TP/FP/FN/TN）\
 > ROC曲线：ROC 曲线以假阳性率（FPR）为横轴、真正率（TPR）为纵轴\
 > 交叉验证：把训练集分成多个折（folds），轮流作为验证集以评估模型稳定性\
-> F1-score：精确率（Precision）和召回率（Recall）的调和平均：F1 = 2 * (P * R) / (P + R)\
+> F1-score：精确率（Precision）和召回率（Recall）的调和平均：F1 = 2 * (P * R) / (P + R)
 ## 用scikit-learn写一个简单的二分类AI模型
 ### 环境准备
 建议环境`Python 3.8+`
