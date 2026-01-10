@@ -36,7 +36,7 @@ app.get("/api/mounts", async (req, res) => {
     }
 });
 
-// 简单代理：发起挂载/卸载 （body: { action: "mount" | "unmount" }）
+// 简单代理：发起挂载/卸载 （body: { action: "mount" | "unmount" }）。
 app.post("/api/mounts/:id", async (req, res) => {
     try {
         const id = req.params.id;
