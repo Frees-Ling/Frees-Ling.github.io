@@ -4,7 +4,7 @@ published: 2026-01-09
 description: 'Unitree Go2'
 image: 'https://vip.123pan.cn/1816365004/yk6baz03t0n000d7w33hq3gy1ogyqw1gDIYPAqDzAIaOAcxvDdawDO==.webp'
 tags: ['Unitree Go2', '机器人', '开发演示']
-category: ''
+category: 'Develop Log'
 draft: false 
 lang: ''
 ---
