@@ -65,16 +65,22 @@ git clone git@github.com:unitreerobotics/unitree-ros2.git
 ```bash
 git clone git@github.com:unitreerobotics/unitree_sdk.git
 ```
-### 官方教程
-我没有构建编译成功估计是因为机器狗算力板上面的安全模块没有驱动成功，当然也可以自行参考官方进行编译
-首先克隆仓库至本地
-```bash
-git clone git@github.com:unitreerobotics/unitree-ros2.git
-mkdir build
-cd build
-cmake ..
-make
-```
+> ### 官方教程
+> 我没有构建编译成功估计是因为机器狗算力板上面的安全模块没有驱动成功，当然也可以自行参考官方进行编译
+> 首先克隆仓库至本地
+> ```bash
+> git clone git@github.com:unitreerobotics/unitree-ros2.git
+> mkdir build
+> cd build
+> cmake ..
+> make
+> ```
+> 然后直接进入`syslonedds_ws`文件进行编译
+> ```bash
+> cd cyclonedds_ws
+> source install/setup.bash
+> ros2 run go2_helloworld hello
+> ```
 ### 4.使用VS code SSH远程连接机器人
 ![](https://vip.123pan.cn/1816365004/ymjew503t0n000d7w32yjgmsq9l36plcDIYPAqDzAIaOAcxvDdawDO==.png)
 如上图，使用SSH远程连接机器人
