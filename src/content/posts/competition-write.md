@@ -274,3 +274,38 @@ Scanning dependencies of target cross_rectangle
 [100%] Built target detection
 [100%] Built target cross_rectangle
 ```
+# 第三方库安装
+## Eigen（线性代数库）
+```bash
+sudo apt update
+sudo apt install libeigen3-dev
+```
+安装完成后，头文件在 `/usr/include/eigen3`
+## OpenCV2
+```bash
+sudo apt install libopencv-dev=2.4.9+dfsg-1
+```
+> 注意：Ubuntu 20.04 默认可能没有旧版 OpenCV2，需要自己编译，或者干脆用 OpenCV4，API 兼容性大部分没问题
+
+### OpenCV2 编译版
+```bash
+sudo apt install build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+git clone https://github.com/opencv/opencv.git
+cd opencv
+git checkout 2.4
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+```
+安装完成后，头文件在 `/usr/include/opencv` 和 `/usr/include/opencv2`
+> 国内<br>
+> ```bash
+> git clone https://gitee.com/OpenCVChina/opencv.git
+> cd opencv
+> git checkout 2.4
+> mkdir build
+> cd build
+> cmake ..
+> make -j$(nproc)
+> sudo make install```
