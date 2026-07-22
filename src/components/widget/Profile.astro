@@ -25,12 +25,20 @@ const config = profileConfig;
         <div class="flex gap-2 justify-center mb-1">
             {config.links.length > 1 && config.links.map(item =>
                     <a rel="me" aria-label={item.name} href={item.url} target="_blank" class="btn-regular rounded-lg h-10 w-10 active:scale-90">
-                        <Icon name={item.icon} class="text-[1.5rem]"></Icon>
+                        {item.icon.startsWith("http") ? (
+                            <img src={item.icon} alt={item.name} class="h-6 w-6" />
+                        ) : (
+                            <Icon name={item.icon} class="text-[1.5rem]"></Icon>
+                        )}
                     </a>
             )}
             {config.links.length == 1 && <a rel="me" aria-label={config.links[0].name} href={config.links[0].url} target="_blank"
                                             class="btn-regular rounded-lg h-10 gap-2 px-3 font-bold active:scale-95">
-                <Icon name={config.links[0].icon} class="text-[1.5rem]"></Icon>
+                {config.links[0].icon.startsWith("http") ? (
+                    <img src={config.links[0].icon} alt={config.links[0].name} class="h-6 w-6" />
+                ) : (
+                    <Icon name={config.links[0].icon} class="text-[1.5rem]"></Icon>
+                )}
                 {config.links[0].name}
             </a>}
         </div>

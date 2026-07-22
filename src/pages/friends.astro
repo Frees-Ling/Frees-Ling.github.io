@@ -1,13 +1,13 @@
 ---
-import MainGridLayout from "../layouts/MainGridLayout.astro";
-import { getEntry } from 'astro:content'
+import { getEntry } from "astro:content";
 import Markdown from "@components/misc/Markdown.astro";
 import SiteCard from "@components/misc/SiteCard.astro";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
 
-const aboutPost = await getEntry('spec', 'friends');
-let Content;
+const aboutPost = await getEntry("spec", "friends");
+let Content: any;
 if (aboutPost?.rendered) {
-    Content = aboutPost.rendered;
+	Content = aboutPost.rendered;
 }
 ---
 <MainGridLayout title="Friends" description="此处存放着我的朋友们~">

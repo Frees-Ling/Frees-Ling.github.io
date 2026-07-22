@@ -1,10 +1,10 @@
 import {
-    type ExpressiveCodeConfig,
-    type LicenseConfig,
-    LinkPreset,
-    type NavBarConfig,
-    type ProfileConfig,
-    type SiteConfig,
+	type ExpressiveCodeConfig,
+	type LicenseConfig,
+	LinkPreset,
+	type NavBarConfig,
+	type ProfileConfig,
+	type SiteConfig,
 } from "./types/config";
 
 export const siteConfig: SiteConfig = {
@@ -16,15 +16,15 @@ export const siteConfig: SiteConfig = {
 		fixed: false, // Hide the theme color picker for visitors
 	},
 	banner: {
-        enable: true,
-        src: 'assets/images/banner.jpg',   // Relative to the /src directory. Relative to the /public directory if it starts with '/'
-        position: 'center', // Equivalent to object-position, defaults center
-        credit: {
-            enable: true,
-            text: 'live like it’s.',
-            url: 'https://www.pixiv.net/artworks/132358394'
-        },
-    },
+		enable: true,
+		src: "assets/images/banner.jpg", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+		position: "center", // Equivalent to object-position, defaults center
+		credit: {
+			enable: true,
+			text: "live like it’s.",
+			url: "https://www.pixiv.net/artworks/132358394",
+		},
+	},
 	toc: {
 		enable: true, // Display the table of contents on the right side of the post
 		depth: 2, // Maximum heading depth to show in the table, from 1 to 3
@@ -44,7 +44,7 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Home,
 		LinkPreset.Archive,
 		LinkPreset.About,
-        LinkPreset.Friends,
+		LinkPreset.Friends,
 		{
 			name: "GitHub",
 			url: "https://github.com/Frees-Ling", // Internal links should not include the base path, as it is automatically added
@@ -57,7 +57,7 @@ export const profileConfig: ProfileConfig = {
 	avatar: "assets/images/demo-avatar.png", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 	name: "Frees Ling",
 	bio: "很高兴认识你呀！在这里记录一些生活和学习的点滴，欢迎哦", // Short bio, markdown is supported
-    // description: "欢迎来到我的小天地！这里是我分享生活点滴和
+	// description: "欢迎来到我的小天地！这里是我分享生活点滴和
 	links: [
 		{
 			name: "Twitter",
@@ -71,21 +71,21 @@ export const profileConfig: ProfileConfig = {
 			icon: "fa6-brands:github",
 			url: "https://github.com/Frees-Ling",
 		},
-        {
-            name: "Telegram",
-            icon: "fa6-brands:telegram",
-            url: "https://t.me/Frees_Ling_bot",
-        },
-        {
-            name:"Bilibili",
-            icon: "fa6-brands:bilibili",
-            url: "https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0",
-        },
-        {
-            name:"开往-友链接力",
-            icon: "https://www.travellings.cn/assets/travelling-dark.png",
-            url: "https://www.travellings.cn/go.html"
-        }
+		{
+			name: "Telegram",
+			icon: "fa6-brands:telegram",
+			url: "https://t.me/Frees_Ling_bot",
+		},
+		{
+			name: "Bilibili",
+			icon: "fa6-brands:bilibili",
+			url: "https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0",
+		},
+		{
+			name: "开往-友链接力",
+			icon: "https://www.travellings.cn/assets/travelling-dark.png",
+			url: "https://www.travellings.cn/go.html",
+		},
 	],
 };
 
