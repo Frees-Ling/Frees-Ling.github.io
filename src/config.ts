@@ -67,11 +67,6 @@ export const profileConfig: ProfileConfig = {
 			url: "https://x.com/LingFrees23428",
 		},
 		{
-			name: "Steam",
-			icon: "fa6-brands:steam",
-			url: "https://steamcommunity.com/profiles/76561199468186322/",
-		},
-		{
 			name: "GitHub",
 			icon: "fa6-brands:github",
 			url: "https://github.com/Frees-Ling",
@@ -88,7 +83,7 @@ export const profileConfig: ProfileConfig = {
         },
         {
             name:"开往-友链接力",
-            icon: "https://www.travellings.cn/assets/b.png",
+            icon: "https://www.travellings.cn/assets/travelling-dark.png",
             url: "https://www.travellings.cn/go.html"
         }
 	],
