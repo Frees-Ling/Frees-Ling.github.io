@@ -4,7 +4,7 @@ published: 2026-04-06
 description: '如果注定要分别，那么，相遇的意义又是什么'
 image: ''
 tags: [Meeting, Meaning]
-category: ''
+category: 'Note'
 draft: false 
 lang: ''
 ---

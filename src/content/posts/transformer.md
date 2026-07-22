@@ -501,10 +501,10 @@ $$
 \begin{array}{c|c|c}
 \text{行列式的值} & \text{几何效果} & \text{含义} \\
 \hline
-\det > 1 & \square \rightarrow \text{▭▭▭} & \text{面积放大变换，如 }\det=3\text{ 表示空间被撑大3倍} \\
-0 < \det < 1 & \square \rightarrow \text{▖} & \text{面积缩小变换，如 }\det=0.5\text{ 表示空间被压一半} \\
-\det < 0 & \square \rightarrow \text{▭（翻面）} & \text{面积大小不变但方向翻转，如 }\det=-1\text{ 表示翻到纸背面} \\
-\det = 0 & \square \rightarrow \text{────} & \text{面积消失，二维压成线/点，信息回不来} \\
+\det > 1 & \square \to \blacksquare & \text{面积放大变换，如 }\det=3\text{ 表示空间被撑大3倍} \\
+0 < \det < 1 & \square \to \ \cdot & \text{面积缩小变换，如 }\det=0.5\text{ 表示空间被压一半} \\
+\det < 0 & \square \to \blacksquare\text{(翻面)} & \text{面积大小不变但方向翻转，如 }\det=-1\text{ 表示翻到纸背面} \\
+\det = 0 & \square \to \text{——} & \text{面积消失，二维压成线/点，信息回不来} \\
 \end{array}
 $$
 

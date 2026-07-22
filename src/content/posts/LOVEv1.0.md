@@ -4,7 +4,7 @@ published: 2026-03-25
 description: ''
 image: ''
 tags: [LOVE]
-category: ''
+category: 'Note'
 draft: false 
 lang: ''
 ---

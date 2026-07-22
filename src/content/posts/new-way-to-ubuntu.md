@@ -4,7 +4,7 @@ published: 2026-03-12
 description: '本文在VScode上使用Remote SSH插件在Ubuntu上进行代码编写，适用于需要远程开发的用户。'
 image: ''
 tags: [Ubuntu，VScode，Remote SSH]
-category: ''
+category: 'Note'
 draft: false 
 lang: ''
 ---
