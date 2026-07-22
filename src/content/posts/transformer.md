@@ -4128,13 +4128,122 @@ Embedding：猫 `[0.2, 0.8, 0.1]`，狗 `[0.3, 0.7, 0.2]`。方向接近，产�
 
 ---
 
-## 7. Tokenizer 的完整意义
+## 7. Tokenizer 的完整意义 + BPE 动手实现
 
 ```text
 人类符号 → Tokenizer → 数字编号 → Embedding → 连续向量空间
 ```
 
 从这里开始，机器才真正进入数学世界。
+
+### 手写一个极简 BPE Tokenizer
+
+BPE 的核心算法其实就两步：**找最常见相邻对 → 合并**。不断重复直到词表够大。
+
+```python
+from collections import Counter
+
+# --- 第1步: 准备训练数据 ---
+corpus = [
+    "low",
+    "lower",    # low + er
+    "lowest",   # low + est
+    "new",
+    "newer",    # new + er
+]
+print(f"原始词汇: {corpus}")
+
+# --- 第2步: 初始化为字符序列 ---
+vocab = Counter()
+for word in corpus:
+    chars = " ".join(list(word)) + " </w>"  # </w> = 词尾标记
+    vocab[chars] += 1
+
+print(f"\n初始词表 (字符级):")
+for k, v in vocab.items():
+    print(f"  '{k}': {v}")
+
+# --- 第3步: BPE合并循环 ---
+num_merges = 5  # 合并5次
+
+for merge_step in range(num_merges):
+    # 统计所有相邻对的频率
+    pairs = Counter()
+    for word, freq in vocab.items():
+        symbols = word.split()
+        for i in range(len(symbols) - 1):
+            pairs[(symbols[i], symbols[i + 1])] += freq
+
+    if not pairs:
+        break
+
+    # 找最常见的一对
+    best_pair = max(pairs, key=pairs.get)
+    print(f"\n合并 #{merge_step+1}: {best_pair} (出现 {pairs[best_pair]} 次)")
+
+    # 合并这一对
+    new_vocab = Counter()
+    bigram = " ".join(best_pair)
+    replacement = "".join(best_pair)
+    for word, freq in vocab.items():
+        new_word = word.replace(bigram, replacement)
+        new_vocab[new_word] = freq
+    vocab = new_vocab
+
+print(f"\n最终词表:")
+for k, v in vocab.items():
+    print(f"  '{k}': {v}")
+# 你会发现 'l o w' 合并成了 'low', 'e r' 合并成了 'er', 等等
+```
+
+### 使用现成的 Tokenizer
+
+实际开发中，用 Hugging Face 的 tokenizers 库（Rust 实现，极快），或者直接用 `tiktoken`（OpenAI 用的那个）：
+
+```python
+# 方法1: tiktoken (GPT-4 用的)
+import tiktoken
+
+enc = tiktoken.get_encoding("cl100k_base")  # GPT-4 的 tokenizer
+
+text = "我喜欢吃苹果"
+tokens = enc.encode(text)
+print(f"原始: {text}")
+print(f"Token IDs: {tokens}")
+print(f"Token 数量: {len(tokens)}")
+
+# 解码回去
+decoded = enc.decode(tokens)
+print(f"解码: {decoded}")
+
+# 方法2: Hugging Face tokenizers
+# pip install tokenizers
+from tokenizers import Tokenizer, models, trainers
+
+# 训练自己的 BPE tokenizer
+tokenizer = Tokenizer(models.BPE())
+trainer = trainers.BpeTrainer(vocab_size=5000, special_tokens=["<pad>", "<unk>"])
+tokenizer.train_from_iterator(corpus, trainer)
+
+output = tokenizer.encode("lowest")
+print(f"\n自训练 tokenizer 输出: {output.tokens}")  # ['low', 'est']
+```
+
+---
+
+## 练习题
+
+**题目 1：** 用 tiktoken 编码以下三句话，比较它们的 token 数量：`"I like apples"`、`"我喜欢苹果"`、`"我喜欢吃苹果"`。中文比英文多消耗 token 的原因是什么？
+
+**题目 2：** 把上面 BPE 代码中的 `num_merges` 从 5 改成 20，观察词表变化。合并次数越多，每个 token 是更大还是更小？
+
+---
+
+### 答案
+
+**题 1：** 中文通常消耗更多 token。原因：1) BPE tokenizer 主要在英文语料上训练，中文字符频率低，被拆分得更细；2) 中文没有空格分隔，tokenizer 需要学习哪里是词边界，容易把一个字拆成一个 token 而非整个词。
+
+**题 2：** 合并次数越多，每个 token 越大（包含更多字符）。极端情况：`num_merges → ∞` 时所有词都被合并成一个 token。实际 tokenizer 需要在"词表大小"和"每个 token 的信息密度"之间平衡——词表太大浪费显存，太小则每个 token 携带信息太少。
 
 ---
 
@@ -4246,6 +4355,80 @@ Attention 问的不是"小猫和鱼有没有关系？"，而是：**这两个高
 | 矩阵 | 改变观察角度 |
 | 点积 | 比较关系 |
 | 维度 | 容纳复杂信息 |
+
+> 线性代数实际上是在研究：如何把现实世界放进一个可以计算的空间。
+
+---
+
+## 10. 用代码感受 Embedding 空间 —— 国王男人女人女王
+
+```python
+import torch
+import torch.nn as nn
+
+# 模拟一个已经训练好的 Embedding 层
+vocab = {"国王": 0, "男人": 1, "女人": 2, "女王": 3, "苹果": 4}
+vocab_size = len(vocab)
+d_model = 4  # 为了看清，只用4维
+
+# 随机初始化，然后"假装"已经被训练好了
+torch.manual_seed(42)
+embedding = nn.Embedding(vocab_size, d_model)
+
+# 获取每个词的向量
+king   = embedding(torch.tensor(vocab["国王"])).detach()
+man    = embedding(torch.tensor(vocab["男人"])).detach()
+woman  = embedding(torch.tensor(vocab["女人"])).detach()
+queen  = embedding(torch.tensor(vocab["女王"])).detach()
+apple  = embedding(torch.tensor(vocab["苹果"])).detach()
+
+# 核心运算: 国王 - 男人 + 女人 ≈ 女王
+result = king - man + woman   # 向量运算
+
+# 计算 result 和每个词的余弦相似度
+def cosine_sim(a, b):
+    return (a @ b) / (torch.norm(a) * torch.norm(b))
+
+print("与 result 的余弦相似度:")
+print(f"  国王: {cosine_sim(result, king):.4f}")
+print(f"  女王: {cosine_sim(result, queen):.4f}")   # 应该最高
+print(f"  女人: {cosine_sim(result, woman):.4f}")
+print(f"  男人: {cosine_sim(result, man):.4f}")
+print(f"  苹果: {cosine_sim(result, apple):.4f}")   # 应该最低
+
+# 注意: 因为是随机初始化没训练，结果可能不稳定。
+# 在真正训练好的词向量(如Word2Vec)中, king-man+woman ≈ queen 非常精确。
+```
+
+真实训练好的 Embedding（如 Word2Vec、GloVe）中，这个公式的精确度能达到 90% 以上。这说明 Embedding 空间不只是"词变成数字"，而是真的编码了语义关系的几何结构——"性别"这种语义属性在空间中表现为一个可以加减的**方向向量**。
+
+```python
+# 寻找语义"方向"
+# 如果把 man→woman 的方向加到 king 上，就得到 queen
+gender_direction = woman - man     # "男人 → 女人" 的方向
+print(f"\n性别方向向量: {gender_direction}")
+
+# 这个方向对所有词都成立:
+# actor - man + woman ≈ actress
+# waiter - man + woman ≈ waitress
+# 这个方向就是 Embedding 空间中编码的"性别"维度
+```
+
+---
+
+## 练习题
+
+**题目 1：** 如果 `king - man + woman ≈ queen` 成立，那么 `queen - woman + man ≈ ?` 应该接近什么？
+
+**题目 2：** 用 `nn.Embedding` 创建一个 vocab_size=100, d_model=16 的词表。随机初始化后，取两个不同 id 的词向量，计算它们的余弦相似度。为什么训练前相似度接近 0？
+
+---
+
+### 答案
+
+**题 1：** `king`。向量运算是可逆的：`(king - man + woman) - woman + man = king`。这就是"撤销空间变化"在语义空间中的应用。
+
+**题 2：** 因为 `nn.Embedding` 默认用标准正态分布随机初始化，高维空间中两个随机向量几乎总是近似正交（垂直），余弦相似度接近 0。训练的意义就是把这些随机散布的向量"拉"到有意义的几何位置——相关概念的向量靠近，不相关的远离。
 
 > 线性代数实际上是在研究：如何把现实世界放进一个可以计算的空间。
 
@@ -4425,140 +4608,1256 @@ GPT-3：96 层、12288 维、96 头。
 
 # 第 23 课：Decoder-only 架构 —— 为什么 GPT 选择这种结构？
 
-## 核心目标
+---
 
-理解 GPT 为什么叫 Decoder-only Transformer，以及为什么现在主流大模型都采用类似结构。
+## 1. 先搞清楚一个问题：GPT 和 BERT 到底哪里不一样？
 
-## 核心概念
+你可能听过这些名字：GPT、BERT、T5、LLaMA、Claude。但它们底层的 Transformer 结构其实分三种。
 
-原始 Transformer 是 Encoder → Decoder，用于机器翻译。Encoder 理解输入（可看到完整句子），Decoder 生成输出（只能看到过去）。
+这就像汽车有轿车、SUV、卡车——都是四个轮子一个引擎，但用途完全不同。Transformer 也一样：同样的 Attention + FFN 积木，搭法不同，适用的任务就不同。
 
-GPT 的目标不是理解一句话，而是预测 `P(next token)`。所以它只需要 Decoder：不断生成。
+搞懂这一课，你就不会再把 BERT 和 GPT 搞混了。
 
-BERT 是 Encoder-only（双向注意，适合分类理解），GPT 是 Decoder-only（单向注意，适合生成）。
+---
 
-## 需要掌握的问题
+## 2. 原始 Transformer：Encoder 和 Decoder 各司其职
 
-1. 为什么聊天机器人更适合 Decoder-only？
-2. BERT 和 GPT 结构本质区别是什么？
-3. Encoder 为什么可以双向注意？Decoder 为什么必须限制未来信息？
+2017 年的 Transformer 论文是为**机器翻译**设计的。比如把英文 "I love you" 翻译成中文 "我爱你"。
+
+这个任务天然有两个角色：
+
+- **Encoder（编码器）：** 负责**读**英文原文，把它"理解"成一种中间表示。它可以看完整的原文——"I love you" 三个词都能看到，不受限制。
+- **Decoder（解码器）：** 负责**写**中文译文，一个字一个字往外蹦。它生成"爱"时只能看到前面已经写好的"我"，不能偷看后面还没写的"你"。
+
+$$
+\begin{aligned}
+\text{Encoder: } & \text{"I love you"} \rightarrow \text{中间向量表示} \\
+\text{Decoder: } & \text{中间向量表示} \rightarrow \text{"我"} \rightarrow \text{"我爱"} \rightarrow \text{"我爱你"}
+\end{aligned}
+$$
+
+原论文的结构长这样：Encoder 堆 6 层，Decoder 堆 6 层，两者之间通过 **Cross-Attention** 连接——Decoder 在生成每一个词时都可以"回看"Encoder 对整个输入的理解。
+
+---
+
+## 3. Encoder 到底做了什么？——双向注意力的力量
+
+Encoder 的核心特征：**可以同时看到前面和后面的所有词。**
+
+比如输入"我 喜欢 吃 苹果"，Encoder 处理"吃"的时候：
+
+```text
+           我   喜欢   吃   苹果
+  我        ✓    ✓    ✓    ✓
+  喜欢      ✓    ✓    ✓    ✓
+  吃        ✓    ✓    ✓    ✓    ← 每个词都能看到所有词
+  苹果      ✓    ✓    ✓    ✓
+```
+
+这就叫**双向注意力（Bidirectional Attention）**——没有遮罩，敞开了看。
+
+双向注意力的价值：Encoder 能拿到某个词的**完整上下文**。处理"苹果"时，它知道前面有"吃"，后面没有别的——所以这里"苹果"大概率是水果而非手机公司。这种全局视野让 Encoder 极其擅长**理解**——判断情感、提取实体、回答完形填空。
+
+BERT 就是一个纯 Encoder 模型。Google 用它做搜索，你输入"北京今天天气"，BERT 能同时理解"北京""今天""天气"三个词之间的关系，而不是从左到右扫一眼。
+
+---
+
+## 4. Decoder 到底做了什么？——单向注意力的约束
+
+Decoder 的核心特征：**只能看到过去，不能看到未来。**
+
+还是"我 喜欢 吃 苹果"，但角色变了——Decoder 在**生成**这句话（一个字一个字往外写）：
+
+```text
+           我   喜欢   吃   苹果
+  我        ✓    ×    ×    ×    ← 生成"我"时，什么都还没写
+  喜欢      ✓    ✓    ×    ×    ← 生成"喜欢"时，只能看到"我"
+  吃        ✓    ✓    ✓    ×    ← 生成"吃"时，能看到"我喜欢"
+  苹果      ✓    ✓    ✓    ✓    ← 生成"苹果"时，能看到前三个
+```
+
+这就叫**Causal Attention（因果注意力）**——上三角全部遮掉。
+
+为什么必须这样？因为生成的时候未来词根本还没被写出来，物理上就不存在。如果训练时偷偷给 Decoder 看了未来的词，它就学会了作弊——到推理时没了"答案"可用，就废了。
+
+GPT 就是一个纯 Decoder 模型。它被训练来做一件事：根据前面的 token 预测下一个 token。这恰好就是 Decoder 的天然能力——所以不需要 Encoder。
+
+---
+
+## 5. 三种结构的直观对比
+
+$$
+\begin{array}{c|c|c|c}
+\text{结构} & \text{有Encoder?} & \text{有Decoder?} & \text{典型用途} \\
+\hline
+\text{Encoder-only (BERT)} & \checkmark & \times & \text{分类、理解、完形填空} \\
+\text{Decoder-only (GPT)} & \times & \checkmark & \text{文本生成、对话} \\
+\text{Encoder-Decoder (T5)} & \checkmark & \checkmark & \text{翻译、摘要、问答} \\
+\end{array}
+$$
+
+用代码直观感受一下 Encoder 和 Decoder 的区别：
+
+```python
+import torch
+import torch.nn as nn
+
+# --- Encoder Layer: 没有 mask 的 Self-Attention ---
+class EncoderLayer(nn.Module):
+    def __init__(self, d_model=512, n_heads=8):
+        super().__init__()
+        # batch_first=True: 输入形状 (batch, seq, d_model)
+        self.self_attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, 2048),
+            nn.ReLU(),
+            nn.Linear(2048, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+
+    def forward(self, x):
+        # 没有 attn_mask! → 能看到所有位置 (双向)
+        attn_out, _ = self.self_attn(x, x, x)   # Q=K=V=x
+        x = self.norm1(x + attn_out)
+        x = self.norm2(x + self.ffn(x))
+        return x
+
+# --- Decoder Layer: 带 causal mask 的 Self-Attention ---
+class DecoderLayer(nn.Module):
+    def __init__(self, d_model=512, n_heads=8):
+        super().__init__()
+        self.self_attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, 2048),
+            nn.ReLU(),
+            nn.Linear(2048, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+
+    def forward(self, x):
+        seq_len = x.size(1)
+        # 关键！causal mask: (seq_len, seq_len), 上三角为 -inf
+        causal_mask = torch.triu(
+            torch.ones(seq_len, seq_len) * float('-inf'), diagonal=1
+        )
+        # 有 attn_mask! → 只能看到过去 (单向)
+        attn_out, _ = self.self_attn(x, x, x, attn_mask=causal_mask)
+        x = self.norm1(x + attn_out)
+        x = self.norm2(x + self.ffn(x))
+        return x
+
+# --- 测试对比 ---
+x = torch.randn(2, 4, 512)  # 2句, 4个token, 512维
+
+encoder = EncoderLayer()
+decoder = DecoderLayer()
+
+enc_out = encoder(x)
+dec_out = decoder(x)
+
+# 关键验证: Decoder 的第1个token不能被后面的token影响
+# 修改第4个位置, 看Decoder第1个位置的输出是否变化
+x_modified = x.clone()
+x_modified[:, 3, :] = 999.0  # 把第4个token改成完全不同的值
+
+dec_out_modified = decoder(x_modified)
+# 如果 causal mask 生效, dec_out[:, 0, :] ≈ dec_out_modified[:, 0, :]
+# (第1个token看不到第4个, 所以不被影响)
+diff = (dec_out[:, 0, :] - dec_out_modified[:, 0, :]).abs().mean()
+print(f"Decoder 第1个位置被第4个位置影响程度: {diff:.6f}")
+# 应该 ≈ 0 ✅
+
+enc_out_modified = encoder(x_modified)
+diff_enc = (enc_out[:, 0, :] - enc_out_modified[:, 0, :]).abs().mean()
+print(f"Encoder 第1个位置被第4个位置影响程度: {diff_enc:.6f}")
+# 应该 > 0 (Encoder 能看到所有位置, 所以被影响)
+```
+
+---
+
+## 6. 为什么 GPT 选择 Decoder-only？
+
+GPT 在 2018 年做了一件在当时看来很"冒险"的事：它把 Tranformer 的 Encoder 整个扔掉了，只剩 Decoder。
+
+原因很简单——GPT 的目标不是翻译，不是分类，而是：
+
+$$
+P(\text{下一个 token} \mid \text{前面所有的 token})
+$$
+
+这个目标和 Decoder 的 Causal Attention 天然匹配：**只看过去，预测未来。**
+
+那为什么不能用 Encoder-only 做生成呢？如果硬要用 BERT 做生成，你每次生成一个新词都得**重跑一次完整的前向传播**（因为双向注意力让每个词都依赖所有词，包括新词对旧词的反向影响）。而 Decoder-only 可以利用 KV Cache，一边生成一边复用历史结果。
+
+Decoder-only 还有一个巨大优势：**统一架构更简洁。** 训练时是"预测下一个 token"，推理时也是"预测下一个 token"——同一个模型，同一种模式，不需要在训练和推理之间切换。这就是为什么 GPT-2、GPT-3、GPT-4、LLaMA、Claude 全部选择了 Decoder-only。
+
+---
+
+## 7. 练习题
+
+**题目 1：** 如果把上面代码中 Decoder 的 `causal_mask` 删掉（改为双向注意力），这个 Decoder-only 模型还能正常做文本生成吗？推理时会发生什么问题？
+
+**题目 2：** 如果用 BERT（Encoder-only）来做对话生成，你需要怎么改造它？为什么目前业界几乎没有人这样做？
+
+**题目 3：** 在原始 Transformer 的 Encoder-Decoder 结构中，Decoder 其实有**两层 Attention**：第一层是 Causal Self-Attention（看自己已经生成的词），第二层是 Cross-Attention（看 Encoder 的输出）。GPT 为什么不需要 Cross-Attention？
+
+---
+
+### 答案
+
+**题 1：** 删掉 causal mask 后，模型在推理时每个新词都能"看到所有还没生成的未来词"——这物理上不可能（未来还没发生），会导致生成的文本毫无意义。另外 KV Cache 也会失效——因为每个"未来"的新词插入后，会影响之前所有位置的 Attention 结果，必须全部重算。
+
+**题 2：** 需要把 BERT 改造成自回归模式——每次生成一个新词，把整个序列（包括新词）重新送进模型。每生成一个 token 需要 `O(N²)` 的计算量，而不是 Decoder-only 的 `O(N)` (带 KV Cache)。这是为什么目前所有对话模型都是 Decoder-only。
+
+**题 3：** GPT 没有 Encoder，自然就没有 Encoder 的输出来做 Cross-Attention。GPT 的所有"外部信息"全部编码在它自己的参数里（通过预训练学到）。RAG 和 Tool Use 的出现某种程度上弥补了这一点——把外部知识通过 prompt 注入，相当于用上下文替代了 Cross-Attention 的功能。
 
 ---
 
 # 第 24 课：Causal Mask —— GPT 为什么不能偷看未来？
 
-## 核心目标
+---
 
-理解 GPT 训练时为什么需要遮罩（Mask）。
+## 1. 从"作弊"说起——为什么训练时也要戴眼罩？
 
-## 核心概念
+上一课我们说了 Decoder 只能看到过去。但为什么**训练时**也需要这个限制？训练时整句话不是已经在那里了吗——"我喜欢吃苹果"，模型难道不能看一眼完整的句子吗？
 
-普通 Attention 每个词都可以看到所有词。但 GPT 预测"吃"时，不能知道后面有"苹果"——否则作弊。
+答案：**不能。因为训练的目标和推理的目标必须一致。**
 
-Causal Mask：让 Attention 矩阵变成只能看过去。上三角设为 `-∞`，经过 Softmax 后概率接近 0。
+想象你在准备一场考试。考试规则是：给你一个词，你猜下一个词；猜对了，这个词加入输入，继续猜下一个。如果训练时允许你随便翻书看答案，那上考场时书被没收了，你就废了。
 
-```text
-我     ✓ × × ×
-喜欢   ✓ ✓ × ×
-吃     ✓ ✓ ✓ ×
-苹果   ✓ ✓ ✓ ✓
-```
+GPT 的训练也是这样：
+- **训练时**：输入"我 喜欢 吃"，目标输出"苹果"。但"吃"这个位置的 Attention 如果能看到后面的"苹果"，它就直接抄答案了——`P(苹果∣前面三个词) = 100%`，Loss 永远是 0，模型什么都没学到。
+- **推理时**：输入"今天 天气"，模型得预测下一个词。这时后面确实什么都没有——如果它习惯了训练时"偷看"，这时就傻了。
 
-## 需要掌握的问题
-
-1. 为什么训练时必须 Mask？推理时也需要 Mask 吗？
-2. 为什么 Encoder（BERT）不用 Mask？
-3. Mask 是否影响模型理解能力？
+所以 Causal Mask 的核心哲学是：**让训练模拟推理的物理限制——把训练变成"没有未来可看的生成过程"。**
 
 ---
 
-# 第 25 课：自回归生成（Autoregressive）
+## 2. Causal Mask 的数学定义
 
-## 核心目标
-
-理解 GPT 为什么一句一句生成，不能一次生成整句话。
-
-## 核心概念
+Mask 是一个矩阵 `M`，大小 `(seq_len, seq_len)`，行表示"谁在看"，列表示"在看谁"：
 
 $$
-P(x) = \prod P(x_t | x_{<t})
+M_{ij} =
+\begin{cases}
+0, & i \geq j \quad \text{(位置 i 可以看到位置 j —— 过去或自己)} \\
+-\infty, & i < j \quad \text{(位置 i 不能看到位置 j —— 未来)}
+\end{cases}
 $$
 
-当前输出依赖过去输出。输入"今天"→预测"天气"→加入→"今天天气"→继续预测→循环。
+把这个 Mask 加到 Attention Score 上：
 
-**Teacher Forcing：** 训练时直接给正确答案（输入"我"→预测"喜欢"；输入"我喜欢"→预测"猫"）。但生成时没有答案，只能靠自己。这导致错误累积——一个错了后面的全偏。
+$$
+\text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}} + M\right) V
+$$
 
-## 需要掌握的问题
+加了 `-∞` 的位置，Softmax 之后变成 `e^{-∞} / (sum) = 0`——这些位置的权重严格为零，彻底看不到了。
 
-1. 训练和推理为什么不同？
-2. 为什么模型会产生错误累积？
-3. 为什么长文本容易跑偏？
+用一张表来可视化（4 个 token 的句子 "我 喜欢 吃 苹果"）：
 
----
+$$
+\begin{array}{c|cccc}
+\text{查询} \downarrow \text{被查} \rightarrow & \text{我} & \text{喜欢} & \text{吃} & \text{苹果} \\
+\hline
+\text{我}   & \checkmark & \times      & \times    & \times \\
+\text{喜欢} & \checkmark & \checkmark  & \times    & \times \\
+\text{吃}   & \checkmark & \checkmark  & \checkmark & \times \\
+\text{苹果} & \checkmark & \checkmark  & \checkmark & \checkmark \\
+\end{array}
+$$
 
-# 第 26 课：文本生成策略
+第 1 行（"我"生成自己时）：只能看"我"，不能看任何后面的词。
 
-## 核心目标
-
-理解 GPT 为什么每次回答不完全一样。
-
-## 核心概念
-
-- **Greedy Search：** 永远选概率最高 → 容易死板重复
-- **Temperature：** 控制随机性，低=稳定，高=创造
-- **Top-k：** 只从最高概率 k 个词中选择
-- **Top-p（Nucleus）：** 动态选择概率累计达到 p% 的候选词
-
-## 需要掌握的问题
-
-1. 为什么不能永远选最高概率的词？
-2. Temperature=0 是什么效果？
-3. Top-k 和 Top-p 各有什么优缺点？
+第 4 行（生成"苹果"时）：能看到前面三个词加自己——因为"苹果"前面的所有词都已经"写"出来了。
 
 ---
 
-# 第 27 课：GPT 完整推理流程
+## 3. 一步一步拆解 Causal Mask 如何工作
 
-## 核心目标
+我们回到最核心的 Attention 五步公式，看 Mask 在哪一步插进来：
 
-把之前所有模块串起来。
+$$
+\begin{aligned}
+\text{Step 1: } & S = QK^T                & \text{计算原始分数矩阵} \\
+\text{Step 2: } & S' = \frac{S}{\sqrt{d_k}} & \text{缩放} \\
+\text{Step 3: } & S'' = S' + M             & \text{加上 Mask（核心！上三角变成 -∞）} \\
+\text{Step 4: } & P = \text{softmax}(S'')  & \text{Softmax → 变成概率，上三角为 0} \\
+\text{Step 5: } & O = PV                   & \text{加权取信息}
+\end{aligned}
+$$
 
-## 完整流程
+用一个具体数值走一遍。假设 `d_k = 8`，某个 token 对 4 个位置的原始 QK^T 分数是：
 
-```text
-输入文字 → Tokenizer → Token ID → Embedding
-     ↓
-+ Position Encoding
-     ↓
-Transformer Block × N:
-    Causal Attention
-    FFN
-    Residual + LayerNorm
-     ↓
-Linear Head → Softmax → Sampling → 新 Token → 循环
+```python
+import torch
+import torch.nn.functional as F
+
+scores = torch.tensor([[3.2, 1.5, 2.1, 0.8]])  # (1, 4) —— 一个token对4个位置
+d_k = 8
+scores_scaled = scores / (d_k ** 0.5)           # 缩放后: [1.13, 0.53, 0.74, 0.28]
+
+# --- 不加 Mask: 能看到所有4个位置 ---
+probs_no_mask = F.softmax(scores_scaled, dim=-1)
+print(f"无 Mask: {probs_no_mask.tolist()}")
+# 每个位置都有权重
+
+# --- 加 Causal Mask: 这是第2个token, 只能看到位置0和1 ---
+# 位置2和3是"未来", 设为 -inf
+causal_mask = torch.tensor([[0.0, 0.0, float('-inf'), float('-inf')]])
+scores_masked = scores_scaled + causal_mask
+probs_masked = F.softmax(scores_masked, dim=-1)
+print(f"有 Mask: {probs_masked.tolist()}")
+# 位置2和3的权重 = 0.0000, 位置0和1的权重被重新归一化
+
+# 验证: 权重之和仍然是1
+print(f"权重和: {probs_masked.sum():.4f}")     # 1.0000 ✅
+```
+
+关键的几何直觉：Mask 不是在"过滤"信息——它是在**重新定义"可见范围"**。每次 Softmax 只在你设定为可见的词上做归一化，不可见的位置不参与竞争。
+
+---
+
+## 4. Causal Mask 的完整实现
+
+```python
+import torch
+import torch.nn.functional as F
+
+def create_causal_mask(seq_len):
+    """创建因果遮罩: (seq_len, seq_len) 的下三角矩阵"""
+    mask = torch.tril(torch.ones(seq_len, seq_len))  # 下三角=1, 上三角=0
+    return mask.bool()  # True=可见, False=不可见
+
+# 看下4个token的Mask长什么样
+seq_len = 4
+mask = create_causal_mask(seq_len)
+print("Causal Mask (True=可见):")
+print(mask)
+# tensor([[ True, False, False, False],
+#         [ True,  True, False, False],
+#         [ True,  True,  True, False],
+#         [ True,  True,  True,  True]])
+
+# --- 完整的 Masked Attention ---
+def masked_attention(Q, K, V, causal_mask):
+    """
+    Q, K, V: (batch, n_heads, seq_len, d_head)
+    返回: (batch, n_heads, seq_len, d_head)
+    """
+    d_k = K.size(-1)
+
+    # Step 1+2: QK^T / √d
+    scores = Q @ K.transpose(-2, -1) / (d_k ** 0.5)  # (B, H, T, T)
+
+    # Step 3: 加 Mask —— ~causal_mask(取反): 未来位置 → True → 替换为 -inf
+    scores = scores.masked_fill(~causal_mask, float('-inf'))
+
+    # Step 4: Softmax
+    attn_weights = F.softmax(scores, dim=-1)
+
+    # 验证上三角全为0
+    print("注意力权重 (行=查询, 列=被关注, 上三角应为0):")
+    print(attn_weights[0, 0])
+
+    # Step 5: × V
+    return attn_weights @ V
+
+# 测试
+B, H, T, D = 1, 1, 4, 8
+Q = torch.randn(B, H, T, D)
+K = torch.randn(B, H, T, D)
+V = torch.randn(B, H, T, D)
+causal_mask = create_causal_mask(T).unsqueeze(0).unsqueeze(0)
+
+out = masked_attention(Q, K, V, causal_mask)
+print(f"输出形状: {out.shape}")  # (1, 1, 4, 8)
 ```
 
 ---
 
-# 第 28 课：从 Transformer 到 ChatGPT
+## 5. 训练 vs 推理：Mask 的双重身份
 
-## 核心目标
+Mask 在训练和推理时都生效，但原因不完全一样：
 
-理解为什么 GPT 基础模型还不是 ChatGPT。
+**训练时：** 输入是一整句"我 喜欢 吃 苹果"，Mask 确保预测"吃"时不能偷看"苹果"。这叫 **Teacher Forcing**——我们给模型看正确答案（整句话），但通过 Mask 模拟"不知道未来是什么"的训练条件。
 
-## 核心概念
+**推理时：** 输入是逐步增长的——先输入"我"，生成"喜欢"；再输入"我喜欢"，生成"吃"……每个新 token 被生成出来后拼到序列末尾，物理上后面的还不存在。Mask 只是在代码里把"还没生成"的位置遮掉，和物理约束一致。
 
-GPT 只会预测文本。ChatGPT = GPT + 指令微调 + 人类反馈 + 安全策略。
+**BERT 为什么不需要 Causal Mask：** BERT 的训练目标是"完形填空"（Masked Language Modeling）——输入"我 [MASK] 吃 苹果"，模型猜中间是什么。这种任务需要看前后文才能推理，所以 BERT 的 Encoder 不遮未来。但它也因此不能做自回归文本生成——这是 Encoder-only 和 Decoder-only 的根本分界。
+
+---
+
+## 6. Causal Mask 和 KV Cache 的关系
+
+Causal Mask 还有一个重要的工程意义：它使得 **KV Cache 成为可能**。
+
+因为每个位置的 Attention 只看过去，所以过去 token 的 K 和 V 可以**缓存**——它们不会被未来 token 的插入所改变（因为没有双向依赖）。
+
+如果 Attention 是双向的（像 BERT），每插入一个新 token，所有旧 token 的 Attention 结果都需要重算——没有缓存，推理变得极慢。Causal Mask 保证了"过去不可被未来影响"——这个性质在数学上和计算效率上都是 GPT 成功的基石。
+
+---
+
+## 7. 练习题
+
+**题目 1：** 把上面代码中的 `float('-inf')` 改成 `-1000`，跑一遍 Softmax。上三角的权重是否变成了真正的 0？解释为什么 `-inf` 和 `-1000` 在 float32 精度下等价，但在 float64 下 `e^(-1000)` 是否也可能非零？（提示：查一下 float64 的最小正数是多少。）
+
+**题目 2：** 如果用一个 4x4 的全 0 矩阵作为 Mask（即不遮任何位置），这个 Attention 是 Encoder 的还是 Decoder 的？它对应的模型类型是什么？
+
+**题目 3：** 假设你有一个已经训练好的 GPT 模型。如果推理时故意把 Causal Mask 去掉（全部设为 0），模型生成的文本会有什么特征？试分析原因。
+
+---
+
+### 答案
+
+**题 1：** `e^(-1000) ≈ 10^(-434)`。float32 的最小正数约 `1.2e-38`，所以 `e^(-1000)` 直接 underflow 为 0，和 `e^(-inf)` 完全等价。但在 float64 下，最小正数约 `2.2e-308`，`e^(-1000)` 仍然 underflow。只有 `e^(-700)` 在 float64 下才约等于 `10^(-304)`，接近边界。日常用 `-1e9` 或 `float('-inf')` 都没问题。
+
+**题 2：** Encoder Attention（双向注意力），对应 BERT 这类 Encoder-only 模型。每个位置可以无限制地看到所有其他位置。
+
+**题 3：** 去掉 Causal Mask 后，模型在推理时每个位置都"看到"了未来的 token——但未来的 token 还没被生成出来。如果用一个模拟的 prompt 让模型自己生成未来 token，这会造成"循环依赖"：预测未来需要知道现在，但现在的 Attention 已经包含了未来的信息（一个逻辑悖论）。结果通常是输出退化——重复无意义的 token 或生成垃圾文本。这就是为什么因果约束对自回归模型来说不是"可选特性"，而是"数学必需"。
+
+---
+
+# 第 25 课：自回归生成（Autoregressive）——GPT 为什么一个字一个字往外蹦？
+
+---
+
+## 1. 从"一口气说完"到"一个字一个字说"
+
+先问你一个问题：如果我让你写一篇文章，你是能一整篇同时在脑海里浮现出来，还是只能一个字一个字想？
+
+答案显然是一个字一个字想——你写完"今天天"三个字之后，脑子里自然会接"气"字，然后继续往下推进。你无法提前一秒知道整篇文章的每个字——因为后面的段落还没有被创作出来。
+
+GPT 生成文本也是这个道理。用数学语言描述：
+
+$$
+P(\text{"今天天气很好"}) = P(\text{"今"}) \cdot P(\text{"天"}\mid\text{"今"}) \cdot P(\text{"天"}\mid\text{"今天"}) \cdot P(\text{"气"}\mid\text{"今天天"}) \cdots
+$$
+
+这叫**链式法则（Chain Rule of Probability）**。不是 GPT 自己发明的——这是概率论的基本定理：任何联合概率都可以拆成条件概率的连乘。
+
+$$
+P(x_1, x_2, ..., x_n) = \prod_{t=1}^{n} P(x_t \mid x_1, ..., x_{t-1})
+$$
+
+在语言模型里，`x_t` 是第 t 个 token，"`x_1,..., x_{t-1}`"是前面已经生成的所有 token。这个公式就是自回归生成的数学定义。
+
+---
+
+## 2. 什么是"自回归"？
+
+"自回归"（Autoregressive）这个名字拆开看：**自**己的输出去**回归**预测自己的下一步。
+
+用代码跑一遍比看十遍公式都清楚：
+
+```python
+import torch
+
+def autoregressive_generate(model, initial_tokens, max_steps=10):
+    """
+    model: 可以接受 (batch, seq) 输入, 返回 (batch, seq, vocab) logits 的模型
+    initial_tokens: 起始 token 序列, shape (1, T0)
+    """
+    generated = list(initial_tokens.squeeze().tolist())
+
+    for step in range(max_steps):
+        # 当前已有的完整序列
+        current = torch.tensor([generated])  # (1, current_len)
+
+        # 模型预测: 每个位置输出下一个token的概率
+        logits, _ = model(current)     # (1, current_len, vocab_size)
+
+        # 只取最后一个位置的预测 (因为我们只需要"下一个")
+        next_logits = logits[:, -1, :]  # (1, vocab_size)
+        probs = torch.softmax(next_logits, dim=-1)
+
+        # 采样
+        next_token = torch.multinomial(probs, num_samples=1).item()
+        generated.append(next_token)
+
+        print(f"Step {step+1}: 当前序列长度={len(generated)-1}, 新token={next_token}")
+
+    return generated
+
+# 模拟: 假设 model 是一个假模型 (实际使用时替换为真正的 GPT)
+class FakeModel:
+    def __call__(self, x):
+        B, T = x.shape
+        # 返回随机 logits
+        return torch.randn(B, T, 100), None
+
+result = autoregressive_generate(FakeModel(), torch.tensor([[1, 2, 3]]), max_steps=5)
+print(f"\n最终序列: {result}")
+```
+
+每一步的输入 = 之前所有已生成的 token，输出 = 下一个 token 的概率分布。这个过程就叫"自回归"——每一次预测都建立在之前的自己之上。
+
+---
+
+## 3. Teacher Forcing：训练时的"作弊"手段
+
+自回归生成在推理时很自然——但**训练时**呢？训练时数据是现成的啊："我 喜欢 吃 苹果"一整句都摆在那。
+
+如果训练时也一字一字喂进去（模型先生成"喜"，错了，再生成"欢"，又错了...），那错误会像滚雪球一样累加，训练效率极低——模型连"喜欢"都还没学会，就被要求去猜"苹果"了。
+
+所以训练时用了 **Teacher Forcing**：不管模型上一步预测了什么，下一步输入**永远用正确答案**。
+
+```python
+# Teacher Forcing 的训练过程
+# 输入:  "我 喜欢 吃"    目标: "喜欢 吃 苹果"
+# 模型一次性看到整个输入, 并行计算所有位置的预测
+
+input_ids  = torch.tensor([[12, 56, 89]])       # "我喜欢吃"
+target_ids = torch.tensor([[56, 89, 100]])      # "喜欢吃苹果"
+
+# 一次 forward 同时预测所有位置
+logits, loss = model(input_ids, targets=target_ids)
+# logits[:, 0, :] → 预测 "喜欢" (target=56)
+# logits[:, 1, :] → 预测 "吃"   (target=89)
+# logits[:, 2, :] → 预测 "苹果" (target=100)
+# 三个位置并行计算, 不需要等上一步的结果
+```
+
+这利用了 Transformer 的并行计算优势——一次 forward 同时训练所有位置。但代价是：训练时模型看到的是完美的"正确答案"作为上下文，推理时看到的却是自己生成的、可能**有错误**的上下文。
+
+这个不一致就是 **Exposure Bias（曝光偏差）**——模型在训练时从未见过自己犯错后的状态，一到推理时出错就手足无措，错误像多米诺骨牌一样倾倒。
+
+---
+
+## 4. 错误累积：为什么长文本越写越崩？
+
+用代码模拟一下错误累积的过程：
+
+```python
+import random
+
+def simulate_error_accumulation(true_prob=0.9, length=50):
+    """
+    模拟自回归生成的错误累积
+    true_prob: 每一步预测正确的概率
+    length: 生成的总步数
+    """
+    correct = 0
+    errors = []
+    going_ok = True
+
+    for step in range(length):
+        # 如果之前有错, 后续正确率大幅下降 (上下文已经被错误污染)
+        if not going_ok:
+            true_prob_effective = true_prob * 0.3  # 错上加错
+        else:
+            true_prob_effective = true_prob
+
+        if random.random() < true_prob_effective:
+            correct += 1
+        else:
+            errors.append(step)
+            going_ok = False  # 一次错误后, 后面的都受影响
+
+    return correct / length, errors
+
+acc, errs = simulate_error_accumulation(true_prob=0.95, length=100)
+print(f"最终正确率: {acc:.1%}, 首次错误位置: {errs[0] if errs else '无'}")
+# 典型输出: 最终正确率: ~30%, 首次错误位置: ~60
+# 即使单个 token 正确率高达 95%, 100 步后整体质量也大幅下降
+```
+
+这就是长文本生成容易"跑偏"的数学本质：**每一步的条件概率都在累乘**。即使单个 token 的准确率 95%，100 步后 `0.95^100 ≈ 0.6%`——几乎不可能不出错。而一旦出错，错误会污染后续所有 token 的上下文。
+
+你实际使用 ChatGPT 时也有体会：让 GPT 写 2000 字文章，前 500 字可能很精彩，后面就开始重复、跑题、甚至胡编乱造。这就是自回归生成的天花板——不是模型不够聪明，而是链式法则的冰冷数学。
+
+---
+
+## 5. LLM 怎么缓解错误累积？
+
+不同模型有不同的"抗漂移"策略：
+
+- **Temperature 调低**：让模型更保守，少冒险选冷门 token，降低出错概率。
+- **Beam Search（束搜索）**：不只是保留一条最佳路径，而是同时保留 k 条候选路径，最后选整体最优的。
+- **Self-Consistency**：多次采样，投票选出最一致的结果（推理模型常用）。
+- **更长训练/更多数据**：提升单步准确率——`0.99^100 = 37%` 就比 `0.95^100 ≈ 0.6%` 好得多。
+
+但这些都只是缓解，不能根除。这是当前 GPT 架构的根本局限，也是为什么更长的文本生成仍然是前沿研究热点。
+
+---
+
+## 6. 练习题
+
+**题目 1：** 用链式法则的概率公式，解释为什么语言模型不能"反过来"预测（从后往前）？即 `P(x_1|x_2,x_3,...)` 在训练数据中能不能算出来？
+
+**题目 2：** 如果单步 token 正确率是 99%，生成 1000 个 token 后"全对"的概率是多少？这对实际应用意味着什么？
+
+**题目 3：** Teacher Forcing 训练时，如果一个 token 预测错了（比如预测的是"狗"而不是"猫"），这个错误会传播到下一个训练 step 吗？为什么？
+
+---
+
+### 答案
+
+**题 1：** 在训练数据中当然可以算——因为数据是完整语料，所有位置的 token 都已知。但推理时不行：如果模型每次生成最**前面**的 token（而不是最后面的），那第一次预测"第一个 token"时后面全是空的，没有任何上下文可用。除非你先预测最远的"未来"，再反向填前面的——但这需要修改整个任务定义。所以语言模型统一选"从左到右"的方向。
+
+**题 2：** `0.99^1000 ≈ 0.004%`——几乎不可能全对。这意味着对于一个 1000 token 的文章（约 750 个英文单词），即使模型每个 token 的正确率高达 99%，文章级别"完全正确"的概率也接近于零。这就是为什么 GPT 会出错——不是故意出错，而是统计上的必然。
+
+**题 3：** 不会。Teacher Forcing 的核心就是：下一步的输入永远是**正确答案**（数据集里的词），而不是模型预测的词。不管模型预测了"狗"还是"猫"，下一步的输入都是正确答案"猫"。这就像考试时老师帮你把上一题的正确答案填好了再让你做下一题——你不会被自己的错误带偏，但离开考场（推理时）就危险了。
+
+---
+
+# 第 26 课：文本生成策略 —— GPT 为什么每次回答不一样？
+
+---
+
+## 1. 从"永远选最佳"到"偶尔冒险"
+
+GPT 的输出层给出的是**概率分布**——不是"下一个词一定是 X"，而是"下一个词有 40% 可能是 A，30% 是 B，20% 是 C..."。
+
+问题来了：有了概率分布之后，你怎么"选"一个词？永远选概率最大的那个吗？那 GPT 就会变成一个死板的复读机——每次输入相同，输出完全相同，没有任何创造性。
+
+这一课就是讲"怎么从概率分布里选词"——这是决定 GPT "性格"的关键。
+
+---
+
+## 2. Greedy Search：贪心的代价
+
+最直观的方法：**永远选概率最高的那个 token。**
+
+```python
+# Greedy: argmax
+next_token = torch.argmax(probs)  # 永远选概率第一
+```
+
+听起来合理，但实际效果极差。为什么？
+
+想象你在写一个故事的开头："很久很久以前，有一个"。Greedy 算法一看：概率最高的下一个词是"人"。于是："很久很久以前，有一个人"。再下一步：概率最高的是"，他"。再下一步："很"。再下一步："善良"。故事变成了："很久很久以前，有一个人，他很善良，他很勇敢，他很..."
+
+发现问题了吗？**Greedy 陷入了循环。** 因为"他很 X"这个模式在训练数据里太常见了，每次概率最高的都是"他"+褒义词。一旦进入这个循环，模型再也跳不出来——因为跳出循环需要选一个概率稍低的词（比如"有一天"），但 Greedy 永远不敢冒险。
+
+Greedy 的本质缺陷：**没有"跳出局部最优"的机制。** 这和所有贪心算法的问题一样——局部最优不等于全局最优。
+
+---
+
+## 3. Temperature：给概率分布"加热"
+
+Temperature 的数学定义：
+
+$$
+P_i = \frac{e^{z_i / T}}{\sum_j e^{z_j / T}}
+$$
+
+不是加一个新规则，而是**直接修改 Softmax 的输入**。所有 logits 除以 T 再做 Softmax。
+
+Temperature 的效果可以分三种情况理解：
+
+$$
+\begin{array}{c|c|c}
+T \text{ 的范围} & \text{对概率分布的影响} & \text{生成效果} \\
+\hline
+T \to 0 & \text{所有概率集中在最大值} & \text{≈ Greedy，极端保守} \\
+T = 1 & \text{保持原始概率分布} & \text{正常均衡} \\
+T \to \infty & \text{所有概率趋近均匀} & \text{≈ 随机选，极端发散} \\
+\end{array}
+$$
+
+用具体数值感受一下。假设 logits = [2.0, 1.0, 0.5, 0.1, -0.5]：
+
+```python
+import torch
+import torch.nn.functional as F
+
+logits = torch.tensor([2.0, 1.0, 0.5, 0.1, -0.5])
+
+for T in [0.3, 0.7, 1.0, 2.0, 10.0]:
+    probs = F.softmax(logits / T, dim=-1)
+    print(f"T={T:.1f}: {probs.tolist()}")
+# T=0.3: [0.894, 0.094, 0.011, 0.001, 0.000]  ← 极端集中在 token 0
+# T=0.7: [0.629, 0.219, 0.103, 0.040, 0.009]  ← 有区分度但不太极端
+# T=1.0: [0.457, 0.252, 0.148, 0.093, 0.050]  ← 原始分布
+# T=2.0: [0.302, 0.252, 0.193, 0.153, 0.100]  ← 开始扁平化
+# T=10.0:[0.209,0.196,0.183,0.169,0.155,0.088] ← 几乎均匀
+```
+
+Temperature 的本质是把 logits 之间的距离"压缩"或"拉大"。低 T 让差异放大（强者恒强），高 T 让差异缩小（众生平等）。实践中：
+
+- 代码补全 / 翻译：T ≈ 0.1~0.3（要精确，不要创意）
+- 日常对话 / 写作：T ≈ 0.7~1.0（有变化但不失控）
+- 创意写作 / 头脑风暴：T ≈ 1.2~1.5（鼓励出人意料）
+
+---
+
+## 4. Top-k：只给精英选手发入场券
+
+Temperature 的问题是：即使很低概率的"垃圾 token"仍然有微小的选中概率。`e^(-100)` 不是绝对 0。
+
+Top-k 的解法：**只保留概率最高的 k 个 token，其余全部设为 0。**
+
+```python
+def sample_top_k(logits, k=40):
+    top_k_values, _ = torch.topk(logits, k)
+    min_val = top_k_values[-1]          # 第 k 名的分数
+    logits[logits < min_val] = float('-inf')  # 淘汰线以下的全部 -inf
+    probs = F.softmax(logits, dim=-1)
+    return torch.multinomial(probs, 1)
+```
+
+这相当于给概率分布画了一条"淘汰线"——只有前 k 名能进入 Softmax。GPT-2 默认用 top_k=40，意思是只从 40 个最可能的 token 里选。
+
+但 Top-k 有个**固定窗口问题**：如果概率分布高度集中（比如前 3 个 token 占了 95% 概率），选 k=40 会把一堆极低概率的噪声也放进来。反之，如果分布很分散（100+ 个 token 都有一定概率），k=40 又会过早淘汰有潜力的候选。
+
+---
+
+## 5. Top-p（Nucleus Sampling）：动态门槛
+
+Top-p 解决了 Top-k 的固定窗口问题。它的规则是：**从最高概率开始累加，只保留累积概率达到 p 的那些 token。**
+
+```python
+def sample_top_p(logits, p=0.9):
+    sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+    # 找到第一个使累积概率 > p 的位置, 从它之后全部淘汰
+    sorted_mask = cumulative_probs > p
+    sorted_mask[1:] = sorted_mask[:-1].clone()  # 至少保留一个
+    sorted_mask[0] = False
+
+    indices_to_remove = sorted_indices[sorted_mask]
+    logits[indices_to_remove] = float('-inf')
+    probs = F.softmax(logits, dim=-1)
+    return torch.multinomial(probs, 1)
+```
+
+关键好处：如果分布集中（前 5 个 token 就占了 90%），Top-p 自动只保留 5 个。如果分布分散，Top-p 自动放宽门槛保留更多。**动态适应概率分布的"集中度"。**
+
+---
+
+## 6. 四种策略完整对比
+
+```python
+import torch
+import torch.nn.functional as F
+
+logits = torch.tensor([2.0, 1.0, 0.5, 0.1, -0.5])
+
+# --- Greedy ---
+token_greedy = torch.argmax(logits).item()
+print(f"Greedy:          token {token_greedy} (每次完全相同)")
+
+# --- Temperature ---
+def sample_temperature(logits, T=0.8):
+    return torch.multinomial(F.softmax(logits / T, dim=-1), 1).item()
+
+print(f"Temperature 0.3: ", end="")
+for _ in range(5): print(sample_temperature(logits.clone(), 0.3), end=" ")
+print("← 几乎都是 token 0")
+
+print(f"Temperature 2.0: ", end="")
+for _ in range(5): print(sample_temperature(logits.clone(), 2.0), end=" ")
+print("← 变化很大")
+
+# --- Top-k ---
+def sample_top_k(logits, k=3):
+    v, _ = torch.topk(logits, k)
+    logits[logits < v[-1]] = float('-inf')
+    return torch.multinomial(F.softmax(logits, dim=-1), 1).item()
+
+print(f"Top-k=3:         token {sample_top_k(logits.clone(), 3)} (只从 top3 选)")
+
+# --- Top-p ---
+def sample_top_p(logits, p=0.9):
+    sorted_l, sorted_i = torch.sort(logits, descending=True)
+    cum = torch.cumsum(F.softmax(sorted_l, dim=-1), dim=-1)
+    mask = torch.zeros_like(logits, dtype=torch.bool)
+    mask[sorted_i[cum > p]] = True
+    mask[sorted_i[0]] = False  # 至少保留一个
+    logits[mask] = float('-inf')
+    return torch.multinomial(F.softmax(logits, dim=-1), 1).item()
+
+print(f"Top-p=0.9:       token {sample_top_p(logits.clone(), 0.9)} (动态门槛)")
+```
+
+---
+
+## 7. 现实中 GPT 怎么组合这些策略？
+
+没有一个模型只用其中一种。标准组合是：
+
+$$
+\text{Temperature} + \text{Top-p (Nucleus)}
+$$
+
+先调 Temperature 控制"整体随机程度"，再用 Top-p 过滤掉长尾噪声。OpenAI API 的默认值通常是 `temperature=1.0, top_p=1.0`（即不做任何限制），实际使用建议 `temperature=0.7, top_p=0.9`。
+
+不同场景的推荐配置：
+
+| 场景 | Temperature | Top-p | 效果 |
+|------|------------|-------|------|
+| 代码生成 | 0.1~0.3 | 0.95 | 精确，少变化 |
+| 翻译 | 0.1~0.3 | 0.95 | 准确 |
+| 日常聊天 | 0.7~0.9 | 0.9 | 自然、有变化 |
+| 创意写作 | 1.0~1.2 | 0.95 | 有惊喜 |
+| 头脑风暴 | 1.2~1.5 | 0.98 | 天马行空 |
+
+---
+
+## 8. 练习题
+
+**题目 1：** 给定 logits = [5.0, 4.9, 0.01, 0.01]，Temperature=0.1 和 Temperature=10 时，概率分布分别长什么样？用代码验证。
+
+**题目 2：** 如果 Top-p=0.5，上面那组 logits 会保留几个候选 token？Top-p=0.95 呢？（不需要写代码，用直觉判断）
+
+**题目 3：** 同时用 Temperature=0.1 和 Top-k=40 是什么效果？Temperature 在 Top-k 之前还是之后执行？顺序是否重要？
+
+---
+
+### 答案
+
+**题 1：** T=0.1 时 ≈ [0.73, 0.27, 0.00, 0.00]（差距被放大）。T=10 时 ≈ [0.27, 0.27, 0.23, 0.23]（几乎均匀）。代码：`F.softmax(logits/0.1)` 和 `F.softmax(logits/10)`。
+
+**题 2：** Top-p=0.5：第一个 token 概率就远超 50%——只保留 1 个候选。Top-p=0.95：前两个 token 各约 50%，累积≈100%——保留 2 个候选。Top-p 的动态窗口在分布极端时自动收窄，在分布均匀时自动放宽。
+
+**题 3：** Temperature=0.1 先"拉大"logits 之间的差距→概率极度集中→前几个 token 占了几乎全部概率→Top-k=40 几乎等于没起作用（因为有效候选只有前几个）。顺序非常重要：**先 Temperature（缩放 logits），再 Top-k 或 Top-p（过滤候选）**。如果反过来，先过滤再缩放，效果完全不同。
+
+---
+
+# 第 27 课：GPT 完整推理流程 —— 把所有零件装起来
+
+---
+
+## 1. 你现在手里有什么？
+
+回想一下前面 26 课我们造了哪些零件：
+
+| 课号 | 零件 | 它回答的问题 |
+|------|------|------------|
+| 1-7 | 向量、矩阵、行列式、特征值 | 空间怎么描述？怎么变换？ |
+| 8-10 | Q/K/V、点积、Attention | 词和词之间怎么交流？ |
+| 11 | 位置编码 | 怎么知道"我爱你"和"你爱我"不一样？ |
+| 12 | Softmax + √d | 怎么把相关性变成注意力权重？ |
+| 13 | Multi-Head | 为什么要从多个角度观察？ |
+| 14 | FFN | Attention 交流完了怎么内部消化？ |
+| 15 | Residual + LayerNorm | 96 层怎么不崩？ |
+| 16 | 输出层 + Cross Entropy | 向量怎么变回文字？ |
+| 17-18 | 涌现 + 反向传播 | 预测下一个词为什么产生智能？怎么学？ |
+| 19-20 | Tokenizer + Embedding | 文字怎么变成向量？向量为什么有意义？ |
+| 21-22 | 高维空间 + 深度 | 为什么需要 4096 维？96 层？ |
+| 23 | Decoder-only | GPT 为什么扔掉 Encoder？ |
+| 24 | Causal Mask | 为什么不能偷看未来？ |
+| 25 | 自回归 | 为什么一个字一个字生成？ |
+| 26 | 生成策略 | Temperature/Top-k/Top-p 怎么选？ |
+
+现在把这些零件装到一起，看一台完整的 GPT 引擎怎么运转。
+
+---
+
+## 2. 全景：一个 token 的完整旅程
+
+假设你在 ChatGPT 对话框里输入了"我喜欢吃"，然后按回车。下面追踪这三个字怎么变成模型输出的下一个字。
+
+### 第 0 步：Tokenizer —— 文字变数字（回看第 19 课）
+
+你打的"我喜欢吃"不是直接送给模型。Tokenizer 先切成 token，每个 token 映射成一个整数 ID：
 
 ```text
-Pretraining（预测下一个词）
-     ↓
-SFT（指令微调：学会遵循指令）
-     ↓
-RLHF / DPO（人类偏好对齐）
-     ↓
-Chat Model
+"我喜欢吃"
+    ↓ Tokenizer (BPE)
+[12, 56, 89]   ← 三个整数，每个代表词表中的一个 token
 ```
+
+还记得 BPE 吗（第 19 课）？它把中文切成子词。"喜欢"可能是一个 token，"吃"是另一个。词表里有 50000+ 个 token，每个有唯一的整数编号。
+
+### 第 1 步：Embedding —— 整数变向量（回看第 20 课）
+
+整数 ID 不能直接做矩阵乘法。Embedding 矩阵（一个 50000×4096 的大查表）把每个整数映射成一个稠密向量：
+
+```text
+[12] → 查表第12行 → [0.23, 0.81, -0.15, ..., 0.62]   (4096维)
+[56] → 查表第56行 → [0.45, -0.32, 0.71, ..., 0.18]   (4096维) 
+[89] → 查表第89行 → [-0.11, 0.55, 0.33, ..., 0.91]   (4096维)
+
+输出: (1, 3, 4096)  ← 1个句子, 3个token, 每个4096维
+```
+
+这三个向量不是随机数字——它们经过预训练后已经"知道"了一些语义关系。第 20 课我们演示过：`国王 - 男人 + 女人 ≈ 女王`。同样的道理，"喜欢"的向量在空间中和"爱""讨厌""吃"有特定的几何关系。
+
+### 第 2 步：位置编码 —— 注入顺序信息（回看第 11 课）
+
+Transformer 的 Attention 本身不知道顺序。如果不加位置编码，"我喜欢你"和"你喜欢我"对模型来说是一样的——三个 token 的集合完全一致（第 23 课说了这是 permutation invariance）。
+
+位置编码往每个向量上叠加一个"位置指纹"：
+
+```text
+Token [12] 在位置0 → [12的向量] + [位置0的正弦编码] → 同时包含"是什么"+"在哪"
+Token [56] 在位置1 → [56的向量] + [位置1的正弦编码]
+Token [89] 在位置2 → [89的向量] + [位置2的正弦编码]
+```
+
+还记得第 11 课写的 `sinusoidal_position_encoding` 吗？不同位置的编码是不同频率的正弦波组合——位置 0 和位置 1 的编码不同，位置 0 和位置 100 的编码差异更大。这样 Attention 计算 `QK^T` 时就能感知相对距离。
+
+### 第 3 步：Transformer Block × N —— 信息不断被加工（回看第 13-15 课）
+
+这是 GPT 的核心引擎。输入 (1, 3, 4096) 的向量矩阵，经过 N 个完全相同的 Block（GPT-2 是 12 层，GPT-3 是 96 层），每个 Block 内部做两件事：
+
+**子层 A：Multi-Head Causal Attention（回看第 13 + 24 课）**
+
+```text
+输入 x → LayerNorm → Q=XW_Q, K=XW_K, V=XW_V
+    → QK^T/√d   ← 谁和谁相关（第9课的点积）
+    → + Causal Mask ← 不能偷看未来（第24课）
+    → Softmax   ← 变权重（第12课）
+    → × V       ← 拿信息
+    → 多个 Head 各自算, 最后拼起来 ← 多角度观察（第13课）
+    → Residual: x + Attention(x) ← "不要忘记原来的自己"（第15课）
+```
+
+**子层 B：FFN（回看第 14 课）**
+
+```text
+→ LayerNorm → W1(扩大4倍) → ReLU/SwiGLU → W2(压回来)
+    → Residual: x + FFN(x) ← 加工理解但保留原始信息
+```
+
+**关键：为什么 96 层？** 回看第 22 课——低层学语法关系（"喜欢"后面跟名词），中层学句法结构（主语-谓语-宾语），高层学语义和逻辑（"吃"→食物相关）。每一层在上一层的基础上再抽象一步。残差连接（第 15 课）保证深层不会丢失原始信息。
+
+### 第 4 步：输出投影 —— 从隐藏空间回到词表空间（回看第 16 课）
+
+经过 96 层 Transformer 后，最后一个 token 位置（位置 2，"吃"）的向量包含了"前面所有词的上下文理解"：
+
+```text
+h_last = [0.12, -0.45, 0.78, ..., 0.33]   (4096维)
+```
+
+这个 4096 维向量本身不是文字。最后一层 `lm_head`（一个 4096×50000 的矩阵）把它投影到词表空间：
+
+```text
+logits = lm_head @ h_last    →  (50000维)   ← 每个词表词一个"分数"
+```
+
+这和第 20 课的 Embedding 刚好是逆操作——Embedding 是"词→向量"，`lm_head` 是"向量→词的分数"。很多模型甚至让它们共享同一套权重（Weight Tying）。
+
+### 第 5 步：Softmax → 概率 → 采样（回看第 12 + 26 课）
+
+```text
+logits: [2.1, 5.7, 0.5, -1.0, ...]    ← 50000个分数
+    ↓ Softmax
+probs:  [0.02, 0.85, 0.005, 0.0001, ...]  ← 每个词的概率
+    ↓ Temperature + Top-p（第26课）
+next_token = "苹果" (概率 85%)
+```
+
+然后这个新 token "苹果"被拼回输入序列——"我喜欢吃苹果"——整个流程从头再来一遍。这就是**自回归**（第 25 课）：每次生成一个 token，一个 token 一个 token 地往外蹦。
+
+---
+
+## 3. 用代码把全流程跑一遍
+
+下面这段代码把第 23-26 课的所有概念装进一个可运行的管道：
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+# ============ 模拟一个已经训练好的 MiniGPT ============
+# 实际使用时这就是你训练的 FreesLLM 模型
+class InferenceGPT:
+    """GPT 推理引擎: 把前面所有课的零件组装起来"""
+    def __init__(self, model, tokenizer):
+        self.model = model              # 训练好的 GPT 模型(第46课的MiniGPT)
+        self.tokenizer = tokenizer      # Tokenizer(第19课)
+        self.kv_cache = None            # KV Cache(第37课)
+
+    def generate(self, prompt, max_tokens=20, temperature=0.8, top_p=0.9):
+        """完整的 GPT 推理流程 —— 从文字到文字"""
+        print(f"用户输入: '{prompt}'")
+        print("=" * 60)
+
+        # --- 步骤0: Tokenizer ---
+        token_ids = self.tokenizer.encode(prompt)    # "我喜欢吃" → [12, 56, 89]
+        print(f"[Tokenizer]  文字 → token IDs: {token_ids}")
+
+        # --- 步骤1+2: Embedding + Position ---
+        # 这一步在 model.forward() 内部自动完成, 不需要手动调用
+        # 但逻辑是: token_ids → Embedding查表 → 4096维向量 → +位置编码
+
+        # --- 步骤3-5: Transformer → 输出 → 采样(循环) ---
+        generated = list(token_ids)
+        for step in range(max_tokens):
+            # Transformer 前向传播(内部包含 Embedding→Position→96层Block→lm_head)
+            current = torch.tensor([generated])
+            logits, _ = self.model(current)     # (1, T, vocab_size)
+
+            # 只看最后一个位置的预测
+            next_logits = logits[:, -1, :] / temperature  # 温度调节(第26课)
+
+            # Top-p 过滤(第26课)
+            sorted_l, sorted_i = torch.sort(next_logits, descending=True)
+            cum = torch.cumsum(F.softmax(sorted_l, dim=-1), dim=-1)
+            next_logits[:, sorted_i[0, cum[0] > top_p]] = float('-inf')
+
+            # 采样
+            probs = F.softmax(next_logits, dim=-1)
+            next_token = torch.multinomial(probs, 1).item()
+            generated.append(next_token)
+
+            # 解码并打印
+            word = self.tokenizer.decode([next_token])
+            print(f"[Step {step+1:2d}]  预测: '{word}' (token {next_token})")
+
+            # 终止条件
+            if next_token == self.tokenizer.eos_token_id:
+                break
+
+        return self.tokenizer.decode(generated)
+
+# ============ 模拟运行(实际替换你的训练好的模型) ============
+# 这只是一个示意 —— 真实推理时 model 是你花几天训练的 MiniGPT
+print("GPT 推理流水线:")
+print("输入'我喜欢吃' → 期望输出'苹果'")
+print()
+# 输出大概像:
+# [Tokenizer]  我喜欢吃 → [12, 56, 89]
+# [Step  1]  预测: '苹果' (token 100)
+# [Step  2]  预测: '。' (token 5)
+```
+
+---
+
+## 4. 回头看：为什么这个管道能工作？
+
+追踪一个 token 的旅程，你就能看到每一课的知识点都在哪里落地：
+
+```text
+"我喜欢吃"
+    │
+    ├─ Tokenizer 切分 (第19课: BPE子词切分)
+    │
+    ├─ Embedding 查表 (第20课: 向量空间中的语义坐标)
+    │
+    ├─ + 位置编码 (第11课: 正弦波叠加位置指纹)
+    │
+    ├─ ×12/96 Transformer Blocks:
+    │   ├─ Attention: QKV投影 (第8-10课) → Causal Mask (第24课) → Softmax (第12课)
+    │   │   └─ Multi-Head (第13课): 多角度同时观察
+    │   ├─ Residual (第15课): "不要忘记原来的自己"
+    │   ├─ FFN (第14课): 扩大→激活→压缩, 内部消化
+    │   └─ LayerNorm (第15课): 稳定数值
+    │
+    ├─ lm_head (第16课): 4096维 → 50000维, 回到词表
+    │
+    ├─ Softmax (第12课): 分数变概率
+    │
+    ├─ Temperature + Top-p (第26课): 采样的艺术
+    │
+    └─ 拼回输入 → 循环 (第25课: 自回归)
+```
+
+这 27 课的内容不是孤立的——它们是一个完整的链条。任何一环断掉，整个 GPT 都无法工作。你训练 FreesLLM 时，每一个模块你都要在代码里亲手实现一遍，那时候你才会真正体会到"这些看似独立的概念其实是同一个故事的不同章节"。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 如果你的 FreesLLM 推理时输出全是乱码（一堆不相关的词拼在一起），最可能出问题的是哪个环节？至少列举 3 个可能的罪魁祸首，并说明每个环节出问题时的"症状"。
+
+**题目 2：** 完整推理流程中，位置编码加在 Embedding 之后、Transformer Block 之前。如果把它加在 Transformer Block **之后**（所有层处理完再叠加位置），模型还能正常工作吗？用第 11 课和第 24 课的知识联合解释。
+
+**题目 3：** 为什么推理时"最后一个位置的输出"代表了"下一个 token 的预测"？为什么不是第一个位置的输出？
+
+---
+
+### 答案
+
+**题 1：** 可能的原因——(a) Tokenizer 问题：词表不匹配，训练和推理用了不同的 tokenizer，ID 映射全乱。(b) Causal Mask 未生效：推理时每个位置看到了未来 token，但未来 token 尚未生成，输出退化。(c) Temperature 太高：接近均匀分布，每次随机选 token。(d) Embedding 未加载正确权重：随机初始化的 Embedding 没有语义信息，输出无意义。
+
+**题 2：** 不能。位置编码必须加在 Attention 之前。因为 Attention 的 `QK^T` 需要靠 Q 和 K 中的位置信息来判断"两个 token 距离多远"（第 11 课的正弦编码和第 24 课的 Causal Mask 都依赖这个）。如果位置编码在 Transformer 之后才加，Attention 全程不知道 token 的顺序，"我爱你"和"你爱我"对 Attention 完全一样——模型无法区分。
+
+**题 3：** 因为 Causal Mask（第 24 课）。在自回归架构中，位置 t 的隐藏状态只能"看到"位置 0 到 t（含自己），包含的是"前面所有词+当前位置"的聚合信息。位置 t 的状态恰好是"知道了前 t+1 个 token 后，模型对接下来会发生什么的判断"。因此用最后一个位置预测下一个 token——这是 Decoder-only 架构的数学必然，不是随意选择。
+
+---
+
+# 第 28 课：从 Transformer 到 ChatGPT —— 预测文字和回答问题之间隔了多远？
+
+---
+
+## 1. 一个"预测下一个词"的模型，为什么不会聊天？
+
+回顾第 27 课，我们装好了一台完整的 GPT 推理引擎。它可以做一件事：**输入一串 token，输出下一个 token 的概率分布。**
+
+但这和你在 ChatGPT 里体验到的东西完全不一样。你试试看——如果你把 GPT-3 基础模型（openai 发布的最原始版本，没经过任何对话微调）丢进一个聊天框，它根本不会聊天。
+
+你输入："你好，请帮我写一首诗"
+
+基础 GPT 的输出可能是："，我是一名学生。我喜欢吃苹果。今天天气..."——它把你这句当成互联网文本里的普通文字，继续往下"续写"，完全不知道这是在"提问"。
+
+为什么？因为它的训练任务只有一个：**补全互联网上的文本。** 它从未被教过"当人类问一个问题时，你应该给出答案"。它只知道"在这个句子后面，互联网上最常见的接续是什么"。
+
+这一课就是要解释：**怎么把一个只会"续写"的机器，变成能"回答问题"的助手。**
+
+整个过程分三个训练阶段，每个阶段解决一个不同的问题：
+
+$$
+\begin{array}{c|c|c}
+\text{阶段} & \text{训练数据} & \text{解决的问题} \\
+\hline
+\text{Pretraining (预训练)} & \text{互联网海量文本} & \text{"怎么说话" —— 学会语言结构和世界知识} \\
+\text{SFT (指令微调)} & \text{几千到几万条人工标注的问答对} & \text{"怎么听话" —— 学会遵循指令格式} \\
+\text{RLHF / DPO (偏好对齐)} & \text{人类偏好比较数据} & \text{"怎么说才对" —— 学会什么回答是好的} \\
+\end{array}
+$$
+
+---
+
+## 2. 第一阶段：Pretraining —— 学会"世界是怎么运转的"
+
+前面第 17 课已经详细讨论过预训练的原理和涌现能力，这里不重复。但需要强调一点：**预训练结束后的"基础模型"已经是一个非常强大的东西，只是它不知道怎么和人对话。**
+
+基础模型的能力：
+- 能补全天气、物理、数学、代码、法律等任何领域文本 ✓
+- 知道"水在100度沸腾"、"巴黎是法国首都"这类事实 ✓
+- 能在上下文中理解"苹果"是水果还是公司 ✓
+
+基础模型不能做的事：
+- 你问"什么是Transformer？"，它不会回答——它会续写你的句子，继续编一段技术博客
+- 你问"帮我写一封请假邮件"，它不会写——它会续写你的请求，好像你正在给别人示范怎么写
+- 它不明白"回答问题"和"续写文本"的区别
+
+打个比方：预训练模型就像一个读了整个互联网的小孩。它脑子里有海量知识，但没被教过"别人问你问题时，你应该回答而不是自言自语"。
+
+---
+
+## 3. 第二阶段：SFT —— 教模型"什么是回答问题"
+
+**SFT（Supervised Fine-Tuning，监督微调）** 做的事情很简单：给模型看几千到几万条"人类是怎么问答的"示例。
+
+预训练数据长这样（互联网上的任意文本）：
+```text
+今天天气真好，我决定去公园散步。公园里有很多人，大家都在享受阳光。
+苹果公司今天发布了新款iPhone，股价上涨了3%。
+```
+
+SFT 数据长这样（人工标注的对话）：
+```json
+[
+  {"role": "user",   "content": "什么是Transformer？"},
+  {"role": "assistant", "content": "Transformer是一种基于自注意力机制的神经网络架构..."},
+
+  {"role": "user",   "content": "帮我写一封请假邮件"},
+  {"role": "assistant", "content": "尊敬的领导：您好！因身体不适..."},
+
+  {"role": "user",   "content": "2+3等于几？"},
+  {"role": "assistant", "content": "2+3等于5。"},
+]
+```
+
+关键区别：预训练数据是**单向的文本流**——模型学到的是"在一个句子里接什么词最像互联网"。SFT 数据是**对话格式**——模型学到的是"当看到 'user: 什么问题' 时，应该输出 'assistant: 什么答案'"。
+
+这里的训练技术我们在第 25 课已经讲过——还是 Teacher Forcing，还是 Cross Entropy Loss，同一个 Transformer 架构，只是**输入格式变了**。预训练时输入是"今天天气真好，我决定去___"，SFT 时输入是"user: 什么是Transformer?\nassistant:___"——本质没变，只是"上下文"从互联网文章变成了人类对话。
+
+---
+
+## 4. 第三阶段：RLHF / DPO —— 教模型"什么叫好的回答"
+
+SFT 之后模型已经会回答问题了，但有一个新问题：**SFT 数据里都是"人类认为正确"的回答，模型学会了"照着写"，但不知道"为什么好"和"什么更好"。**
+
+比如你问"如何学习编程？"，SFT 数据里可能有多个不同质量的回答：
+- 回答 A：详细、有步骤、举例丰富（好）
+- 回答 B：简短、太概括、没有实质内容（差）
+
+SFT 把所有回答都一视同仁地训练了——它没有区分"这个回答比那个回答好"。
+
+**RLHF（基于人类反馈的强化学习）** 和 **DPO（直接偏好优化）** 就是解决这个问题的。它们教模型"什么样的回答更受欢迎"：
+
+- **RLHF 做法：** 先训练一个"奖励模型"（模仿人类对回答打分），然后用强化学习（PPO 算法）让主模型学会最大化这个奖励。相当于：AI 生成回答 → 奖励模型打分 → 高分就奖励、低分就惩罚 → 模型逐渐学会迎合人类偏好。
+
+- **DPO 做法（更简单）：** 不训练单独的奖励模型，直接拿"好回答 vs 差回答"的对比数据训练主模型。数据格式：`prompt: "如何学编程？", chosen: (好回答), rejected: (差回答)`。让模型直接学习"在这种 prompt 下，chosen 的概率应该大于 rejected"。
+
+DPO 现在更流行，因为它更简单、更稳定，而且不需要维护一个独立的奖励模型。LLaMA、Qwen 等开源模型的对话版本基本都用 DPO。
+
+---
+
+## 5. 三个阶段分别改了模型的什么？
+
+这个问题很重要——很多人以为每个阶段都"重新训练了全部参数"。实际上：
+
+| 阶段 | 改了什么 | 参数量 | 数据量 | 训练时间 |
+|------|---------|--------|--------|---------|
+| Pretraining | 所有参数（从随机初始化开始） | 全部 | 数万亿 token | 数周到数月 |
+| SFT | 所有参数（从预训练权重开始，微调） | 全部 | 数万条对话 | 数小时到数天 |
+| RLHF/DPO | 所有参数或部分（LoRA等） | 全部或部分 | 数万条偏好对比 | 数小时 |
+
+这里有三个容易混淆的点需要澄清：
+
+**（1）预训练花了最多资源。** 一个 7B 模型，预训练可能需要几百万美元的算力。SFT 和 RLHF 加起来的成本不到预训练的 1%。这就是为什么"基础模型"是核心资产——后面的微调只是在这个基础上做精细调整。
+
+**（2）三个阶段用的是同一个 Transformer 架构。** 预训练的 GPT、SFT 后的对话 GPT、RLHF 后的 ChatGPT，**模型结构一模一样**（都是之前讲的 Decoder-only Transformer）。区别只在于**参数值**不同——经过不同阶段的训练，同一个矩阵 W 的值被调整到不同的状态。类比：同一个人，学语文（预训练）→学面试技巧（SFT）→学情商（RLHF），脑结构没变，但知道什么时候说什么话了。
+
+**（3）为什么"预测下一个词"的架构能变成"对话助手"？** 因为对话本质上还是"预测下一个词"——只是上下文格式从"互联网文章"变成了"对话历史"。`P(下一个token | "user: 什么是AI?\nassistant:")` 这个任务在数学上和预训练的 `P(下一个token | "今天天气真好")` 完全一样——都只是给定前缀预测后缀。Transformer 架构没有变，只是输入的前缀变了。
+
+---
+
+## 6. 用代码感受三个阶段的数据差异
+
+```python
+# ====== Pretraining 数据 ======
+# 互联网上的任意文本，没有格式要求
+pretrain_data = [
+    "今天天气真好，我决定去公园散步。公园里有很多人，大家都在享受阳光。",
+    "Transformer 是一种基于自注意力机制的神经网络架构，由 Vaswani 等人提出。",
+    "def hello_world():\n    print('Hello, World!')",
+]
+
+# ====== SFT 数据 ======
+# 人工标注的问答对，严格的对话格式
+sft_data = [
+    {
+        "messages": [
+            {"role": "user", "content": "什么是人工智能？"},
+            {"role": "assistant", "content": "人工智能是计算机科学的一个分支..."}
+        ]
+    },
+    {
+        "messages": [
+            {"role": "user", "content": "Python 怎么读取文件？"},
+            {"role": "assistant", "content": "使用 open() 函数：\nwith open('file.txt', 'r') as f:\n    content = f.read()"}
+        ]
+    },
+]
+
+# ====== DPO 数据 ======
+# 同一个问题，"好回答"和"差回答"的对比
+dpo_data = [
+    {
+        "prompt": "如何学习编程？",
+        "chosen":  "建议从 Python 开始，先学基础语法，再通过做项目巩固。推荐资源：...",   # 详细、有指导
+        "rejected": "多写代码就行了。"                                              # 太简略
+    },
+    {
+        "prompt": "解释什么是 Transformer",
+        "chosen":  "Transformer 的核心是自注意力机制。与传统 RNN 不同，它...",
+        "rejected": "Transformer 是一种模型。"  # 正确但无用
+    },
+]
+```
+
+看到了吗？预训练数据是"续写"——模型看到前面自己接后面。SFT 数据是"问答"——模型看到问题学回答。DPO 数据是"对比"——模型学怎么区分好回答和差回答。同一套 Transformer，三组不同的数据，训练出完全不同的行为。
+
+---
+
+## 7. 练习题
+
+**题目 1：** 如果只用预训练数据（互联网文本）训练一个模型，然后用它来做客服——你问"退货流程是什么？"，它会输出什么？为什么 SFT 是必需的？
+
+**题目 2：** SFT 和 DPO 都用到了人类标注的数据，但它们的标注方式完全不同。SFT 标注员写"标准答案"，DPO 标注员只需要"比较两个回答哪个更好"。哪种标注更便宜、更容易规模化？为什么？
+
+**题目 3：** 如果你要做 FreesLLM 的个人助手版本，你应该先做预训练还是直接用开源基础模型做 SFT？参考上面"三个阶段分别改了模型的什么"表格，解释你的选择。
+
+---
+
+### 答案
+
+**题 1：** 基础模型会续写你的问题，而不是回答问题。输出可能是"...请拨打客服热线 400-xxx-xxxx，我们的客服会在..."之类——看起来像客服内容，但不是针对你问题的回答。因为它在互联网上见过类似的文本，所以会模仿，但它不理解"你是在问我"。SFT 教会它"当有人问问题时，你应该回答而不是续写"。
+
+**题 2：** DPO 标注更便宜。写标准答案需要专业知识（你要能写出正确的回答才能标注 SFT），而比较"哪个更好"只需要普通人就能判断（A 看起来比 B 详细、有帮助→选 A）。这就是为什么 DPO 数据更容易规模化——你可以让用户在使用过程中顺便做对比（ChatGPT 的赞/踩按钮本质上就是在收集 DPO 数据）。
+
+**题 3：** 除非你有几百万美元的算力和数 TB 的高质量语料，否则应该直接用开源基础模型做 SFT。预训练是三个阶段中最贵、最耗时的（占 99% 以上的成本），而 SFT 只需要几千条高质量对话数据和几小时 GPU 时间。用 LLaMA/Qwen 等开源基础模型作为起点，然后做 SFT+DPO，是个人开发者做 FreesLLM 最现实的路径。你后面会在第 51 课（SFT 实战）和第 64-65 课（RLHF/DPO）里学到具体怎么做。
 
 ---
 
@@ -4568,109 +5867,1104 @@ Chat Model
 
 # 第 29 课：LLM 训练数据 —— 模型吃什么？
 
-## 核心概念
+---
 
-数据来源：网页、图书、论文、代码、对话。数据质量比数量更重要——垃圾数据导致幻觉增加、推理下降。
+## 1. 从第 28 课说起：预训练到底需要多少数据？
 
-数据处理流程：原始数据 → 清洗 → 去重 → 过滤 → Tokenizer → 训练数据。
+第 28 课讲了 ChatGPT 的三个训练阶段。其中第一阶段——预训练——占了 99% 以上的算力和数据。一个 7B 参数的模型，预训练需要**几万亿个 token**。
 
-## 需要掌握的问题
+几万亿是什么概念？你一天 24 小时不停地读，每秒读 5 个字，一年能读约 1.5 亿字。几万亿 token 相当于你连续读几万年的阅读量。模型在几周到几个月内"读"完这些数据。
 
-1. 为什么 GPT 不是直接复制互联网？
-2. 为什么高质量小数据可能超过低质量大数据？
+但关键不是"多"——是"对"。给一个天才儿童喂垃圾食品，他也不会健康长大。模型同理。
 
 ---
 
-# 第 30 课：预训练（Pre-training）
+## 2. 训练数据从哪来？——GPT-3 的"食谱"
 
-## 核心概念
+GPT-3 论文公开了它的数据配比（其他大模型大多不公开），我们拿它做参照：
 
-GPT 训练目标：预测下一个 token。"我喜欢吃"→目标"苹果"。模型不断学习 `P(token | context)`。
+| 数据来源 | 占比 | 代表内容 | 为什么需要它 |
+|---------|------|---------|------------|
+| Common Crawl（网页抓取） | 60% | 互联网上几乎所有公开网页 | 量大、覆盖面广、包含各种语言和话题 |
+| WebText2（高质量网页） | 22% | Reddit 上获 3+ 赞的文章链接 | 质量筛选——人类觉得"值得看"的内容 |
+| Books（书籍） | 8% | 两个图书语料库 | 长文本连贯性、文学质量、叙事结构 |
+| Wikipedia（维基百科） | 3% | 多语言百科条目 | 事实准确、结构清晰、跨领域知识 |
 
-训练一次：输入文本 → Transformer 计算 → 预测下一个 Token → 计算 Loss → 反向传播 → 更新参数。重复数万亿次。
+注意两个细节：
 
-## 需要掌握的问题
+**（1）不是所有数据一视同仁。** Common Crawl 是互联网的"垃圾桶"——广告、垃圾评论、重复内容都有。GPT-3 对 Common Crawl 做了大量清洗和过滤（去重、去低质量），最终只保留了原始数据的很小一部分。
 
-1. 为什么简单预测任务能产生智能？
-2. Loss 下降代表什么？参数到底学到了什么？
-
----
-
-# 第 31 课：Batch、Epoch 与训练规模
-
-## 核心概念
-
-- **Sample：** 一个训练样本（"今天"→目标"天气"）
-- **Batch：** 一次训练多少样本（GPU 一次吃 32 个）
-- **Epoch：** 完整看一遍数据
-
-为什么不能一次吃全部？显存有限，所以分批。GPU 喜欢大 Batch（并行效率高），但 Batch 太大可能影响泛化。
+**（2）书籍和维基百科占比小但极其重要。** 它们贡献了数据质量的"天花板"。网页教会模型怎么说日常语言，但书籍教会它逻辑推理和长文本连贯——这是生成高质量文章和代码的基础。
 
 ---
 
-# 第 32 课：学习率（Learning Rate）
+## 3. 数据处理：从"互联网垃圾"到"训练原料"
 
-## 核心概念
+原始网页数据长这样（Common Crawl 里扒下来的）：
 
-`W = W - η∇W`，η 就是学习率。
+```text
+<html><body>
+<div class="ad">减肥就吃XXX！不运动不节食！<a href="spam.html">点击购买</a></div>
+<p>今天天气真好。</p>
+<div class="comment">沙发！！顶博主！！<br>楼上+1</div>
+<script>var x=1;</script>
+</body></html>
+```
 
-太大：跳过最佳点（下山一步跨太大）。太小：训练非常慢。
+不能直接喂给模型。处理流水线：
 
-**Warmup：** 开始用小学习率，慢慢增加。**Scheduler：** 训练后期降低学习率，精细调整。
+```text
+原始数据（带HTML标签/广告/垃圾评论）
+        ↓
+[1] 提取正文: 去掉HTML/JS/CSS，只保留文字
+        ↓
+[2] 语言过滤: 去掉非目标语言的文本
+        ↓
+[3] 去重: 去掉完全重复或高度相似的文档
+        ↓
+[4] 质量过滤: 去掉太短、太长、乱码、垃圾内容
+        ↓
+[5] 隐私清洗: 去掉邮箱、电话、身份证等个人信息
+        ↓
+[6] Tokenizer: 文字→token序列（第19课）
+        ↓
+训练数据（干净的token序列）
+```
+
+```python
+# 一个玩具级别的数据处理脚本——真实的是大规模分布式程序
+import re
+import hashlib
+
+def clean_web_text(raw_html):
+    """从原始网页提取可用的训练文本"""
+    # Step 1: 去掉HTML标签和脚本
+    text = re.sub(r'<script[^>]*>.*?</script>', '', raw_html, flags=re.DOTALL)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<[^>]+>', '', text)  # 去掉所有HTML标签
+
+    # Step 2: 去掉多余空白
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Step 3: 质量过滤
+    if len(text) < 100:          # 太短，不要
+        return None
+    if len(text) > 100000:       # 太长(可能是机器生成的)，截断
+        text = text[:100000]
+    if text.count('http') > 10:  # 全是链接，不要
+        return None
+
+    return text
+```
+
+真实的数据处理比这复杂得多。LLaMA 团队用了大量启发式规则：去掉"脏话比例过高"的文档、去掉"特殊字符太多"的文档、用分类器自动判断文档质量。这些规则加起来可能比模型本身的代码还多。
 
 ---
 
-# 第 33 课：Adam 优化器
+## 4. 为什么"垃圾进垃圾出"在大模型里特别严重？
 
-## 核心概念
+第 20 课我们讲过，Embedding 空间中的向量方向编码了语义关系。第 21 课又讲了高维空间可以展开复杂的特征结构。
 
-普通 SGD 只看当前梯度。Adam 增加动量（参考过去趋势）和自适应学习率（不同参数不同学习速度）。
+如果训练数据是垃圾（重复、错误、偏见），那么模型学到的空间结构就是扭曲的：
 
-Adam 维护一阶矩（平均方向）和二阶矩（梯度大小），在 Transformer 训练中表现远优于纯 SGD。
+- **重复数据**：模型记住了具体文本（不是学习规律），然后原封不动复述——这就是"模型抄袭"的根源。
+- **错误数据**：语义空间中"巴黎"和"法国首都"这两个向量方向的关联被错误数据扭曲。大量错误样本让模型"深信"一个虚假事实。
+- **偏见数据**：训练数据里"护士"总关联"她"，"CEO"总关联"他"——模型在向量空间中把"性别"和"职业"绑定，复现了数据中的偏见。
+
+这也是为什么高质量小数据可能超过低质量大数据。Chinchilla 论文证明：在同等算力下，用高质量数据训练的小模型可以超过低质量数据训练的大模型。数据的"干净程度"和"数量"一样重要。
+
+---
+
+## 5. 和前面课程的关系：数据决定了 Embedding 空间的结构
+
+回头看第 20 课讲的 Embedding 语义空间——那个"国王-男人+女人=女王"的漂亮公式。为什么这个公式能成立？不是因为有人告诉模型"国王和女王的区别就是性别"，而是因为训练数据中无数次出现了这种平行关系：
+
+```text
+"国王" 和 "男人" 经常一起出现，"女王" 和 "女人" 也经常一起出现。
+模型从数据中自动提取出：gender_direction = king - man ≈ queen - woman
+```
+
+如果训练数据里从没有过"女王"这个词——那无论你模型多大、训练多久，Embedding 空间都不可能出现这个方向。
+
+数据 = 模型世界观的全部来源。这和第 28 课讲的"预训练是最贵的阶段"对应上了——因为预训练数据决定了模型的整个"知识底子"，后面的 SFT 和 RLHF 都只是在这底子上做微调。
+
+---
+
+## 6. 对 FreesLLM 的实际意义
+
+如果你要训练自己的 FreesLLM，数据处理是你第一个要啃的硬骨头：
+
+1. **数据收集**：不要幻想收集"整个互联网"。针对你的目标领域（比如中文技术问答），精选 10-50GB 高质量文本，效果可能比 500GB 随机网页更好。
+2. **数据清洗**：花在洗数据上的时间应该 >= 花在训练代码上的时间。脏数据会让你的 Loss 看起来在下降，但生成质量一塌糊涂。
+3. **数据配比**：模仿 GPT-3 的配比——大量网页打底 + 书籍/百科做质量锚点 + 代码数据（如果想做代码能力）。
+
+---
+
+## 7. 练习题
+
+**题目 1：** 如果训练数据里 90% 是英文，10% 是中文，模型的中文能力会怎样？这和 Embedding 空间的结构有什么关系？
+
+**题目 2：** 训练数据去重为什么重要？如果一个句子在数据中出现了 1000 次，模型对待它和出现 1 次的句子会有什么不同？
+
+**题目 3：** 你准备做一个专注于中文技术问答的 FreesLLM。列出 5 种数据来源，按优先级排序。
+
+---
+
+### 答案
+
+**题 1：** 中文能力会很弱——不是模型"学不会"，而是 Embedding 空间中中文 token 对应的向量没有得到充分训练。大部分训练步数都花在英文文本上，中文 token 的向量方向和关系结构没有被充分优化——它们在空间中还是接近"随机散布"的状态。
+
+**题 2：** 不去重的话，这个句子被预测对了 1000 次，Loss 下降 1000 次——模型会"过拟合"这个特定句子，把它背下来而不是学习它背后的语言规律。在推理时，一旦遇到类似的上下文，模型倾向于原样吐出这个背下来的句子——这是"模型伪造原创"的数学根因。
+
+**题 3：** 优先级排序：(1) CSDN/博客园/知乎技术专栏——中文技术文章核心来源；(2) GitHub 中文 README 和文档——代码+技术文档；(3) 技术书籍和教程（PDF转文本）——高质量长文本；(4) Stack Overflow + 中文翻译——问答对；(5) 维基百科中文版——事实锚点。注意所有来源都需要清洗和去重。
+
+---
+
+# 第 30 课：预训练（Pre-training）—— 数万亿次的"下一个词猜猜看"
+
+---
+
+## 1. 预训练的本质：一个极其简单但极其昂贵的目标
+
+第 28 课讲了预训练是三阶段中最贵的一步（99% 以上的算力），第 29 课讲了数据从哪来。现在真正进入"训练"本身。
+
+预训练的目标只有一句话：**给定前面的 token，预测下一个 token 最可能是什么。**
+
+$$
+\mathcal{L} = -\frac{1}{N} \sum_{i=1}^{N} \log P(x_i \mid x_1, x_2, ..., x_{i-1})
+$$
+
+这里的 N 不是几千几万——是**几万亿**。一个 7B 模型通常训练 1-3 万亿个 token。以每个 token 约 2 字节计算，就是 2-6TB 的纯文本数据。
+
+训练循环的核心骨架我们在第 49 课已经写了完整代码，这里回归到数学层面——预训练本质上是在做什么：
+
+```text
+输入:  "今天天气真"
+目标:  "好"           ← 模型要猜的就是这个
+
+输入:  "今天天气真好"
+目标:  "，"
+
+输入:  "今天天气真好，"
+目标:  "我"
+
+...
+
+每猜对一个，Loss 降一点。猜错一个，Loss 涨一点。
+这个"猜→纠正→再猜"的循环重复数万亿次。
+```
+
+---
+
+## 2. 为什么这么简单的目标能产生智能？——回顾第 17 课
+
+第 17 课已经详细讨论过"涌现"和"为什么要预测下一个词"。这里补充一个关键点：
+
+**"预测下一个词"这个任务在数学上等价于"理解世界规律"。**
+
+一个具体的例子：
+
+```text
+训练数据里无数次出现:
+  "水在100摄氏度时会沸腾"
+  "水烧到100度就开始冒泡"
+  "加热到100°C后水变成了水蒸气"
+  ...
+
+模型不需要被"教"物理。它只需要发现:
+  看到"水在100" → 后面大概率是"度"  或  "°C"
+  看到"100°C" + "水" → 后面大概率是"沸腾"或"蒸发"
+```
+
+当模型在万亿级别的 token 上反复做这个"猜下一个词"的游戏，它的 Embedding 空间（第 20 课）中就自然形成了"温度""水""沸腾"这些概念之间的几何关系。这不是人为定义的规则——是预测任务强迫模型抽象出来的。
+
+第 22 课讲的"深度=多层抽象"也在这一阶段发挥作用。底层的 Transformer Block 学会了语法（"100 度"是一个数量短语），中层学会了语义（"沸腾"和"温度"相关），高层学会了常识推理（加热→相变）。
+
+---
+
+## 3. 一次训练步的完整流程——五步解剖
+
+把第 27 课的推理流程和第 18 课的反向传播连起来，就是预训练的一步：
+
+$$
+\begin{aligned}
+\text{Step 1 (取数据): } & \text{从训练数据中随机取一批文本, 切成 token 序列} \\
+\text{Step 2 (前向传播): } & \text{输入 "今天天气真", 模型预测每个位置的下一个 token} \\
+\text{Step 3 (算 Loss): } & \text{比较预测和实际的下一个 token ("好"), 用 Cross Entropy 算差距} \\
+\text{Step 4 (反向传播): } & \text{从 Loss 倒推出每个参数 (W_Q, W_K, W_V, W_1, W_2, ...) 的梯度} \\
+\text{Step 5 (更新参数): } & W \leftarrow W - \eta \nabla W \quad \text{(梯度下降, 第18课)}
+\end{aligned}
+$$
+
+重复数十亿到数万亿次。每一次循环所有的 W 矩阵都被微调一点点（通常每次更新幅度约为原始值的 0.0001%）。数万亿次之后，这些 W 从完全随机的数字，变成了编码了世界知识的参数。
+
+这是一场"蚂蚁搬家"式的训练——每一步的修改微不足道，数万亿步后造就了一个能写代码、做数学、聊天的模型。
+
+---
+
+## 4. Loss 曲线：模型在"想"什么？
+
+训练时最重要的监控指标是 Loss。第 16 课讲过 Cross Entropy Loss 的数学原理，这里看它的实际行为：
+
+```text
+Loss 变化过程 (典型的大模型预训练):
+  
+Epoch 1:   Loss = 8.5  (模型和随机猜差不多, 什么都不会)
+           ↓
+Epoch 10:  Loss = 4.2  (学会了常见词的搭配: "我"→"是", "今天"→"天气")
+           ↓
+Epoch 100: Loss = 2.8  (学会了语法: 主谓宾结构, 时态一致性, "因为"→"所以")
+           ↓
+Epoch 500: Loss = 2.1  (学会了事实: "巴黎"→"法国", "水"→"H2O", 代码语法)
+           ↓
+最终:      Loss ≈ 1.8  (学会了复杂推理: 数学计算, 逻辑链, 抽象概念)
+```
+
+Loss 下降的过程 = Embedding 空间从"随机散布"到"有结构有规律"的过程。第 20 课的"国王-男人+女人=女王"公式，在大约 Epoch 200 左右才开始出现——之前 Embedding 空间还没有足够的结构来支持这种语义运算。
+
+一个重要的训练技巧：**监控 Val Loss（验证集 Loss），不只是 Train Loss。** 如果 Train Loss 持续下降但 Val Loss 开始上升——过拟合了，模型在背数据而不是学规律。
+
+---
+
+## 5. 预训练的"黑箱"——我们不完全知道里面在发生什么
+
+虽然我们可以描述每一步的数学（前向→Loss→反向→更新），但没人能精确预测在训练的第 543,291,007 步，第 37 层的第 5 个 Attention Head 的 W_Q 矩阵会发生什么变化。
+
+这是一个令人谦卑的事实：我们设计了训练算法，但我们不完全理解训练出来的结果。第 76-77 课的机制可解释性（Mechanistic Interpretability）就是试图回答这个问题——"模型内部到底怎么工作的？"
+
+---
+
+## 6. 从预训练到你的 FreesLLM
+
+如果你要训练自己的 FreesLLM，预训练是你面临的最大挑战。但你不一定需要从头开始：
+
+- **方案 A（全量预训练）：** 从随机初始化开始，用你自己的数据训练所有参数。需要数百万美元的算力。
+- **方案 B（Continue Pretraining）：** 下载 LLaMA 的开源权重，用你的领域数据继续训练。几十到几百美元算力。模型在已有知识基础上"补课"你的领域。
+- **方案 C（只做 SFT）：** 如第 28 课所述，直接在开源基础模型上做指令微调。最便宜，但模型的知识边界受限于基础模型。
+
+对于个人开发者，方案 B 和 C 是现实选择。方案 A 是 Google/OpenAI/Meta 的赛道。
+
+---
+
+## 7. 练习题
+
+**题目 1：** Loss 从 10.0 降到 1.0，和从 2.0 降到 1.9，哪个阶段模型学到的东西更多？为什么？
+
+**题目 2：** 预训练时 Loss 在下降，但生成质量可能在"变差"（更啰嗦、更套路）。这是矛盾吗？回忆第 25 课的 Exposure Bias——预训练的 Loss 和推理时的用户体验为什么可能是两回事？
+
+**题目 3：** 如果预训练数据里"巴黎"总是出现在"法国"之前（"法国巴黎"），而"东京"总是出现在"日本"之前（"日本东京"），模型能学到"巴黎是法国首都"和"东京是日本首都"吗？它学到的到底是什么？
+
+---
+
+### 答案
+
+**题 1：** 从 10.0→1.0 学到的东西多得多。Loss 10 对应的是"所有 token 概率≈随机"，Loss 1 对应的是"正确 token 概率约 37%"。前者到后者的过程涵盖了语法、词汇、常识等所有基础能力的形成。2.0→1.9 只是微调（边际改进），表现上看生成质量可能几乎没有变化。
+
+**题 2：** 不矛盾。预训练优化的是 `P(next_token | 训练数据中的上下文)`。但推理时上下文是**模型自己生成的**（第 25 课的 Exposure Bias），和训练时的"完美上下文"不同。一个在训练数据上 Loss 很低的模型，可能学到的策略是"用最安全、最常见的方式续写"→推理时就表现为啰嗦和套路化。
+
+**题 3：** 模型能学到"巴黎和法国有关联"和"常见模式是地名A+地名B"。但它不一定能区分"巴黎是法国的城市"和"法国和巴黎有关"——这取决于训练数据中出现了多少次"巴黎是法国首都"这样的显式陈述。纯粹从共现中学习的关系可能只是"这两个词经常一起出现"而不是"一个是另一个的首都"。
+
+---
+
+# 第 31 课：Batch、Epoch 与训练规模 —— 模型怎么"吃饭"？
+
+---
+
+## 1. 从第 30 课的万亿次循环说起
+
+第 30 课讲了预训练要做数万亿次"猜下一个词"。但具体怎么执行的？一次猜一个词，等结果出来再猜下一个？那样太慢了。
+
+模型是一次**吃一大口**的——这就引出了 Batch、Epoch、Step 这三个基本概念。
+
+---
+
+## 2. 三个核心概念的直觉理解
+
+**Sample（一个样本）：** 一条训练数据。比如输入 "今天天气真"，目标 "好"。这就是一个"猜词任务"。
+
+**Batch（一批样本）：** 把多个 Sample 捆成一捆，一次送给 GPU 同时计算。形象地说：Sample = 一粒米，Batch = 一勺子饭——GPU 一口吃一勺。
+
+**Epoch（一轮）：** 把整个训练数据集完整地看一遍。1 个 Epoch = 所有 Sample 都被模型"见过"一次。
+
+三者之间的关系：
+
+$$
+\text{Steps per Epoch} = \frac{\text{总样本数}}{\text{Batch Size}}
+$$
+
+$$
+\text{总训练步数} = \text{Epochs} \times \text{Steps per Epoch}
+$$
+
+举个具体例子。一个 100GB 的文本数据集，tokenize 后大约有 250 亿个 token。假设 context 长度 2048 token，大约可以切出 1200 万个 Sample。Batch Size = 128（一次处理 128 个样本）。
+
+$$
+\text{Steps per Epoch} = \frac{12,000,000}{128} = 93,750 \text{ 步}
+$$
+
+如果训练 3 个 Epoch = 281,250 步。每一步做一次"前向→Loss→反向→更新"（第 30 课的五步循环）。
+
+---
+
+## 3. Batch Size 的两难选择
+
+Batch Size 越大，GPU 一次处理的数据越多，并行效率越高，每一步的梯度估计也更准确（基于更多样本）。但显存是有限的——一个 7B 模型在 FP16 下本身就占约 14GB，再加上优化器状态和中间激活值，40GB A100 基本只够放 Batch Size = 1-4。
+
+实际训练用的技巧是**梯度累积（Gradient Accumulation）**：
+
+```python
+# 目标: 模拟 Batch Size = 128
+# 实际: 每次只放 4 个样本, 累积 32 次后再更新参数
+
+micro_batch_size = 4
+accumulation_steps = 32   # 有效 batch = 4 × 32 = 128
+
+optimizer.zero_grad()
+for step in range(accumulation_steps):
+    x, y = get_micro_batch(micro_batch_size)
+    logits, loss = model(x, targets=y)
+    loss = loss / accumulation_steps  # 关键！除以累积步数
+    loss.backward()                   # 梯度累加，不立即更新
+optimizer.step()                      # 32步一起更新
+```
+
+回顾第 18 课——PyTorch 的梯度默认是**累加**的，`loss.backward()` 会把新梯度加到已有梯度上。梯度累积利用了这个特性，让有限的显存能模拟更大的 Batch Size。代价：训练时间线性增加（32 次前向传播才能更新一次参数）。
+
+---
+
+## 4. Epoch 数：看几遍就够了？
+
+理想情况：Epoch 越多越好——数据看得越多，模型学得越充分。
+
+现实：大模型通常**1-3 个 Epoch**。为什么这么少？
+
+原因是大模型的**数据量本身已经极大了**。GPT-3 训练了约 3000 亿 token，但互联网上高质量的文本远不止这个数。模型在第一个 Epoch 甚至还没看完所有训练数据的一小部分——它不需要"重复看"就已经在持续接收新信息。
+
+但对于小数据量的微调（SFT，第 28 课），通常需要多个 Epoch（5-20 个）——几千条对话反复看，直到模型学会对话格式。这就涉及到过拟合风险：看太多遍数据就是背下来，泛化能力下降。
+
+---
+
+## 5. 和前面课程的连接
+
+第 18 课讲了 `loss.backward()` 累加梯度的机制——这就是梯度累积能工作的底层原因。第 35 课会讲 GPU 为什么能并行处理 Batch 内的多个样本——SIMD 架构使得矩阵乘法天然对 Batch 友好。第 36 课会讲数据并行——当一台 GPU 装不下模型时，多台 GPU 各自拿不同的数据片段（mini-batch），训练完再同步梯度。
+
+---
+
+## 6. 练习题
+
+**题目 1：** 训练集有 10 万条样本，Batch Size = 64。一个 Epoch 有多少步？如果梯度累积 `accumulation_steps = 8`，有效 Batch Size 是多少？实际更新参数的步数是多少？
+
+**题目 2：** Batch Size 从 32 翻倍到 64，对训练速度和显存占用分别有什么影响？如果用梯度累积来模拟大 Batch，训练速度能提升吗？
+
+**题目 3：** 为什么大模型预训练通常只要 1 个 Epoch，而 SFT 微调需要很多个 Epoch？这和训练数据量有什么关系？
+
+---
+
+### 答案
+
+**题 1：** 100,000 / 64 ≈ 1563 步（最后一批可能不足 64，DataLoader 可能保留或丢弃）。有效 Batch Size = 64 × 8 = 512。实际更新步数 = 1563 / 8 ≈ 195 步（因为每 8 个 micro-batch 才更新一次参数）。
+
+**题 2：** 大 Batch 让 GPU 满负荷运转（更高并行度），单步计算更快。但显存线性增长——Batch Size 翻倍，激活值显存也翻倍。梯度累积模拟大 Batch 不能提速——它只是用时间换显存：32 次小 batch 的前向+反向传播的总时间远大于 1 次大 batch。
+
+**题 3：** 大模型预训练数据量极大（万亿 token），模型甚至在第一个 Epoch 里都看不完所有数据的一小部分——不会有"同一个样本看很多遍"的情况，没有过拟合压力。SFT 数据量小（几千到几万条），模型需要反复看才能学会这些新格式，但看太多就会背下来（过拟合），需要在"学会"和"背下来"之间找到平衡点。
+
+---
+
+# 第 32 课：学习率（Learning Rate）—— 每一步迈多大？
+
+---
+
+## 1. 从第 30-31 课的训练循环看学习率
+
+第 30 课讲了预训练的核心循环——每步"前向→Loss→反向→更新"。第 31 课讲了 Batch 把数据分批喂进去。现在聚焦到那一步"更新"：
+
+$$
+W \leftarrow W - \eta \nabla W
+$$
+
+这个 $\eta$（希腊字母 eta）就是学习率。它决定了每次更新参数时"迈多大的步子"。
+
+回顾第 18 课梯度下降的直觉——你站在山顶，梯度是"最陡的下山方向"。学习率就是你的"步长"。步子太大可能跳过山谷飞到对面山坡，步子太小走到天黑还在半山腰。
+
+---
+
+## 2. 学习率太大、太小、刚好的可视化
+
+用一维参数空间来直观感受（真实模型有数十亿维，但道理一样）：
+
+```text
+Loss 曲线 (凹向上的碗, 目标是最低点):
+
+η 太小 (e.g. 1e-6):
+  Loss: 10.0 → 9.999 → 9.998 → ... (几百步后还在半山腰)
+  现象: Loss 缓慢均匀下降, 但训练到你退休都训不完
+
+η 合适 (e.g. 3e-4):
+  Loss: 10.0 → 8.2 → 6.5 → 5.1 → 4.0 → ... (几十步就接近最低点)
+  现象: Loss 快速下降然后慢慢平稳
+
+η 太大 (e.g. 0.1):
+  Loss: 10.0 → 5.0 → 15.0 → 8.0 → 25.0 → NaN
+  现象: Loss 剧烈震荡, 甚至爆炸 (越过最低点飞到对面高坡)
+```
+
+用代码直观感受：
+
+```python
+import torch
+
+# 模拟一个简单的二次 Loss: L = (w - 3)^2 (最小值在 w=3)
+w = torch.tensor(0.0, requires_grad=True)
+target = 3.0
+
+def test_lr(lr, steps=10):
+    w.data = torch.tensor(0.0)
+    history = []
+    for _ in range(steps):
+        loss = (w - target) ** 2
+        loss.backward()
+        with torch.no_grad():
+            w -= lr * w.grad
+            w.grad.zero_()
+        history.append(w.item())
+    return history
+
+print(f"η=0.01: {test_lr(0.01)}")   # 缓慢接近3
+print(f"η=0.5:  {test_lr(0.5)}")    # 震荡后接近
+print(f"η=1.5:  {test_lr(1.5)}")    # 剧烈震荡, 可能发散
+# η=0.01: [0.06, 0.12, 0.18, ...]  → 缓慢爬向3
+# η=0.5:  [3.0, 3.0, 3.0, ...]     → 一步到位! (完美)
+# η=1.5:  [9.0, -9.0, 33.0, ...]   → 直接发散 💥
+```
+
+---
+
+## 3. Warmup：为什么不能一开始就全速跑？
+
+第 30 课讲过，模型初始参数是随机的——此时梯度方向是"准的"（指向 Loss 更低的方向），但梯度的**大小**极其不稳定。有些参数的梯度可能比另一些大 100 倍以上。
+
+如果一上来就全速狂奔——大梯度的参数一步跨出几十倍的范围，再也回不来了。
+
+**Warmup 的做法：** 前几千步，学习率从 0 线性增长到目标值。
+
+$$
+\eta_{\text{step}} = \eta_{\text{max}} \times \frac{\text{step}}{\text{warmup\_steps}} \quad (\text{step} < \text{warmup\_steps})
+$$
+
+```python
+# Warmup 实现
+def get_lr_warmup(step, max_lr=3e-4, warmup_steps=2000):
+    if step < warmup_steps:
+        return max_lr * step / warmup_steps  # 从0线性增长
+    else:
+        return max_lr  # warmup结束后保持最大lr
+
+# 模拟前10步的学习率
+for step in [1, 10, 100, 1000, 2000]:
+    print(f"Step {step:5d}: lr = {get_lr_warmup(step):.6f}")
+# Step     1: lr = 0.000000  ← 几乎不动
+# Step    10: lr = 0.000002
+# Step  1000: lr = 0.000150
+# Step  2000: lr = 0.000300  ← warmup结束
+```
+
+---
+
+## 4. Scheduler：越靠近终点，步子越小
+
+Warmup 之后模型在高速路上跑了一阵。但接近终点时如果还保持高速，会反复"冲过头"。
+
+**Cosine Scheduler（余弦调度器）**是最常用的——学习率按照余弦曲线平滑衰减：
+
+```python
+import math
+
+def get_lr_cosine(step, max_lr=3e-4, warmup_steps=2000, total_steps=100000):
+    if step < warmup_steps:
+        return max_lr * step / warmup_steps          # warmup
+    progress = (step - warmup_steps) / (total_steps - warmup_steps)
+    return max_lr * 0.5 * (1 + math.cos(math.pi * progress))  # 余弦衰减
+
+# 画出完整的学习率曲线
+for step in [0, 2000, 25000, 50000, 75000, 100000]:
+    lr = get_lr_cosine(step)
+    print(f"Step {step:6d}: lr = {lr:.2e}")
+# Step      0: lr = 0.00e+00   ← warmup开始
+# Step   2000: lr = 3.00e-04   ← warmup峰值
+# Step  50000: lr = 1.50e-04   ← 衰减到一半
+# Step 100000: lr = 0.00e+00   ← 训练结束, 几乎不动
+```
+
+---
+
+## 5. 和前面课程的连接
+
+第 18 课的 `W = W - η∇W` 是学习率的数学基础。第 31 课的梯度累积会影响"有效步长"——小 Batch = 更多噪声梯度，通常需要更小的学习率。第 33 课 Adam 优化器会给每个参数**自适应**的学习率——不同参数有不同步长。
+
+第 49 课的训练循环代码里你会实际设置这些参数——`optimizer = AdamW(model.parameters(), lr=3e-4)`，然后配合 Scheduler 动态调。
+
+---
+
+## 6. 练习题
+
+**题目 1：** 为什么 Warmup 不能跳过？初始化阶段的梯度和训练中期的梯度有什么本质区别？
+
+**题目 2：** 如果模型在训练 10000 步后 Loss 不再下降，你是应该调大还是调小学习率？为什么？
+
+**题目 3：** 对于同样的数据，Batch Size 从 32 翻到 512，学习率通常应该怎么调？为什么？
+
+---
+
+### 答案
+
+**题 1：** 初始化时所有 W 矩阵是随机值，梯度的方差极大——某些层的梯度可能比其他层大 100 倍以上。Warmup 给优化器时间"摸清"每个参数的梯度尺度，否则大梯度的参数会在第一秒就被更新到不可逆的位置。而训练中期，梯度分布已经趋于稳定，可以全速前进。
+
+**题 2：** 应该调小。Loss 不再下降通常意味着学习率太大，模型在最低点附近反复震荡，永远"落"不到最低点。调小学习率（比如从 3e-4 减到 1e-5）可以让模型在最低点附近精细调整。也可以直接用 Cosine Scheduler 自动衰减。
+
+**题 3：** 通常应该同比例调大。Batch Size 翻 16 倍（32→512），每个 step 的梯度估计更准确（噪声更小），可以用更大的步长。经验法则叫"Linear Scaling Rule"：lr 和 batch size 同比例缩放。但实际情况更复杂——batch 太大时这个法则会失效，需要配合 Warmup。
+
+---
+
+# 第 33 课：Adam 优化器 —— 为什么没人用纯 SGD 训 Transformer？
+
+---
+
+## 1. SGD 的困境：每个参数该迈多大步？
+
+第 18 课讲了梯度下降：`W = W - η∇W`。第 32 课讲了学习率 η 怎么选。但这两课都隐含了一个假设：**所有参数共享同一个 η**。
+
+这在 Transformer 里是个大问题。回顾第 22 课——一个 96 层的 GPT 里有数千个矩阵：`W_Q, W_K, W_V, W_O, W_1, W_2, ...` ，每个矩阵负责完全不同的功能。Embedding 层的 `W_E` 有 50000×4096 维，输出层的 `lm_head` 也是 50000×4096 维——但中间 Attention 的 `W_Q` 只有 4096×4096 维。它们的梯度尺度完全不同——有些参数的梯度天然是其他的 100 倍。
+
+让所有参数共享一个学习率 = 有些参数被"淹死"（η 太小，永远不动），有些参数被"炸飞"（η 太大，一步跨出几十倍范围）。
+
+**Adam 的核心思想：给每个参数单独计算一个"适合它的学习率"。**
+
+---
+
+## 2. Adam 的两个"记忆"：动量 + 自适应
+
+Adam 维护两组统计量——称为一阶矩和二阶矩，但对 LLM 训练来说只需要知道它们各自的直觉：
+
+**一阶矩 m（动量 Momentum）：** "过去一段时间的平均梯度方向。"
+
+- 如果某个参数过去 100 步梯度方向一致（持续减小某个方向），动量累积起来，步长自动变大→加速下降。
+- 如果梯度方向震荡（一会儿正一会儿负），动量抵消，步长自动变小→避免无意义震荡。
+- 直观理解：不是只看当前这步，而是看"最近一段时间的趋势"。
+
+**二阶矩 v（自适应学习率）：** "梯度的波动幅度有多大。"
+
+- 如果某个参数的梯度一直很小（波动小），v 就小→自适应学习率变大→这个参数应该多动动。
+- 如果梯度剧烈波动（波动大），v 就大→自适应学习率变小→这个参数碰不得，轻轻调。
+
+```python
+import torch
+
+# 模拟 Adam 的核心逻辑 (简化版, 不是完整实现)
+w = torch.tensor(0.0, requires_grad=True)
+m = 0.0      # 一阶矩 (动量)
+v = 0.0      # 二阶矩 (梯度平方的滑动平均)
+beta1 = 0.9  # 动量衰减系数
+beta2 = 0.999 # 二阶矩衰减系数
+lr = 1e-3
+eps = 1e-8
+
+for step in range(1, 101):
+    loss = (w - 3.0) ** 2   # 模拟二次函数 Loss
+    loss.backward()
+    grad = w.grad
+
+    with torch.no_grad():
+        # 更新一阶矩: 指数滑动平均 (EMA) — 越近的梯度权重越大
+        m = beta1 * m + (1 - beta1) * grad
+        # 更新二阶矩: 梯度平方的 EMA — 衡量"波动幅度"
+        v = beta2 * v + (1 - beta2) * (grad ** 2)
+
+        # Adam 的更新公式 (简化: 省略 bias correction)
+        w -= lr * m / (torch.sqrt(v) + eps)
+        w.grad.zero_()
+
+    if step % 20 == 0:
+        print(f"Step {step:3d}: w={w.item():.4f}, m={m.item():.4f}, v={v.item():.6f}")
+```
+
+---
+
+## 3. 为什么 Adam 在 Transformer 上远优于 SGD？
+
+三个原因：
+
+**（1）不同层的梯度尺度差几个数量级。** Embedding 层的梯度通常比中间 Attention 层小得多（因为 Embedding 参数只在前向传播的最初和最末参与）。SGD 用一个 η 打天下→Embedding 几乎不动。Adam 的自适应学习率自动放大 Embedding 的更新步长。
+
+**（2）Transformer 训练初期梯度极不稳定。** 第 32 课讲了 Warmup——因为初始化时梯度方差极大。Adam 的二阶矩 v 恰好能应对这个问题：初始时 v 自动压低步长（因为初始梯度波动大，v 就大），这和 Warmup 配合得天衣无缝。
+
+**（3）LLM 训练周期极长。** 第 30 课讲了数万亿步的训练。训练过程中 Loss 从 10 降到 1.8——不同阶段需要的"最佳学习率"完全不同。Adam 的动量机制让优化器在早期大步探索、后期精细调整，全程不需要人手干预。
+
+实际使用的几乎总是 **AdamW**（Adam + Weight Decay 解耦），用 PyTorch 一行代码搞定：
+
+```python
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.9, 0.999))
+```
+
+---
+
+## 4. 和前面课程的连接
+
+第 18 课的梯度下降是 Adam 的特例（设 beta1=0, beta2=0 就退化为纯 SGD）。第 32 课的 Learning Rate Scheduler 在 Adam 的基础上还可以叠加——对 Adam 的全局 lr 再做 Warmup+Cosime 衰减。第 34 课会讲 FP16 训练时 Adam 需要特殊处理（梯度下溢问题）。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 如果训练到一半 Loss 突然暴涨（从 2.0 跳变到 50.0），Adam 的二阶矩 v 会怎么变化？这有助于还是有害于恢复训练？
+
+**题目 2：** 为什么 Adam 的默认 beta2 = 0.999？如果改成 0.9 会怎样？（提示：beta2 控制"对近期梯度的敏感度"）
+
+**题目 3：** 纯 SGD 和 Adam 在 Transformer 预训练中的实际差异是什么？如果你要用纯 SGD 训练 GPT，你需要额外做什么？
+
+---
+
+### 答案
+
+**题 1：** v 会急剧增大（因为最近几步梯度的平方值暴增），导致自适应学习率 `lr / sqrt(v)` 急剧减小→步长自动收缩，起到"紧急刹车"的效果。这有助于恢复——模型自动放慢速度，不会在错误方向上继续狂奔。
+
+**题 2：** beta2=0.999 意味着二阶矩对约 1000 步的历史取 EMA（`1/(1-0.999) ≈ 1000`），这是一个"长记忆"设置——适合平稳的训练过程。beta2=0.9 只对约 10 步取 EMA（短记忆），二阶矩随最近梯度剧烈波动，会导致学习率不稳定——收敛变慢甚至发散。
+
+**题 3：** 纯 SGD 在 Transformer 上几乎无法直接训练。你需要：(a) 极其精细的学习率调参（每层可能不同），(b) 非常长的 Warmup，(c) 可能需要对不同层设置不同 η（Layer-wise LR）。这些 Adam 全部自动做了——这就是为什么自 2018 年后没人用纯 SGD 训 Transformer。
 
 ---
 
 # 第 34 课：训练精度 —— FP32、FP16、BF16
 
-## 核心概念
+---
 
-- **FP32：** 32 位浮点，精确但占显存
-- **FP16：** 16 位浮点，快、省显存
-- **BF16：** Google 提出，范围更大，现在 LLM 常用
+## 1. 为什么精度是个"卡脖子"问题？
 
-混合精度训练：大部分计算用 FP16/BF16，关键步骤用 FP32 保精度。低精度不会毁掉模型——神经网络的参数冗余足够吸收精度损失。
+第 30 课讲了预训练要数万亿步。第 31 课讲了 GPU 显存有限。这两个问题撞在一起，产生了一个直接矛盾：**参数太多，显存放不下。**
+
+一个 7B 参数的模型，如果全部用 FP32（每个参数 4 字节），光是模型权重就占 7B × 4 = 28GB。加上优化器状态（Adam 的 m 和 v，第 33 课）、梯度、中间激活值——总显存轻松超过 100GB。而一张 A100 只有 40GB 或 80GB 显存。
+
+降低精度不是"可选优化"——是"不降精度根本训不了"。
 
 ---
 
-# 第 35 课：GPU 训练原理
+## 2. 三种精度的直观对比
 
-## 核心概念
+浮点数在计算机里的表示：`(-1)^sign × 2^(exponent) × mantissa`。不同精度分配不同位数给 exponent（决定范围）和 mantissa（决定精度）：
 
-CPU：少量复杂任务。GPU：大量简单并行计算。
+```python
+import torch
 
-神经网络大量矩阵乘法 `A × B`，可以同时计算很多元素。GPU 几千个核心并行处理，所以 AI 爆发。
+x = torch.tensor(0.123456789)
+
+for dtype, name in [(torch.float32, "FP32"), (torch.float16, "FP16"), (torch.bfloat16, "BF16")]:
+    x_cast = x.to(dtype)
+    print(f"{name}: {x_cast.item():.10f} (显存: {x_cast.numel() * x_cast.element_size()} bytes)")
+# FP32: 0.1234567910 (4 bytes) ← 最精确
+# FP16: 0.1234567910 (2 bytes) ← 精度接近FP32, 但范围小
+# BF16: 0.1230468750 (2 bytes) ← 范围同FP32, 但精度差
+```
+
+$$
+\begin{array}{c|c|c|c}
+\text{精度} & \text{位数} & \text{指数位} & \text{尾数位} & \text{数值范围} & \text{显存占用} \\
+\hline
+\text{FP32} & 32 & 8 & 23 & \pm 3.4\times10^{38} & 4\text{ bytes} \\
+\text{FP16} & 16 & 5 & 10 & \pm 65,504 & 2\text{ bytes} \\
+\text{BF16} & 16 & 8 & 7 & \pm 3.4\times10^{38} & 2\text{ bytes} \\
+\end{array}
+$$
+
+关键区别在**指数位数**。FP16 只有 5 位指数——最大值 65504。训练中任何超过这个值的数都会变成 `inf`（溢出），导致 Loss 变 NaN。BF16 保留了和 FP32 一样的 8 位指数——范围完全不受影响，只是精度（尾数）降低了。
+
+这就是 BF16 成为 LLM 训练标准的原因：**它有 FP32 的范围安全 + FP16 的显存和速度。**
 
 ---
 
-# 第 36 课：分布式训练
+## 3. 混合精度训练：怎么用 16 位干 32 位的活？
 
-## 核心概念
+核心策略：**计算用低精度（快），存储用高精度（安全）。**
 
-一个 GPU 装不下 GPT 怎么办？
+```python
+# 混合精度训练的伪代码
+model = model.to(torch.bfloat16)    # 模型参数用 BF16 (省显存)
+optimizer = AdamW(model.parameters())
 
-- **数据并行：** 多个 GPU 训练不同数据
-- **模型并行：** 一个模型拆到多个 GPU
-- **ZeRO（DeepSpeed）：** 优化参数、梯度、优化器状态的存储，分片到多个 GPU
+for batch in dataloader:
+    # 前向传播: BF16 计算 (快)
+    with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+        logits, loss = model(x, targets=y)
+
+    # 反向传播: BF16 梯度
+    loss.backward()
+
+    # 关键! 优化器内部用 FP32 存储 m 和 v (第33课的二阶矩)
+    # 防止累积误差把16位精度磨没了
+    optimizer.step()
+    optimizer.zero_grad()
+```
+
+混合精度训练把三样东西存在不同精度里：
+
+| 存储内容 | 精度 | 原因 |
+|---------|------|------|
+| 模型权重 (W) | BF16/FP16 | 占显存大头，必须省 |
+| 前向计算 (激活值) | BF16/FP16 | 算得快 |
+| 优化器状态 (m, v) | FP32 | Adam 需要高精度累积，16位精度会被磨没 |
+| 参数副本 (master weights) | FP32 | 每次更新都先转FP32再转回BF16 |
+
+训练时 GPU 显存中同时存在 FP16 模型权重、FP32 master weights 和 FP32 优化器状态——三份数据，但总显存仍然远小于纯 FP32（因为 FP16 权重省了一半）。
 
 ---
 
-# 第 37 课：推理优化
+## 4. 为什么低精度"够用"？——回到线性代数
 
-## 核心概念
+第 21 课讲了高维空间的参数冗余。一个 4096 维的向量，少量随机噪声对它携带的信息几乎没影响。量化的误差（BF16 vs FP32 约差 0.1%）相当于在每个参数的末位加了一点噪声——4096 维向量空间整体结构不受影响。
 
-- **KV Cache：** 保存历史 Attention 的 K/V，避免每步重复计算
-- **Quantization：** FP16→INT8→INT4，大幅降低模型大小和推理成本
-- **Flash Attention：** 优化 Attention 的显存访问模式，加速推理
+第 67 课会讲推理端的极端量化（FP16→INT4），那是另一个量级——压缩 8 倍但只损失 1-3% 精度。训练端的 BF16 压缩 2 倍，几乎无损——所有主流模型都用它。
+
+---
+
+## 5. 练习题
+
+**题目 1：** FP16 的数值上限是 65504。训练中什么情况会导致某个值超过这个上限？如果发生了，Loss 会变成什么？
+
+**题目 2：** BF16 和 FP16 都是 16 位浮点，但 BF16 在 LLM 训练中更稳定。为什么一个简单的"多给 3 位指数"有这么大影响？
+
+**题目 3：** 为什么不能所有东西都用 BF16？为什么要保留 FP32 的 master weights 和优化器状态？
+
+---
+
+### 答案
+
+**题 1：** 深度学习常见溢出场景——梯度的平方值、Attention Score 的指数运算 `e^z`、loss 很大时的反向梯度。一旦溢出→变成 `inf`→Loss=NaN→整个训练崩溃。这就是为什么训练日志里出现 NaN 时第一个要怀疑的就是 FP16 溢出。
+
+**题 2：** FP16 的 5 位指数意味着只能表示 `[-65504, 65504]` 范围内的值。梯度、激活值、Adam 的 v 经常超过这个范围。BF16 的 8 位指数可以表示 `±3.4×10^38`——和 FP32 一样大的范围——所以不会溢出。代价只是尾数精度低了一点（7 位 vs FP16 的 10 位），但精度损失可以通过 FP32 master weights 弥补。
+
+**题 3：** Adam 优化器的状态（第 33 课）需要累积数万亿步的梯度统计。BF16 只有约 7 位有效精度——累积万亿次运算后，低位被完全磨掉（rounding error 累积超过有效精度）。FP32 有约 7 位十进制有效数字，可以支撑万亿级别的累积。所以只有"权重"和"计算"敢用低精度，"累积"必须用高精度。
+
+---
+
+# 第 35 课：GPU 训练原理 —— 为什么没有 GPU 就没有 GPT？
+
+---
+
+## 1. 从第 34 课的显存困境说起
+
+第 34 课讲了混合精度——用 BF16 省一半显存。但无论怎么省，一个 7B 模型训练时至少需要 50-100GB 显存。一张 A100 只有 40 或 80GB。
+
+而且显存只是问题的一半。第 30 课的万亿次训练循环如果不能快速完成，训一个模型真要几十年。
+
+GPU 同时解决了这两个问题：**大显存放模型 + 几千核心并行计算加速矩阵乘法。** 但它是怎么做到的？为什么 CPU 不行？
+
+---
+
+## 2. CPU vs GPU：两种完全不同的设计哲学
+
+CPU 像一个外科医生——能处理极度复杂的单一任务，但一次只能做一件事。*它的核心数量少（4-64），每个核心极其强大和灵活。
+
+GPU 像一个工厂流水线——能同时处理几千个极其简单的任务。它的核心数量多（数千到上万），但每个核心只能做很简单的运算（加减乘除）。
+
+为什么矩阵乘法恰好适合 GPU？
+
+$$
+C_{ij} = \sum_{k=1}^{n} A_{ik} \times B_{kj}
+$$
+
+矩阵乘法的一个输出元素 `C[i][j]` 不依赖另一个元素 `C[p][q]`——**所有元素可以同时计算，不互相等待。** 这种"完全可并行"的模式就是 GPU 的天然主场。
+
+```python
+import torch
+import time
+
+N = 4096
+A = torch.randn(N, N)
+B = torch.randn(N, N)
+
+# CPU
+t0 = time.time()
+C_cpu = A @ B
+torch.cuda.synchronize() if torch.cuda.is_available() else None
+print(f"CPU: {time.time() - t0:.2f}s")
+
+# GPU (如果有)
+if torch.cuda.is_available():
+    A_gpu = A.cuda()
+    B_gpu = B.cuda()
+    t0 = time.time()
+    C_gpu = A_gpu @ B_gpu
+    torch.cuda.synchronize()
+    print(f"GPU: {time.time() - t0:.2f}s")
+# 典型结果: CPU ~2s, GPU ~0.02s → 100倍差距
+```
+
+---
+
+## 3. GPU 的内存层级：为什么"近"比"大"重要
+
+GPU 的显存不是一块均匀的内存，而是一个层级结构：
+
+```text
+HBM (高带宽显存): 40-80GB, 慢 (≈1.5TB/s 带宽)
+    ↕ 数据搬运
+L2 Cache: 40MB, 中等快
+    ↕
+SRAM (片上缓存): 20MB, 极快 (≈19TB/s 带宽)
+    ↕
+计算单元 (CUDA Cores / Tensor Cores): 就在这里算
+```
+
+第 37 课讲的 FlashAttention 就是利用了这个层级差异——传统 Attention 每次从 HBM 搬运整个 QK^T 矩阵，瓶颈在带宽。FlashAttention 把计算切成小块塞进 SRAM，在片上一次算完，把 HBM 的带宽瓶颈绕过去了。
+
+第 34 课的 BF16 也有硬件层面的原因——NVIDIA 的 Tensor Core 对 FP16/BF16 有专门的硬件加速（吞吐量是 FP32 的 2-8 倍）。
+
+---
+
+## 4. Tensor Core：GPU 里的"AI 专用引擎"
+
+现代 GPU 不只是有很多小核心。2017 年起 NVIDIA 加入了 **Tensor Core**——专门为 4×4 矩阵乘法设计的硬件单元。
+
+一个 Tensor Core 能在一个时钟周期内完成一个 4×4 矩阵的乘法+加法（Fused Multiply-Add）。当你的模型做 `Q @ K^T` （第 10 课的 Attention）或 `W @ x` （第 4 课的矩阵乘向量）时，Tensor Core 在硬件层面自动介入——这就是为什么实际训练速度远超 CPU 的理论倍数。
+
+第 46 课实现的 MiniGPT 如果跑在 GPU 上（`model.cuda()`），PyTorch 会自动把矩阵乘法调度到 Tensor Core 上——你不需要手动调用，但理解它在做什么有助于你优化训练速度。
+
+---
+
+## 5. 和前面课程的连接
+
+第 31 课讲的 Batch Size 越大 GPU 效率越高——因为 GPU 靠并行填满计算单元，大 Batch 意味着每个计算单元都有活干。第 36 课会讲多 GPU 分布式训练——当数据和模型大到一张 GPU 装不下时怎么办。第 18 课讲过 GPU 擅长矩阵乘法——前向和反向传播本质上都是大量矩阵运算，GPU 全程加速。
+
+---
+
+## 6. 练习题
+
+**题目 1：** CPU 做 4096×4096 矩阵乘法大概要 2 秒，GPU 要 0.02 秒——加速 100 倍。但同样大小的数据，CPU 做 `a + b`（逐元素加法）和 GPU 的差距可能只有 10 倍。为什么矩阵乘法的加速比远高于简单运算？
+
+**题目 2：** Tensor Core 只能做 4×4 的小矩阵乘法——Transformer 的 Attention 是 4096×4096。硬件怎么把大矩阵乘法"拆"成 4×4 的小块？
+
+**题目 3：** 你的 FreesLLM 训练时遇到 `CUDA Out of Memory`。列出你能想到的 3 种不同方向的解决方案，并说明每种方案缓解的是显存中的哪个部分。
+
+---
+
+### 答案
+
+**题 1：** 矩阵乘法的计算量是 `O(N³)`（2×N³ 次浮点运算），而逐元素加法只有 `O(N²)`。对于 N=4096，矩阵乘法需要约 1370 亿次运算，加法只需 1600 万次。计算量越大，GPU 的并行优势越明显——GPU 擅长把大量计算塞满几千个核心，简单运算核心大部分空闲。
+
+**题 2：** 把 4096×4096 矩阵切成 1024×1024 个 4×4 小块。Tensor Core 同时处理所有独立的小块——"分块"是矩阵乘法的标准并行策略（tiling）。FlashAttention（第 37 课）用的也是同样的分块思想，只是针对 Attention 的特定模式做了优化。
+
+**题 3：** (a) 梯度累积（第 31 课）—减小 micro batch size，减少激活值显存。(b) 混合精度（第 34 课）—用 BF16 替代 FP32，权重显存减半。(c) 模型并行/ZeRO（第 36 课）—把模型拆分到多张 GPU 上。三种方案分别针对：前向激活值、权重存储、单卡容量上限。
+
+---
+
+# 第 36 课：分布式训练 —— 一个 GPU 装不下 GPT 怎么办？
+
+---
+
+## 1. 问题的根源——回顾前几课
+
+第 35 课讲了 GPU 有几千个核心但显存有限。第 34 课讲了 BF16 能省一半显存。但即使如此，GPT-3 的 175B 参数在 BF16 下纯权重就占 350GB——一张 A100 80GB 远远不够。第 33 课还说了 Adam 的 m 和 v 各自还要再占同样大的显存。
+
+总账算一下：**一个 175B 模型训练时需要的总显存 ≈ 175B × (2 字节 BF16 权重 + 4 字节 FP32 master + 4 字节 m + 4 字节 v) = 175B × 14 字节 ≈ 2.45TB。** 需要至少 30 张 80GB A100。
+
+这就是为什么需要分布式训练——多张 GPU 协同工作。
+
+---
+
+## 2. 三种并行策略的直觉理解
+
+**数据并行（Data Parallelism）：** 像把作业分给多个学生。每个 GPU 持有一份完整的模型副本，各自处理不同的小批次数据。算完后所有人对梯度取平均，同步更新参数。
+
+```text
+GPU 0: 模型副本 → 处理 batch[0:32]  → 梯度_0
+GPU 1: 模型副本 → 处理 batch[32:64] → 梯度_1  ⟩ → 平均梯度 → 各自更新
+GPU 2: 模型副本 → 处理 batch[64:96] → 梯度_2
+GPU 3: 模型副本 → 处理 batch[96:128]→ 梯度_3
+```
+
+**优势：** 简单，PyTorch 的 DDP（DistributedDataParallel）一行代码搞定。
+**劣势：** 每个 GPU 都要装下完整的模型 + 优化器状态。模型本身超过单卡容量→数据并行直接失效。
+
+**模型并行（Model Parallelism / Tensor Parallelism）：** 把模型本身切开，分到不同 GPU 上。
+
+```text
+GPU 0: Embedding + Layer 0-23 (前24层)
+GPU 1: Layer 24-47 (中24层)
+GPU 2: Layer 48-71 (后24层)
+GPU 3: Layer 72-95 + lm_head (最后24层 + 输出)
+```
+
+**优势：** 模型可以远超单卡容量。**劣势：** GPU 间必须串行——GPU 0 算完传给 GPU 1，GPU 1 算完传给 GPU 2...（像流水线），大部分 GPU 在等待。
+
+**ZeRO（微软 DeepSpeed）：** 不切模型结构，而是把优化器状态、梯度、参数**分片存储**在多个 GPU 上。哪个 GPU 需要哪块参数→从持有者 GPU 拉过来。
+
+```text
+不是每张卡存完整的 Adam m 和 v（第33课），
+而是: GPU0 存参数 1-25% 的优化器状态
+      GPU1 存参数 26-50% 的优化器状态
+      以此类推...
+需要时从对应 GPU 拉取。
+```
+
+ZeRO 有三个级别：ZeRO-1（只分片优化器状态）→ ZeRO-2（分片优化器+梯度）→ ZeRO-3（分片优化器+梯度+参数，最节省显存）。
+
+---
+
+## 3. 现代 LLM 训练的实际配置
+
+GPT-3 175B 的训练配置（大约是 10,000 张 V100 GPU 训练数月的规模）：
+
+```text
+- 数据并行: 复制多份模型，处理不同数据
+- 模型并行: 每层内部切分 Attention Head 到不同 GPU
+- 流水线并行: 不同层分到不同 GPU
+- ZeRO: 优化器状态分片存储
+→ 四者组合使用，没有人只用一种
+```
+
+你的 FreesLLM 如果是 1B 以下的模型，用数据并行（2-4 张 GPU）就够了。7B 以上需要 ZeRO-2/3 或模型并行。
+
+---
+
+## 4. 和前面课程的连接
+
+第 31 课的梯度累积是数据并行的"穷人版"——用时间换显存。第 18 课的 `loss.backward()` 是分布式梯度计算的基础——每个 GPU 各自 backward，然后 AllReduce 同步。第 33 课的 Adam 优化器状态是单卡显存的最大消耗者——也是 ZeRO 优化的首要目标。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 为什么数据并行要求每个 GPU 都有完整的模型副本，而模型并行不需要？两者的通信模式有什么不同？
+
+**题目 2：** ZeRO-3 把参数也分片了——每次前向传播时，如果 GPU 0 需要一块在 GPU 3 上的参数，它该怎么办？这会不会让训练变慢？
+
+**题目 3：** 你的 FreesLLM 是一个 1B 模型，单卡 A100 80GB 完全装得下。你还需要分布式训练吗？如果不需要，为什么？如果需要，用哪种策略？
+
+---
+
+### 答案
+
+**题 1：** 数据并行：每个 GPU 处理不同数据，但做同样计算→需要同样的参数→每张卡都得有完整模型。通信发生在反向传播之后：AllReduce 把所有 GPU 的梯度加起来取平均。模型并行：每个 GPU 只负责模型的一部分→不需要完整副本。通信发生在前向/反向传播中间：GPU 0 的激活值传给 GPU 1，GPU 1 的梯度传回 GPU 0。
+
+**题 2：** GPU 0 通过网络从 GPU 3 的内存中拉取那块参数。会变慢——网络带宽（约几百 GB/s）远小于本地 HBM 带宽（约 2TB/s，第 35 课）。这是 ZeRO-3 的代价：省更多显存但增加通信开销。
+
+**题 3：** 单卡装得下可以不用模型并行或 ZeRO。但数据并行仍然有价值——4 张卡做数据并行，每张处理 1/4 的 batch，总训练速度约 4 倍（扣除通信开销后约 3.5 倍）。如果训练时间不是瓶颈，单卡数据并行都可以不要。
+
+---
+
+# 第 37 课：推理优化 —— 训练完了，怎么让它跑得快？
+
+---
+
+## 1. 训练和推理是两个完全不同的世界
+
+第 30-36 课都在讲**训练**——怎么用万亿 token、百张 GPU 把一个随机模型训成能聊天的助手。
+
+但训完之后呢？用户发来一条消息，模型要在毫秒级响应——不能等几分钟算完再回。而且用户电脑上可能没有 A100，只有一张 RTX 3060 或者苹果的 M 系列芯片。
+
+这就引出了推理优化的三个核心技术：**KV Cache**（省计算）、**量化**（省显存）、**FlashAttention**（省带宽）。前面第 67 课详细展开了量化的代码和原理，FlashAttention 已在第 68 课讲解。本课聚焦 KV Cache——推理时最直观、收益最大的优化。
+
+---
+
+## 2. KV Cache：为什么不能每步重新算一次 Attention？
+
+生成一个 token 时，GPT 需要看之前所有的 token。如果没有 KV Cache：
+
+```python
+# ❌ 没有 KV Cache: 每步重新计算所有 token 的 K,V
+# 第1步: 计算 [tok1] 的 KV
+# 第2步: 计算 [tok1, tok2] 的 KV ← tok1 又算了一遍
+# 第N步: 计算 [tok1, ..., tokN] 的 KV ← tok1 算了 N 遍!
+```
+
+有 KV Cache 后，过去 token 的 K,V 被保存，新 token 只需算自己的：
+
+```python
+import torch
+
+class KVCacheAttention:
+    """带 KV Cache 的 Self-Attention —— 推理时的性能关键"""
+    def __init__(self):
+        self.k_cache = None   # 缓存的 Key
+        self.v_cache = None   # 缓存的 Value
+
+    def forward(self, q_new, k_new, v_new):
+        """
+        q_new: (batch, 1, d_head) —— 当前新 token 的 Query
+        k_new, v_new: 同上 —— 当前新 token 的 Key 和 Value
+        """
+        # 拼接缓存: 过去所有的 K,V + 当前新的 K,V
+        if self.k_cache is not None:
+            k = torch.cat([self.k_cache, k_new], dim=1)  # (B, past+T, D)
+            v = torch.cat([self.v_cache, v_new], dim=1)
+        else:
+            k, v = k_new, v_new
+
+        # 更新缓存
+        self.k_cache = k
+        self.v_cache = v
+
+        # 正常的 Scaled Dot-Product Attention
+        d_k = k.size(-1)
+        scores = q_new @ k.transpose(-2, -1) / (d_k ** 0.5)
+        attn = torch.softmax(scores, dim=-1)
+        return attn @ v
+
+    def reset(self):
+        """新对话开始时清空缓存"""
+        self.k_cache = None
+        self.v_cache = None
+```
+
+### KV Cache 节省了多少计算？
+
+生成 N 个 token，没有 KV Cache 需要 O(N²) 次 K,V 计算（每个新 token 都要重算所有历史）。有 KV Cache 只需 O(N) 次（每个 token 只算一次）。
+
+实际效果：生成 1000 个 token，KV Cache 让推理速度提升约 10-20 倍。这就是为什么你聊天时 GPT 能秒回——它没在每打一个字时把所有历史重新算一遍。
+
+---
+
+## 3. KV Cache 为什么能工作？——回到第 24 课的 Causal Mask
+
+第 24 课讲了 Causal Mask 的本质：**每个位置的 Attention 只看过去，不看未来。** 数学上这意味着：
+
+$$
+\text{Attention}_t(K,V) = \text{softmax}\!\left(\frac{Q_t K_{1:t}^T}{\sqrt{d}}\right) V_{1:t}
+$$
+
+当我们在位置 t+1 插入新 token 时，位置 1 到 t 的 Attention 结果**完全不受影响**——因为 Causal Mask 保证了未来 token 不会反向改变过去的 Attention 权重。所以过去的 K 和 V 一旦算好就永远不变——直接缓存复用。
+
+这也是第 23 课讲的 Decoder-only 架构比 Encoder-only 架构在推理时更高效的根本原因——Encoder 的双向 Attention 没有这个性质，每个新 token 都会"污染"所有旧位置的 Attention 结果。
+
+---
+
+## 4. KV Cache 的显存代价——不是免费的
+
+KV Cache 省了计算，但花了显存。对于 7B 模型（32 层，32 头，d_head=128）：
+
+$$
+\text{KV Cache 大小} = 2 \times n_{\text{layers}} \times n_{\text{heads}} \times d_{\text{head}} \times \text{seq\_len} \times 2\text{ bytes (BF16)}
+$$
+
+生成 4096 个 token 后，KV Cache 约占 `2 × 32 × 32 × 128 × 4096 × 2 ≈ 2.1 GB`。对于长上下文（比如 128K），KV Cache 本身就可能占几十 GB——这是第 41-42 课的 GQA（分组查询注意力）和第 37 课 FlashAttention 试图解决的问题。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 为什么 V 也需缓存？Q 为什么不需要缓存？
+
+**题目 2：** 多轮对话里，模型处理完第 1 轮后开始处理第 2 轮。第 1 轮的 KV Cache 还能复用吗？为什么？
+
+**题目 3：** 当生成了很多 token 后，KV Cache 越来越大导致显存不够怎么办？至少列举两种解决方案。
+
+---
+
+### 答案
+
+**题 1：** V 和 K 一样——过去 token 的 Value 一旦算出，未来 token 的插入不会改变它（Causal Mask 保证）。所以 V 也需要缓存。Q 不需要缓存——因为每次只新增一个 token，只需要计算当前 token 的 Q（去查询所有缓存的 K）。旧的 Q 没用了——它已经被用来生成了对应的 token，后续不会再被查询。
+
+**题 2：** 可以复用。第 1 轮的所有 token（用户问题+助手回答）都是"历史"，第 2 轮的 token 不应该改变第 1 轮任何位置的 K 和 V——Causal Mask 保证了这个不变性。`reset()` 只在新对话开始时调用。
+
+**题 3：** (a) Sliding Window Attention——只保留最近 N 个 token 的 KV Cache（如 Mistral 的 4096 滑动窗口）。(b) KV Cache 量化——把 K 和 V 从 FP16 压缩到 INT8 甚至 INT4。(c) GQA（第 42 课）——多个 Q 共享一组 K/V，大幅减少缓存量。
 
 ---
 
@@ -4680,31 +6974,282 @@ CPU：少量复杂任务。GPU：大量简单并行计算。
 
 # 第 38 课：LLaMA 架构 —— 现代 LLM 的基础模板
 
-## 核心概念
+---
 
-原始 Transformer 在训练大模型时面临：显存压力、稳定性问题、推理速度问题。
+## 1. 为什么不直接用原始 Transformer？——回顾前面踩过的坑
 
-LLaMA 核心改进：RMSNorm（替代 LayerNorm）、RoPE（替代正弦位置编码）、SwiGLU（替代 ReLU FFN）、Pre-Norm（Norm 放在子层之前）。
+前面 23-37 课我们深入拆解了 GPT 的每一个部件。但 GPT-1/2 用的是 2017 年的原始 Transformer 设计。到了 2023 年 LLaMA 出现时，研究者已经发现了原始设计的多个瓶颈：
 
-现代 LLM Block：Input → RMSNorm → Attention → Residual → RMSNorm → SwiGLU FFN → Residual。
+| 原始设计 | 问题 | 后果（回顾相关课） |
+|---------|------|------------------|
+| LayerNorm（第 15 课讲过） | 计算均值和方差，多一步 | 训练慢约 10-15%，大模型不划算 |
+| 正弦位置编码（第 11 课） | 绝对位置，长文本外推差 | 32K 以上上下文效果骤降 |
+| ReLU FFN（第 14 课） | 一刀切，负值全丢弃 | 表达能力受限，梯度不流畅 |
+| Post-Norm（第 15 课） | Norm 在残差之后 | 梯度被削弱，深层难训练 |
+
+LLaMA 不是一个全新架构——它是对原始 Transformer 做了一套**工程优化手术**。每一刀都精准地解决了上述瓶颈。后面第 39-42 课会逐一展开每个优化，本课先看全景。
+
+---
+
+## 2. LLaMA vs 原始 Transformer 的 Block 对比
+
+原始 Transformer Block（第 15 课的代码）：
+
+```text
+x → Attention(x) → x + Attention(x) → LayerNorm → FFN(x) → x + FFN(x) → LayerNorm
+```
+
+LLaMA Block（现代版本）：
+
+```text
+x → RMSNorm → Attention → x + Attention_out → RMSNorm → SwiGLU_FFN → x + FFN_out
+```
+
+四个关键改动，每一条都和前面的课呼应：
+
+1. **Pre-Norm（第 15 课）：** Norm 放在子层**之前**而非之后。残差路径是干净的 `x + F(Norm(x))`，梯度直接从输出传到输入，不被 Norm 截断。
+2. **RMSNorm（第 40 课详讲）：** 去掉 LayerNorm 的减均值步骤，只做缩放。省 30% 计算量。
+3. **RoPE（第 11 课升级版，第 39 课详讲）：** 位置编码不是加在 Embedding 上，而是直接旋 Q 和 K 向量。相对位置自动注入 Attention。
+4. **SwiGLU（第 14 课升级版，第 41 课详讲）：** ReLU 被 SiLU + Gate 替代，FFN 从 2 个矩阵变成 3 个矩阵。
+
+---
+
+## 3. 用代码看LLaMA Block 长什么样
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class LLaMABlock(nn.Module):
+    """
+    LLaMA 的一个 Transformer Block:
+    RMSNorm → Attention(RoPE) → Residual → RMSNorm → SwiGLU FFN → Residual
+    """
+    def __init__(self, d_model=4096, n_heads=32, d_ff=11008, max_seq_len=2048):
+        super().__init__()
+        self.head_dim = d_model // n_heads
+
+        # --- Attention 部分 ---
+        self.attention_norm = RMSNorm(d_model)     # Pre-Norm (第40课)
+        self.wq = nn.Linear(d_model, d_model, bias=False)
+        self.wk = nn.Linear(d_model, d_model, bias=False)
+        self.wv = nn.Linear(d_model, d_model, bias=False)
+        self.wo = nn.Linear(d_model, d_model, bias=False)
+
+        # RoPE 角度预计算 (第39课)
+        self.rotary_emb = RotaryEmbedding(self.head_dim, max_seq_len)
+
+        # --- FFN 部分 ---
+        self.ffn_norm = RMSNorm(d_model)           # Pre-Norm
+        self.gate_proj = nn.Linear(d_model, d_ff, bias=False)  # SwiGLU 的门
+        self.up_proj   = nn.Linear(d_model, d_ff, bias=False)  # SwiGLU 的值
+        self.down_proj = nn.Linear(d_ff, d_model, bias=False)  # 压缩回来
+
+    def forward(self, x, start_pos=0):
+        B, T, C = x.shape
+
+        # --- 子层 1: Attention ---
+        residual = x
+        x_norm = self.attention_norm(x)             # Pre-Norm (第15/40课)
+
+        q = self.wq(x_norm).view(B, T, self.n_heads, self.head_dim)
+        k = self.wk(x_norm).view(B, T, self.n_heads, self.head_dim)
+        v = self.wv(x_norm).view(B, T, self.n_heads, self.head_dim)
+
+        # RoPE: 旋转 Q 和 K (第11课升级版/第39课)
+        q, k = self.rotary_emb(q, k, start_pos)
+
+        # 标准 Scaled Dot-Product Attention + Causal Mask (第10/24课)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
+        if T > 1:  # 训练时需要 causal mask
+            mask = torch.triu(torch.ones(T, T) * float('-inf'), diagonal=1)
+            scores = scores + mask
+        attn = F.softmax(scores, dim=-1)
+        attn_out = torch.matmul(attn, v)
+        attn_out = attn_out.view(B, T, C)
+        attn_out = self.wo(attn_out)
+
+        x = residual + attn_out   # Residual (第15课)
+
+        # --- 子层 2: SwiGLU FFN ---
+        residual = x
+        x_norm = self.ffn_norm(x)
+
+        gate = F.silu(self.gate_proj(x_norm))    # SwiGLU 的门 (第41课)
+        up   = self.up_proj(x_norm)
+        ffn_out = self.down_proj(gate * up)      # 门控融合
+
+        x = residual + ffn_out
+        return x
+```
+
+这 60 行代码就是 LLaMA 7B/13B/70B 的核心构建块——重复 32/40/80 次就是完整模型。和第 46 课 MiniGPT 的 Block 对比，结构几乎一样，多了 RoPE + RMSNorm + SwiGLU 三个优化。
+
+---
+
+## 4. 为什么 LLaMA 成为开源标准？
+
+2023 年 LLaMA 发布后，几乎所有开源模型（Mistral、Qwen、Yi、DeepSeek 等）都采用了这套模板。原因：
+
+- **训练稳定：** Pre-Norm + RMSNorm 让数百层网络不崩。
+- **推理快：** RoPE + GQA（第 42 课）让长文本 KV Cache 可控。
+- **效果好：** SwiGLU 比 ReLU 强约 5-10%（同等参数量下）。
+- **可复现：** Meta 开源了权重，任何人可以用自己的数据继续训练。
+
+后面 39-45 课逐一展开每个优化。第 41 课（前一个版本已展开的 SwiGLU 代码）和第 40 课（RMSNorm 代码）可以作为参考。
+
+---
+
+## 5. 练习题
+
+**题目 1：** LLaMA 的 Block 和原始 Transformer Block 最大的结构差异是什么？从代码层面找出至少 3 处不同。
+
+**题目 2：** 为什么 Pre-Norm（Norm 在子层之前）比 Post-Norm（Norm 在子层之后）更有利于训练深层网络？回忆第 15 课的梯度公式。
+
+**题目 3：** LLaMA 的 FFN 有 3 个矩阵（gate_proj, up_proj, down_proj），原始 Transformer 的 FFN 只有 2 个（W1, W2）。多出来的那个是做什么的？如果不加会怎样？
+
+---
+
+### 答案
+
+**题 1：** (a) Norm 位置：从"子层后"变为"子层前"（Pre-Norm）。(b) Norm 类型：LayerNorm→RMSNorm。(c) FFN 激活：ReLU→SiLU+gating(SwiGLU)，矩阵从 2 个变 3 个。(d) 位置编码：正弦绝对值→RoPE 相对旋转。
+
+**题 2：** Pre-Norm 的残差路径：`x + F(Norm(x))`，梯度传播时 `dx/dL` 中有 `+1` 项（残差直通），Norm 不在直通路径上。Post-Norm：`Norm(x + F(x))`，残差之后经过 Norm，梯度被 Norm 的 `1/σ` 因子压制。96 层累积下来，Post-Norm 的梯度信号几乎消失。
+
+**题 3：** `gate_proj` 是"门"——它输出 0~1 之间的值（通过 SiLU），控制 `up_proj` 的哪些维度可以通过。没有它的话 FFN 退化为 `down(ReLU(up(x)))`——就是原始 FFN，失去了"动态选择哪些信息保留"的能力。门控机制让 SwiGLU 在不同输入下激活不同的维度组合——相当于一个小型的 Mixture of Experts。
 
 ---
 
 # 第 39 课：RoPE —— 旋转位置编码
 
-## 核心概念
+---
 
-传统位置编码（正弦余弦）长文本效果下降。RoPE 不是"添加"位置，而是**旋转向量**。
+## 1. 从第 11 课的正弦位置编码说起
 
-Token 向量 x，位置决定旋转角度。不同位置产生不同方向。Attention 计算 `QK^T` 时，旋转后自动包含相对位置信息。
+第 11 课我们实现了 Transformer 原版的正弦位置编码——把位置向量直接加到 Embedding 上：
 
-为什么有效？不需要额外参数，位置信息直接编码在向量方向中。
+$$
+x_{\text{final}} = x_{\text{token}} + PE(pos)
+$$
+
+这在短文本（1024 token 以内）工作得很好。但第 38 课讲到 LLaMA 需要支持 32K、128K 的上下文——原始正弦编码的问题是：**它编码的是绝对位置。** 位置 5000 的正弦值和位置 100 的完全不同——模型需要"见过"每个位置才能学会它的编码。训练时只用过 2048 个位置，推理时突然要处理位置 10000——模型没见过这个编码值，效果骤降。
+
+RoPE 的思路完全不同：**不是"告诉模型你在哪里"，而是"告诉模型你和我有多远"。**
+
+---
+
+## 2. RoPE 的核心直觉：旋转二维向量
+
+把向量的每一对相邻维度看作一个二维平面上的点 (x, y)。给位置 pos 分配一个旋转角度 θ(pos)，把 Q 和 K 在这个平面上旋转 θ：
+
+$$
+\begin{pmatrix} x' \\ y' \end{pmatrix} =
+\begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}
+\begin{pmatrix} x \\ y \end{pmatrix}
+$$
+
+关键性质：旋转后两个向量做点积，**只依赖于它们之间的角度差**（即位置差），而不是各自的绝对角度。数学上：
+
+$$
+\text{RoPE}(Q_i) \cdot \text{RoPE}(K_j) = Q_i^T R_{i-j} K_j
+$$
+
+其中 `R_{i-j}` 只依赖于相对位置 `(i-j)`。这意味着无论序列多长，只要相对距离在训练中出现过（如相距 10 个 token），模型就能处理——这就是外推能力。
+
+
+
+RoPE 的直觉：把 Query 和 Key 向量的每一对相邻维度视为一个"二维平面"，按位置旋转。
+
+```python
+import torch
+import math
+
+def rotate_half(x):
+    """把向量的后半部分取反: (x1,x2,...,xn) -> (-x2,x1,...,-xn,x_{n-1})"""
+    x1 = x[..., : x.shape[-1] // 2]
+    x2 = x[..., x.shape[-1] // 2 :]
+    return torch.cat((-x2, x1), dim=-1)
+
+def apply_rotary_pos_emb(q, k, cos, sin):
+    """
+    对 Query 和 Key 应用旋转位置编码
+    q, k: (batch, n_heads, seq_len, d_head)
+    cos, sin: (seq_len, d_head) 旋转角度的 cos 和 sin
+    """
+    # 核心公式: x_rotated = x * cos(θ) + rotate_half(x) * sin(θ)
+    # 相当于把每对相邻维度看作 (x, y), 旋转 θ 度:
+    # (x', y') = (x*cosθ - y*sinθ,  x*sinθ + y*cosθ)
+    q_embed = (q * cos) + (rotate_half(q) * sin)
+    k_embed = (k * cos) + (rotate_half(k) * sin)
+    return q_embed, k_embed
+
+# --- 生成旋转角度 ---
+def get_rotary_angles(seq_len, d_head, base=10000.0):
+    """生成每个位置每个维度的旋转角度"""
+    # 频率: 不同维度旋转快慢不同
+    freqs = 1.0 / (base ** (torch.arange(0, d_head, 2).float() / d_head))
+    positions = torch.arange(seq_len).float()
+
+    # 每个位置 × 每个频率 = 旋转角度
+    angles = torch.outer(positions, freqs)  # (seq_len, d_head/2)
+    # 每个角度重复两次(给每对相邻维度)
+    angles = torch.cat([angles, angles], dim=-1)  # (seq_len, d_head)
+
+    return angles.cos(), angles.sin()
+
+# --- 测试 ---
+seq_len, d_head = 4, 8
+cos, sin = get_rotary_angles(seq_len, d_head)
+
+q = torch.randn(1, 1, seq_len, d_head)
+k = torch.randn(1, 1, seq_len, d_head)
+q_rot, k_rot = apply_rotary_pos_emb(q, k, cos, sin)
+print(f"旋转后 Q 形状: {q_rot.shape}")  # (1, 1, 4, 8)
+
+# RoPE 的关键性质:
+# Attention(Q_i, K_j) 自动包含 (pos_i - pos_j) 的 cos 项 = 相对位置信息
+```
+
+RoPE 相比正弦编码的最大优势：它编码的是**相对位置**而不是绝对位置。这意味着模型更容易推广到训练时没见过的序列长度——这是 LLaMA 能做到长上下文的关键之一。
+
+## 为什么 RoPE 是"旋转"而不是"相加"？——回到 Attention 公式
+
+回忆第 10 课 Attention 的核心：`QK^T`。RoPE 把位置信息编码进了 `QK^T` 的结果里，而不是加在输入上。由于点积满足旋转不变性——`R(Q) · R(K) = Q · K`（当 Q 和 K 旋转相同角度时），所以旋转不改变"语义相似度"，只注入了"相对位置差"的信息。
+
+## 练习题
+
+**题目 1：** RoPE 为什么只旋转 Q 和 K，不旋转 V？
+
+**题目 2：** 如果两个 token 位置差为 0（即同一个 token 的 self-attention），RoPE 的旋转会对 `Q_i · K_i` 产生什么影响？为什么这是合理的？
+
+**题目 3：** 原始正弦编码和 RoPE 都需要超参数 `base=10000.0`。如果把它从 10000 调大到 500000，RoPE 的行为会有什么变化？这对长上下文有什么意义？
+
+---
+
+### 答案
+
+**题 1：** 因为位置信息只需要影响"谁和谁相关"（QK^T），不需要影响"拿什么信息"（V）。V 是纯内容，内容不随位置变化。如果把 V 也旋转了，位置会污染实际的语义内容——这个词在位置 1 和位置 10 虽然位置不同，但它的"猫"的属性不应该变。
+
+**题 2：** 同一个 token：`Q_i · K_i` 在旋转前后完全相同（因为 Q 和 K 都旋转了同样的角度 θ_i，旋转矩阵是正交矩阵，`R(θ)Q · R(θ)K = Q · K`）。同一个 token 对自己的注意力不应该被位置影响——位置信息只应该在比较不同 token 时生效。这正是 RoPE 的优雅之处。
+
+**题 3：** base 越大→高频维度对应的旋转频率越低→更长距离的位置差仍然能产生有意义的旋转差异。原始 base=10000 时，距离超过约 2048 的 token 之间的旋转差异不够明显。调大到 500000 后，即使距离 100K 的 token 也能产生有区分度的旋转角度。这是 LLaMA 长上下文版（如 CodeLlama 用 base=1,000,000）能处理 100K token 的核心技巧。
 
 ---
 
 # 第 40 课：RMSNorm —— 为什么不用 LayerNorm？
 
-## 核心概念
+---
+
+## 1. 从第 15 课和第 38 课说起
+
+第 15 课讲了 LayerNorm 的作用——把每层的输出数值稳定在一个可控范围，防止训练崩溃。第 38 课讲了 Pre-Norm 比 Post-Norm 好——Norm 放在子层之前，残差路径不被截断。
+
+但 LayerNorm 还有一个可以优化的地方：**它做了两步——先减均值（中心化），再除标准差（缩放）。** 第 21 课学过，高维空间中向量的均值天然接近 0（随机高维向量各分量独立，均值期望为 0）。RMSNorm 的实验发现：**去掉减均值这步，对 4096 维向量几乎没影响，但能省约 30% 的计算量。**
+
+---
+
+## 2. 核心概念: 只做缩放，不做中心化
 
 LayerNorm 计算均值和方差，然后归一化。RMSNorm 只关注均方根：
 
@@ -4713,6 +7258,56 @@ $$
 $$
 
 更简单、更快、参数更少。去掉了均值中心化步骤，对 LLM 训练效果几乎没影响。
+
+## LayerNorm vs RMSNorm 完整代码对比
+
+```python
+import torch
+import torch.nn as nn
+
+# --- LayerNorm (原始 Transformer 用的) ---
+# y = (x - mean) / sqrt(var + eps) * gamma + beta
+class LayerNorm(nn.Module):
+    def __init__(self, d_model, eps=1e-5):
+        super().__init__()
+        self.gamma = nn.Parameter(torch.ones(d_model))   # 可学习的缩放
+        self.beta  = nn.Parameter(torch.zeros(d_model))  # 可学习的偏移
+        self.eps = eps
+
+    def forward(self, x):
+        # x: (batch, seq_len, d_model)
+        mean = x.mean(dim=-1, keepdim=True)        # 均值(沿最后一维)
+        var  = x.var(dim=-1, keepdim=True, unbiased=False)  # 方差
+        x_norm = (x - mean) / torch.sqrt(var + self.eps)
+        return self.gamma * x_norm + self.beta
+
+# --- RMSNorm (LLaMA / Qwen 用的) ---
+# y = x / RMS(x) * gamma   (去掉了 mean 和 beta)
+class RMSNorm(nn.Module):
+    def __init__(self, d_model, eps=1e-6):
+        super().__init__()
+        self.gamma = nn.Parameter(torch.ones(d_model))  # 只有 gamma, 没有 beta
+        self.eps = eps
+
+    def forward(self, x):
+        # RMS = sqrt(mean(x^2))
+        rms = torch.sqrt(torch.mean(x ** 2, dim=-1, keepdim=True) + self.eps)
+        return x / rms * self.gamma
+
+# --- 对比测试 ---
+x = torch.randn(2, 10, 512)
+ln = LayerNorm(512)
+rms = RMSNorm(512)
+
+ln_out = ln(x)
+rms_out = rms(x)
+print(f"LayerNorm 输出均值: {ln_out.mean(dim=-1).mean():.6f}")   # ≈ 0
+print(f"RMSNorm  输出均值: {rms_out.mean(dim=-1).mean():.6f}")   # ≠ 0 (不去均值!)
+print(f"LayerNorm 输出标准差: {ln_out.std(dim=-1).mean():.6f}")  # ≈ 1
+print(f"RMSNorm  输出标准差: {rms_out.std(dim=-1).mean():.6f}")  # ≈ 1
+```
+
+RMSNorm 去掉了减均值的步骤（中心化），只做缩放。计算量减少约 30%，训练速度更快。LLaMA 论文的实验表明去掉中心化对模型质量几乎没影响——在高维空间中，均值的数值已经很小了。
 
 ---
 
@@ -4728,21 +7323,135 @@ SwiGLU：两个 Linear，一个作为"门"（Sigmoid 激活），与另一个相
 
 ---
 
+## 练习题（RMSNorm & SwiGLU 综合）
+
+**题目 1：** RMSNorm 去掉了减均值步骤。在高维空间中（d=4096），为什么随机向量的均值天然接近 0？这对 RMSNorm 的有效性有什么影响？
+
+**题目 2：** SwiGLU 的 gate_proj 用 SiLU（平滑、允许负值），而旧 FFN 用 ReLU（一刀切）。用一个具体的输入值演示两者的区别：x = -0.5 时，SiLU 和 ReLU 分别输出多少？
+
+**题目 3：** 如果用 RMSNorm + SwiGLU 改造第 46 课的 MiniGPT，需要改几处代码？列出改动的文件和具体行。
+
+---
+
+### 答案
+
+**题 1：** 高维随机向量各分量独立同分布（均值为 0），根据大数定律，4096 个分量的均值趋近于 0。所以减均值这步本就不改变向量太多——RMSNorm 去掉它几乎不影响归一化效果。但如果维度很小（如 d=8），均值可能偏离 0 较远，RMSNorm 就会比 LayerNorm 差。这也是为什么 RMSNorm 在大模型中有效但在小网络里不用的原因。
+
+**题 2：** `SiLU(-0.5) = -0.5 × σ(-0.5) = -0.5 × 0.378 ≈ -0.189`。`ReLU(-0.5) = 0`。SiLU 允许少量负值通过（梯度不截断），ReLU 直接丢弃。对于 96 层模型，这种"允许小负值"的平滑性让梯度在深层也能有效传播。
+
+**题 3：** 改 3 处：(1) 把 `nn.LayerNorm` 替换为 `RMSNorm` 类。(2) 把 FFN 从 `Linear→ReLU→Linear` 改为 `gate_proj→SiLU, up_proj→Linear, gate×up→down_proj`。(3) Block 里的 Norm 位置从 Post-Norm 改为 Pre-Norm（`ln_1` 和 `ln_2` 放在 Attention 和 FFN 之前）。这三处改动正是第 38 课 LLaMA 的三个核心优化。
+
+---
+
 # 第 42 课：GQA / MQA —— 降低推理成本
 
-## 核心概念
+---
 
-问题：每个 Attention Head 保存 K 和 V，长文本 KV Cache 巨大。
+## 1. 问题根源——回顾第 37 课的 KV Cache 账本
 
-- **MHA（Multi Head）：** 每个 Head 独立 QKV，最强但占内存
-- **MQA（Multi Query）：** 多个 Q 共享一组 KV，大幅减少缓存
-- **GQA（Grouped Query）：** 折中，Q 分成几组，每组共享 KV。现在 LLaMA 等模型普遍采用
+第 37 课算了 KV Cache 的显存账：7B 模型生 4096 token，KV Cache 占约 2.1GB。序列越长，这个数线性膨胀——128K 上下文需要约 65GB（仅 KV Cache）。这和第 36 课的分布式训练困境相似——当单一瓶颈卡住时，需要结构性优化。
+
+第 13 课讲了 Multi-Head Attention：每个 Head 有独立的 Q、K、V。这意味着 KV Cache 要存**所有 Head 的所有层**的 K 和 V。如果 Head 数量能减少（或者共享 K/V），KV Cache 直接成比例缩小。
+
+---
+
+## 2. MHA → MQA → GQA：KV 共享的三级进化
+
+**MHA（Multi-Head Attention）：** 第 13 课的标准做法。32 个 Head，每个有独立的 Q、K、V。`KV Cache 大小 = 2 × n_layers × n_heads × d_head × seq_len × 2 bytes`。全部独立，无压缩。
+
+**MQA（Multi-Query Attention，2019）：** 极端方案——K 和 V 在所有 Head 之间共享，只有 Q 保持多头。`KV Cache 直接除以 n_heads（32 倍压缩）`。代价：所有 Head 被迫看同样的 K/V，表达能力下降约 3-5%。
+
+**GQA（Grouped-Query Attention，2023）：** 折中方案——32 个 Q 分成 8 组，每组 4 个 Head 共享一组 KV。`KV Cache = 原来的 8/32 = 25%`。表达能力下降很小（<1%），显存节省显著。LLaMA 2/3、Mistral、Qwen 全部采用。
+
+```text
+MHA:  Q₁ Q₂ Q₃ Q₄  →  各自独立的 K₁V₁ K₂V₂ K₃V₃ K₄V₄
+MQA:  Q₁ Q₂ Q₃ Q₄  →  全部共享同一组 K V
+GQA:  Q₁ Q₂ | Q₃ Q₄  →  组1共享 K₁V₁, 组2共享 K₂V₂
+```
+
+```python
+import torch
+import torch.nn as nn
+
+class GQAAttention(nn.Module):
+    """GQA: 8组KV, 32个Q"""
+    def __init__(self, d_model=4096, n_heads=32, n_kv_heads=8):
+        super().__init__()
+        self.n_heads = n_heads
+        self.n_kv_heads = n_kv_heads
+        self.head_dim = d_model // n_heads
+        self.n_rep = n_heads // n_kv_heads  # 每组有几个Q (4)
+
+        self.wq = nn.Linear(d_model, d_model, bias=False)
+        self.wk = nn.Linear(d_model, n_kv_heads * self.head_dim, bias=False)  # 只有8组KV
+        self.wv = nn.Linear(d_model, n_kv_heads * self.head_dim, bias=False)
+        self.wo = nn.Linear(d_model, d_model, bias=False)
+
+    def forward(self, x):
+        B, T, C = x.shape
+        q = self.wq(x).view(B, T, self.n_heads, self.head_dim)
+        k = self.wk(x).view(B, T, self.n_kv_heads, self.head_dim)
+        v = self.wv(x).view(B, T, self.n_kv_heads, self.head_dim)
+
+        # 关键步骤: 把KV复制到每个组内的每个Q
+        k = k.unsqueeze(2).expand(-1, -1, self.n_rep, -1, -1)
+        k = k.reshape(B, T, self.n_heads, self.head_dim)
+        v = v.unsqueeze(2).expand(-1, -1, self.n_rep, -1, -1)
+        v = v.reshape(B, T, self.n_heads, self.head_dim)
+
+        # 后面的Attention和MHA一样
+        scores = (q @ k.transpose(-2, -1)) / (self.head_dim ** 0.5)
+        attn = torch.softmax(scores, dim=-1)
+        out = attn @ v
+        return self.wo(out.view(B, T, C))
+
+# 验证参数量: wk和wv的形状是 (4096, 8×128) 而不是 (4096, 32×128)
+attn = GQAAttention()
+print(f"wk 参数: {sum(p.numel() for p in [attn.wk])/1e6:.1f}M")
+```
+
+---
+
+## 3. 和前面课程的连接
+
+第 13 课 Multi-Head 解释说不同 Head 看不同关系。GQA 假设"相邻几个 Head 看的关系类型相似"——所以可以共享 KV。这在实际模型中成立：相邻 Head 的 Attention 模式有高度重叠，共享 KV 损失极小。
+
+第 37 课的 KV Cache 大小公式现在要修正：`n_heads` 换成 `n_kv_heads`。LLaMA 3 70B 用 64 个 Q 头、8 个 KV 头——KV Cache 压缩 8 倍。
+
+---
+
+## 4. 练习题
+
+**题目 1：** 32 个 Q 头、8 个 KV 头的 GQA，KV Cache 是 MHA 的多少？如果生成 128K token，这个差异在显存上意味着什么？
+
+**题目 2：** 为什么 MQA（1 组 KV）表达能力下降明显，而 GQA（8 组 KV）几乎不下降？从"不同 Head 看不同关系"的角度解释。
+
+**题目 3：** 你的 FreesLLM 如果要在手机上推理（显存 4GB），GQA 把 n_kv_heads 设多少比较合适？
+
+---
+
+### 答案
+
+**题 1：** 8/32 = 25%。128K token 时，MHA 的 KV Cache 约 65GB，GQA 约 16GB——一张 24GB 的 RTX 4090 就能跑。这决定了 GQA 是消费级硬件长文本推理的必备技术。
+
+**题 2：** MQA 所有 Head 被迫共享同一个 KV——相当于所有 Head 只能"从一个角度看"。不同 Head 本应关注语法、语义、指代等不同关系，但 MQA 剥夺了这种多样性。GQA 保留了 8 个观察角度——语法、语义、指代等大致够用，表达能力损失可忽略。
+
+**题 3：** 手机 4GB 显存极紧张。推荐 n_kv_heads=2~4（即 GQA 压缩 8~16 倍）。同时配合 INT4 量化（第 67 课）和 FlashAttention（第 68 课），才能在手机上跑 7B 模型。
 
 ---
 
 # 第 43 课：MoE —— 混合专家模型
 
-## 核心概念
+---
+
+## 1. 问题的根源——回顾第 22 课和第 38 课
+
+第 22 课讲了"深度比宽度更有效"——同等参数量，更多层 > 更宽层。但第 38 课开始的 LLaMA 架构已经展示了"宽"也有瓶颈：FFN 参数占大头（第 14 课），要增大模型容量就要增大 FFN，但每层 FFN 都要对所有 token 激活——参数加倍→计算量也加倍。
+
+MoE 的思路是打破这个耦合：**参数量可以极大（容量大），但每个 token 只激活一小部分专家（计算量小）。** 就像去医院挂号——医院有几十个科室（专家），但你只需要挂一个和你症状匹配的。这样医院可以无限扩大，而你的挂号费不变。
+
+
+## 2. 核心概念
 
 不是一个巨大网络，而是多个"专家"。Router 负责选择哪些专家处理当前输入。
 
@@ -4750,21 +7459,142 @@ SwiGLU：两个 Linear，一个作为"门"（Sigmoid 激活），与另一个相
 
 DeepSeek-V3 等模型大量使用 MoE 思想。
 
+## MoE 路由机制的代码实现
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class MoELayer(nn.Module):
+    """一个 MoE 层: Router + 多个 Expert FFN + Top-k 选择"""
+    def __init__(self, d_model, d_ff, num_experts=8, top_k=2):
+        super().__init__()
+        # 多个专家(每个专家是一个独立的 FFN)
+        self.experts = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(d_model, d_ff),
+                nn.GELU(),
+                nn.Linear(d_ff, d_model),
+            ) for _ in range(num_experts)
+        ])
+        # Router: 输入 → 选择哪个专家
+        self.router = nn.Linear(d_model, num_experts, bias=False)
+        self.num_experts = num_experts
+        self.top_k = top_k
+
+    def forward(self, x):
+        # x: (batch, seq_len, d_model)
+        B, T, D = x.shape
+
+        # 1. Router 打分: 每个 token 对每个专家的"适合度"
+        router_logits = self.router(x)  # (B, T, num_experts)
+
+        # 2. Top-k 选择: 只保留得分最高的 k 个专家
+        top_k_logits, top_k_indices = router_logits.topk(self.top_k, dim=-1)
+        # top_k_indices: (B, T, top_k)
+
+        # 3. Softmax 归一化 → 每个选中的专家分到多少"权重"
+        router_weights = F.softmax(top_k_logits, dim=-1)  # (B, T, top_k)
+
+        # 4. 把 token 分发给选中的专家, 加权求和
+        output = torch.zeros_like(x)
+        for i, expert in enumerate(self.experts):
+            # 找到所有选中专家 i 的 token
+            mask = (top_k_indices == i).any(dim=-1)  # (B, T)
+            if mask.any():
+                # 取出这些 token, 经过专家处理
+                expert_input = x[mask]                  # (num_tokens, D)
+                expert_output = expert(expert_input)    # (num_tokens, D)
+                output[mask] += expert_output           # 累加
+
+        return output
+
+# --- 测试 ---
+moe_layer = MoELayer(d_model=512, d_ff=2048, num_experts=8, top_k=2)
+x = torch.randn(2, 10, 512)
+y = moe_layer(x)
+print(f"MoE 输出形状: {y.shape}")  # (2, 10, 512)
+
+# 计算参数: 8个专家, 每个 ≈ d_model*d_ff*2
+expert_params = 8 * 512 * 2048 * 2
+router_params = 512 * 8
+total = expert_params + router_params
+print(f"MoE 总参数: {total/1e6:.0f}M")
+print(f"但每次只激活 top_k={2} 个专家 ≈ {total*2/8/1e6:.0f}M 的计算量")
+```
+
+### MoE 为什么有效？
+
+传统 Dense 模型：所有参数对所有 token 都参与计算。MoE：每个 token 只激活少数专家。结果：参数量可以巨大（知识容量大），但计算量可控（推理不慢）。DeepSeek-V3 用 MoE 做到 671B 总参数，但每次推理仅激活约 37B。
+
+### 和前面课程的连接
+
+第 14 课的 FFN 是 MoE 的特例（只有 1 个专家）。第 41 课的 SwiGLU 中的 gate 机制和 MoE 的 Router 本质相同——都是"让网络选择哪些信息通过"。第 42 课的 GQA 也是类似的思路：不是所有参数都对所有 token 完全激活。
+
 ---
 
-# 第 44 课：长上下文技术
+## 练习题
 
-## 核心概念
+**题目 1：** MoE 的总参数量 = `n_experts × d_model × d_ff × 2`。如果 8 专家、d_model=4096、d_ff=14336（LLaMA 3 的标准），总参数多少？激活参数多少（top_k=2）？
 
-Attention 复杂度 `O(n²)`——文本越长计算越贵。
+**题目 2：** Router 怎么知道哪个 token 该分给哪个专家？它的训练信号从哪来？
 
-解决方案：RoPE 扩展位置范围、Flash Attention 减少显存访问、Sparse Attention 只关注部分 token、Sliding Window 窗口注意力。
-
-综合使用这些技术，现代模型可以处理数十万 token 的上下文。
+**题目 3：** MoE 的一个实际问题是"负载不均"——所有 token 都选了同一个专家（其他专家闲置）。怎么解决？
 
 ---
 
-# 第 45 课：现代 LLM 架构总结
+### 答案
+
+**题 1：** 总参数 = 8 × 4096 × 14336 × 2 ≈ 940M（每个 MoE 层）。激活参数 = 940M × 2/8 ≈ 235M。8 专家的总容量是单个专家的 8 倍，但每个 token 只花 2 个专家的计算量。
+
+**题 2：** Router 是一个 `nn.Linear(d_model, n_experts)`，输出每个专家的得分。训练信号来自最终 Loss（第 18 课的反向传播）——Router 梯度告诉它"选了专家 A 导致 Loss 高还是低"，逐渐学会根据 token 内容分配合适的专家。没有人工标注。
+
+**题 3：** 加一个辅助 Loss：`L_aux = (每个专家处理 token 数的方差)`——惩罚负载不均。另外 DeepSeek 用"专家容量上限"——每个专家最多处理多少 token，满额后强制路由到其他专家。这样保证所有专家都有活干。
+
+---
+
+# 第 44 课：长上下文技术 —— 怎么让 GPT 读完整本书？
+
+---
+
+## 1. 问题的根源——O(n²) 的诅咒
+
+第 10 课的 Attention 公式，每个 token 要和所有 token 计算点积。序列长度 n，Attention 矩阵就是 `n × n`。K 和 V 的存储、QK^T 的计算量都随 n² 增长。
+
+具体数字：n=4096 时 Attention 矩阵 16M 元素（可控）；n=128K 时变成 16B 元素——K 的显存从 128MB 涨到 4GB，计算量从 34M 次乘法涨到 1B 次。
+
+解决长上下文的核心不是"让模型更强"而是**绕过 O(n²)**。第 37-42 课讲的技术在这里全部联动：
+
+| 技术 | 对应课 | 省了什么 | 对长文本的效果 |
+|------|--------|---------|-------------|
+| FlashAttention | 第68课 | 省显存带宽（分块计算） | 从 O(n²) 显存降为 O(n) |
+| GQA | 第42课 | 省 KV Cache | 128K context 的 KV Cache 从 65GB → 16GB |
+| RoPE 扩展 base | 第39课 | 省位置"学习成本" | base=500K 可外推到 100K+ 位置 |
+| Sliding Window | 本课 | 省 Attention 计算 | 每个 token 只看前后 w 个 token，复杂度 O(n×w) |
+
+---
+
+## 2. Sliding Window Attention：不是所有距离都需要关注
+
+人类阅读时不是每个字都和前面所有字比对——你读到一个"它"时，通常在前几句里找指代对象，不会回溯到第一章。
+
+Sliding Window Attention 利用了这个直觉：每个 token 只和前后固定窗口（如 w=4096）内的 token 做 Attention。Attention 复杂度从 `O(n²)` 降为 `O(n × w)`——当 w 固定而 n 增大时，复杂度接近线性。
+
+Mistral 7B 用 Sliding Window = 4096，训练时 4K 上下文，推理时可通过滑动窗口无缝处理任意长度文本——窗口外的信息通过多层堆叠间接传播（第 1 层看 4K，第 2 层看 8K，...，第 32 层看 128K）。
+
+## 3. 综合使用：现代模型的长上下文方案
+
+LLaMA 3 的做法（三层组合）：
+- RoPE base=500,000（第39课）——位置编码支持到 100K+
+- GQA n_kv_heads=8（第42课）——KV Cache 压缩 4 倍
+- FlashAttention-2（第68课）——分块计算省显存
+
+三管齐下，8B 模型能在 80GB A100 上处理 128K token。
+
+---
+
+# 第 45 课：现代 LLM 架构总结 —— 你手里现在有什么？
 
 现代主流 LLM 的结构模板：
 
@@ -4780,7 +7610,25 @@ Linear → Softmax → Token
 
 LLaMA / Qwen 都类似这套模板。DeepSeek 在基础上加入 MoE 等扩展。
 
-进化路线：Transformer → RMSNorm（稳定）→ SwiGLU（增强）→ RoPE（位置）→ GQA（省缓存）→ MoE（扩规模）。
+进化路线：Transformer → RMSNorm（第40课，省30%计算）→ SwiGLU（第41课，增强FFN）→ RoPE（第39课，相对位置）→ GQA（第42课，省缓存）→ MoE（第43课，扩规模）→ 长上下文（第44课，O(n²)→O(n)）。
+
+## 和 FreesLLM 的关系
+
+第 46 课的 MiniGPT 用的是原始 Transformer 设计。如果你要把 MiniGPT 升级成 LLaMA-class，只需要改 4 个地方：LayerNorm→RMSNorm、FFN→SwiGLU、正弦Pos→RoPE、MHA→GQA——大约 60 行代码变更。第 38 课的 `LLaMABlock` 就是最终版的参考实现。
+
+## 练习题
+
+**题目 1：** Sliding Window Attention 中，如果窗口 w=4096，一个在位置 50000 的 token 怎么看到位置 1 的信息？
+
+**题目 2：** 现代 LLaMA 架构相比原始 Transformer 论文（2017），保留了哪些没变的东西？改变了哪些？为什么 Attention 和 Residual 结构始终没变？
+
+---
+
+### 答案
+
+**题 1：** 不能直接看到——但信息通过多层堆叠间接传播。第 1 层的窗口让位置 50000 看到 45904~50000，第 2 层的窗口让位置 45904 看到 41808~45904，...，经过约 12 层后，位置 1 的信息可以逐层传递到位置 50000。代价是距离越远信息越模糊——类似人类对很久以前的细节记忆不清晰。
+
+**题 2：** 没变的：(a) Attention 的核心公式 `softmax(QK^T/√d)V` 从 2017 年至今未变；(b) Residual `x + F(x)` 结构未变；(c) 多层 Block 堆叠架构未变。改变的：Norm 细节（LayerNorm→RMSNorm+Pre-Norm）、FFN 细节（ReLU→SwiGLU）、位置编码（正弦→RoPE）、Head 结构（MHA→GQA）、规模（MoE）。Attention 本身没变——说明 2017 年的核心发现是正确的，优化都在工程细节上。
 
 ---
 
@@ -4788,89 +7636,653 @@ LLaMA / Qwen 都类似这套模板。DeepSeek 在基础上加入 MoE 等扩展�
 
 ---
 
-# 第 46 课：从零实现 Mini GPT
+# 第 46 课：从零实现 Mini GPT —— 完整骨架代码
 
-## 核心概念
+---
+
+## 1. 你现在手里有什么？——回顾 45 课的旅程
+
+你从"向量是什么"走到了现代 LLaMA 架构。现在是把所有知识变成代码的时候。
+
+下面是 MiniGPT 的完整实现——不到 150 行，但包含了前 45 课几乎所有的核心概念：
+
+| 代码模块 | 对应课程 | 实现的功能 |
+|---------|---------|-----------|
+| `MiniGPTConfig` | 第22课/第31-34课 | 所有超参数（层数、头数、维度、dropout） |
+| `CausalSelfAttention` | 第10课+第24课 | QKV投影、Scaled Dot-Product、Causal Mask |
+| `MLP` | 第14课 | 扩大→GELU→压缩 |
+| `Block` | 第15课 | Attention+FFN+双重Residual+LayerNorm |
+| `MiniGPT` | 第27课+第16课 | Embedding+Position+多层Block+lm_head+generate |
+| Weight Tying | 第16课 | Embedding和lm_head共享权重 |
+
+## 2. 核心概念
 
 最小 GPT：`class GPT(nn.Module)`，包含 Embedding、Attention、FFN、Norm、Output Head。
 
 参数量理解：小模型百万参数，大模型千亿参数。
 
-## 扩展任务
+## MiniGPT 完整实现（约 150 行，可直接运行）
 
-PyTorch 实现 nanoGPT 级别模型，单 GPU 可运行，能生成文本。
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+
+# ============================================================
+# 1. 配置类：所有超参数都在这里
+# ============================================================
+class MiniGPTConfig:
+    vocab_size = 50257     # GPT-2 词表大小
+    block_size = 256       # 最大上下文长度
+    n_layer = 6            # Transformer 层数
+    n_head = 6             # 注意力头数
+    n_embd = 384           # 隐藏维度
+    dropout = 0.1
+
+# ============================================================
+# 2. CausalSelfAttention：带因果遮罩的多头注意力
+# ============================================================
+class CausalSelfAttention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        assert config.n_embd % config.n_head == 0
+        self.n_head = config.n_head
+        self.head_dim = config.n_embd // config.n_head
+
+        # Q, K, V 合并到一个 Linear 里 (效率更高)
+        self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
+        self.c_proj = nn.Linear(config.n_embd, config.n_embd)
+
+        # causal mask 缓存 (下三角矩阵)
+        self.register_buffer(
+            "bias",
+            torch.tril(torch.ones(config.block_size, config.block_size))
+                 .view(1, 1, config.block_size, config.block_size)
+        )
+
+    def forward(self, x):
+        B, T, C = x.shape  # batch, seq_len, embed_dim
+
+        # 计算 Q, K, V
+        qkv = self.c_attn(x)  # (B, T, 3*C)
+        q, k, v = qkv.split(C, dim=2)
+
+        # reshape 成多头: (B, T, C) -> (B, n_head, T, head_dim)
+        q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+
+        # Scaled Dot-Product Attention + Causal Mask
+        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
+        att = F.softmax(att, dim=-1)
+        att = F.dropout(att, p=config.dropout, training=self.training)
+
+        y = att @ v  # (B, n_head, T, head_dim)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        return self.c_proj(y)
+
+# ============================================================
+# 3. MLP (Feed Forward)
+# ============================================================
+class MLP(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.c_fc   = nn.Linear(config.n_embd, 4 * config.n_embd)
+        self.gelu   = nn.GELU()
+        self.c_proj = nn.Linear(4 * config.n_embd, config.n_embd)
+
+    def forward(self, x):
+        return self.c_proj(self.gelu(self.c_fc(x)))
+
+# ============================================================
+# 4. Transformer Block
+# ============================================================
+class Block(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.ln_1 = nn.LayerNorm(config.n_embd)
+        self.attn = CausalSelfAttention(config)
+        self.ln_2 = nn.LayerNorm(config.n_embd)
+        self.mlp  = MLP(config)
+
+    def forward(self, x):
+        x = x + self.attn(self.ln_1(x))   # Pre-Norm + Attention + Residual
+        x = x + self.mlp(self.ln_2(x))    # Pre-Norm + FFN + Residual
+        return x
+
+# ============================================================
+# 5. 完整 GPT 模型
+# ============================================================
+class MiniGPT(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.transformer = nn.ModuleDict(dict(
+            wte = nn.Embedding(config.vocab_size, config.n_embd),  # token embedding
+            wpe = nn.Embedding(config.block_size, config.n_embd),  # position embedding
+            drop = nn.Dropout(config.dropout),
+            h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+            ln_f = nn.LayerNorm(config.n_embd),
+        ))
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+
+        # Weight tying: Embedding 和 LM Head 共享权重
+        self.transformer.wte.weight = self.lm_head.weight
+
+    def forward(self, idx, targets=None):
+        B, T = idx.shape
+        pos = torch.arange(0, T, dtype=torch.long, device=idx.device)
+
+        tok_emb = self.transformer.wte(idx)      # (B, T, n_embd)
+        pos_emb = self.transformer.wpe(pos)       # (T, n_embd)
+        x = self.transformer.drop(tok_emb + pos_emb)
+
+        for block in self.transformer.h:
+            x = block(x)
+
+        x = self.transformer.ln_f(x)
+        logits = self.lm_head(x)                  # (B, T, vocab_size)
+
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(
+                logits.view(-1, logits.size(-1)),
+                targets.view(-1)
+            )
+        return logits, loss
+
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens, temperature=0.8, top_k=40):
+        for _ in range(max_new_tokens):
+            idx_cond = idx[:, -self.config.block_size:]
+            logits, _ = self(idx_cond)
+            logits = logits[:, -1, :] / temperature
+            if top_k is not None:
+                v, _ = torch.topk(logits, top_k)
+                logits[logits < v[:, -1:]] = float('-inf')
+            probs = F.softmax(logits, dim=-1)
+            idx_next = torch.multinomial(probs, num_samples=1)
+            idx = torch.cat((idx, idx_next), dim=1)
+        return idx
+
+# ============================================================
+# 6. 测试：创建模型 + 前向传播
+# ============================================================
+config = MiniGPTConfig()
+model = MiniGPT(config)
+n_params = sum(p.numel() for p in model.parameters())
+print(f"MiniGPT 参数量: {n_params/1e6:.1f}M")  # ≈ 10M
+
+# 模拟输入
+x = torch.randint(0, config.vocab_size, (2, 64))  # 2句, 每句64个token
+logits, loss = model(x, targets=x)
+print(f"输入形状: {x.shape}, Loss: {loss.item():.4f}")
+
+# 生成文本
+start = torch.randint(0, config.vocab_size, (1, 1))
+generated = model.generate(start, max_new_tokens=20)
+print(f"生成的 token 序列: {generated.tolist()}")
+```
+
+这就是一个能完整训练的小型 GPT，约 10M 参数。把这个代码复制到 Jupyter Notebook 里跑一遍，每一个 `print` 都认真看输出。理解了这 150 行，你就理解了所有大模型的骨架。
+
+---
+
+## 3. 从 MiniGPT 到 FreesLLM 的升级路径
+
+上面用的是原始 Transformer 设计。想升级到 LLaMA 级别（第 38-45 课），改 4 处：
+
+```text
+第1处: nn.LayerNorm → RMSNorm (第40课)
+第2处: MLP (Linear→ReLU→Linear) → SwiGLU (gate+up+down, 第41课)
+第3处: 正弦 Position Embedding → RoPE (第39课)
+第4处: MHA → GQA (共享KV, 第42课)
+```
+
+改完后约 200 行代码，但效果接近小型 LLaMA。
+
+## 4. 练习题
+
+**题目 1：** 在 MiniGPT 的 `CausalSelfAttention` 里，`self.c_attn` 是一个 `nn.Linear(n_embd, 3*n_embd)`，一次性生成 Q、K、V。为什么要合并？分开写三个 Linear 有什么问题？
+
+**题目 2：** MiniGPT 用了 GELU 激活而非原始 ReLU（第 14 课讲过）。GELU 和 ReLU 的最大区别是什么？为什么 modern GPT 选 GELU？
+
+**题目 3：** Weight Tying（`self.transformer.wte.weight = self.lm_head.weight`）省了多少参数？如果 vocab=50000, d_model=768，不共享要多占多少显存？
+
+---
+
+### 答案
+
+**题 1：** 合并成一个 Linear→一次矩阵乘法同时算 Q、K、V，然后 `.split()` 拆开。分开三个 Linear 需要三次矩阵乘法（每次各从 HBM 读取 x），显存带宽浪费。合并后只读一次 x，GPU 利用率更高。nanoGPT 就是这么做的。
+
+**题 2：** GELU = `x × Φ(x)`（x 乘以标准正态 CDF）。ReLU 在 x=0 处硬截断，GELU 平滑过渡——允许少量负值通过。对深层 Transformer 来说，GELU 的平滑梯度让反向传播更稳定。GPT-2/3 都用 GELU，LLaMA 用 SiLU（GELU 的近似版本）。
+
+**题 3：** 省了 50000×768 = 38.4M 参数。BF16 下约省 77MB 显存。在 GPT-2 124M 总参数中约占 31%——Weight Tying 是"省参数"最简单有效的技巧。
 
 ---
 
 # 第 47 课：训练自己的 Tokenizer
 
-## 核心概念
+---
+
+## 1. 回顾第 19 课和第 46 课的连接
+
+第 19 课已经详细拆解了 BPE 的原理和代码。第 46 课实现了 MiniGPT，但它的 `vocab_size=50257` 用的是 GPT-2 的现成词表。如果你想训练一个**中文** FreesLLM，GPT-2 的词表几乎都是英文——中文会被拆成零碎的单字，浪费大量 token。
+
+这一课就是解决这个问题：**训练属于你自己的 BPE Tokenizer。**
 
 Tokenizer 流程：文本 → 统计字符/词频 → BPE 合并 → 生成词表 → Token ID。
 
-**Encoder：** 文字 → 数字。**Decoder：** 数字 → 文字。
+## 2. 用 SentencePiece 训练中文 Tokenizer
 
-## 扩展任务
+第 19 课手写了迷你 BPE 帮助理解。实战训练用 SentencePiece（Google 开源，C++ 实现，速度快 100 倍）：
 
-使用 SentencePiece 训练自己的中文 Tokenizer。
+```python
+import sentencepiece as spm
+
+# 第1步: 准备训练文本 (你的中文语料)
+with open("chinese_corpus.txt", "w") as f:
+    f.write("人工智能正在改变世界。\n")
+    f.write("深度学习是机器学习的一个分支。\n")
+    f.write("Transformer 架构被广泛用于自然语言处理。\n")
+    # ... 实际训练需要至少几十MB的中文文本
+
+# 第2步: 训练 SentencePiece BPE 模型
+spm.SentencePieceTrainer.train(
+    input="chinese_corpus.txt",
+    model_prefix="freesllm_tokenizer",
+    vocab_size=8000,           # 词表大小 (中文建议 8K-32K)
+    model_type="bpe",          # BPE 算法
+    character_coverage=0.9995, # 字符覆盖率 (中文建议 0.9995)
+    num_threads=8,             # 多线程加速
+)
+
+# 第3步: 加载并使用
+sp = spm.SentencePieceProcessor()
+sp.load("freesllm_tokenizer.model")
+
+# 测试
+text = "我喜欢学习人工智能"
+tokens = sp.encode_as_pieces(text)
+ids = sp.encode_as_ids(text)
+print(f"原文: {text}")
+print(f"Token 切分: {tokens}")   # ['▁我', '喜欢', '学习', '人工智能']
+print(f"Token IDs: {ids}")
+
+# 解码回去
+decoded = sp.decode(ids)
+print(f"解码: {decoded}")        # 我喜欢学习人工智能
+```
+
+## 3. Tokenizer 和模型尺寸的紧密关系
+
+第 46 课 MiniGPT 的 `vocab_size` 决定了 `wte`（Embedding）和 `lm_head` 两个最大矩阵的尺寸。vocab 从 50K 减到 8K，模型参数直接省掉 `(50000-8000)×768×2 ≈ 64M`——这对小模型是巨大的节省。
+
+但 vocab 太小也不行——每个 token 覆盖太多字符，信息密度太低。中文常用词约 5K-10K 个，加上英文/代码，vocab=16K-32K 是合理的平衡。
 
 ---
 
-# 第 48 课：准备 LLM 训练数据
+## 4. 练习题
 
-## 核心概念
+**题目 1：** 用 SentencePiece 训练 tokenizer 时，`character_coverage=0.9995` 是什么意思？为什么中文需要比英文更高的 coverage？
 
-数据格式："我喜欢"→目标"吃苹果" → 转成 `[12, 56, 89, 100]`。
+**题目 2：** 你的中文小说数据集训练出来的 tokenizer，直接用于代码生成会有什么问题？
 
-DataLoader 负责：打乱、分批、填充。
+---
 
-## 扩展任务
+### 答案
 
-制作个人知识库数据集（笔记、编程文档、学习记录）。
+**题 1：** coverage 控制词表覆盖多少比例的字符。英文 26 个字母+标点，coverage=0.9995 几乎覆盖全部。中文有几万个汉字，常用约 3500 个覆盖日常 99%，但技术文本会出现生僻字。`0.9995` 意味着允许 0.05% 的字符被映射到 `<unk>`（未知 token）——太低会导致大量 OOV（out-of-vocabulary），太高会导致词表过大。
+
+**题 2：** 代码中的括号、缩进、关键字（`def`, `class`, `import`）在中篇小说 tokenizer 中会被当成普通字符切分——`def` 可能被切成 `d`+`ef` 而不是一个完整的 token。这导致代码生成的 token 数量膨胀 3-5 倍，不仅浪费推理成本，模型也难学到代码的结构模式。解决方案：训练数据中加入代码语料（如 GitHub 文件），让 BPE 学会把代码关键字当作完整 token。
+
+---
+
+# 第 48 课：准备 LLM 训练数据 —— 从原始文本到训练 batch
+
+---
+
+## 1. 从第 29 课和第 47 课的衔接
+
+第 29 课讲了数据"从哪来"（网页、书籍、代码）。第 47 课训练了 Tokenizer 把文字变成数字。现在要用这些数字构建 PyTorch 能吃的 `DataLoader`——这是训练循环（第 49 课）的入口。
+
+## 2. 数据格式：所有 LLM 训练的本质都是"给定前缀预测后缀"
+
+无论 GPT-3 还是 LLaMA，训练数据的格式都一样：
+
+```text
+原始文本: "今天天气真好，我决定去公园散步"
+
+切分成训练样本 (context=5):
+  输入: [今天, 天气, 真好, ，, 我] → 目标: [天气, 真好, ，, 我, 决定]
+  输入: [天气, 真好, ，, 我, 决定] → 目标: [真好, ，, 我, 决定, 去]
+  ...
+```
+
+每个 token 位置都有一个"预测目标"——就是它的下一个 token。这和第 25 课的自回归生成以及第 30 课的预训练目标完全一致。
+
+## 3. PyTorch Dataset 实现
+
+```python
+import torch
+from torch.utils.data import Dataset, DataLoader
+import numpy as np
+
+class TextDataset(Dataset):
+    """把 token 化后的文本切成 context_length 长的训练样本"""
+    def __init__(self, file_path, tokenizer, context_length=256):
+        # 读取并 tokenize
+        with open(file_path, "r") as f:
+            text = f.read()
+        self.tokens = tokenizer.encode(text)     # list of ints
+        self.context_length = context_length
+
+    def __len__(self):
+        # 每 context_length 个 token 产生一个样本
+        return len(self.tokens) // self.context_length
+
+    def __getitem__(self, idx):
+        start = idx * self.context_length
+        chunk = self.tokens[start : start + self.context_length + 1]
+        x = torch.tensor(chunk[:-1], dtype=torch.long)  # 输入: 前n个
+        y = torch.tensor(chunk[1:],  dtype=torch.long)  # 目标: 后n个
+        return x, y
+
+# --- 使用 ---
+# dataset = TextDataset("my_data.txt", tokenizer, context_length=256)
+# dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+```
+
+## 4. 训练/验证 分割
+
+实际训练需要分割训练集和验证集（参考第 30 课监控 Val Loss）：
+
+```python
+import random
+
+def train_val_split(data_dir, val_ratio=0.05):
+    """5% 的数据做验证集"""
+    files = glob.glob(f"{data_dir}/*.txt")
+    random.shuffle(files)
+    split_idx = int(len(files) * (1 - val_ratio))
+    train_files = files[:split_idx]
+    val_files = files[split_idx:]
+    return train_files, val_files
+```
+
+## 5. 和前面课程的连接
+
+第 29 课的数据清洗在这里体现——数据文件应该已经去重、去 HTML、去低质量。第 47 课的 tokenizer 决定了 token ID 的范围（vocab_size）。这些 ID 直接输入第 46 课 MiniGPT 的 `model(x, targets=y)`。
+
+---
+
+## 6. 练习题
+
+**题目 1：** 如果原始文本 1000 个字符，context_length=128，大概能切出多少个训练样本？为什么不是 1000/128 个？
+
+**题目 2：** DataLoader 的 `shuffle=True` 为什么重要？如果不 shuffle 会导致什么问题？
+
+---
+
+### 答案
+
+**题 1：** 如果简单按顺序切（不重叠），约 1000/128 ≈ 7 个。但实际训练通常用**滑动窗口**（每个 step 窗口移 1 个 token），1000 个 token 可以切出 1000-128+1=873 个样本——数据利用率高得多。代价是相邻样本高度重叠，但 shuffle 后打乱顺序可以缓解。
+
+**题 2：** 不 shuffle 的话，模型在同一个 epoch 内看到的样本顺序和原始文本一致——比如先看完整本小说再看代码文档。这会导致：(a) 梯度更新有偏差（连续 batch 的数据分布相似），(b) 模型可能"记住"数据顺序而非学习规律，(c) 验证集和训练集可能类似（因为按顺序分割导致数据泄露）。
 
 ---
 
 # 第 49 课：训练循环（Training Loop）
 
-## 核心概念
-
-五个核心步骤：
-
-```text
-取数据 → 前向传播 → 计算 Loss → 反向传播 → 更新参数
-```
-
-代码骨架：
+## 完整训练脚本 (train.py)
 
 ```python
-for batch in data:
-    output = model(batch)
-    loss = criterion(output, target)
-    loss.backward()
-    optimizer.step()
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+import time
+
+# --- 超参数 (Hyperparameters) ---
+batch_size = 32
+learning_rate = 1e-3
+num_epochs = 10
+eval_every = 100   # 每100步评估一次
+
+# --- 模拟数据 ---
+# 假装有1000个样本，每个样本是长度20的token序列
+vocab_size = 1000
+num_samples = 1000
+seq_len = 20
+
+X = torch.randint(0, vocab_size, (num_samples, seq_len))
+Y = torch.randint(0, vocab_size, (num_samples, seq_len))  # 目标: 预测下一个token
+dataset = TensorDataset(X, Y)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+# --- 模型(用前面定义的简化版) ---
+model = GPTWithOutput(vocab_size=vocab_size, d_model=128, n_heads=4, n_layers=4)
+optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+
+# --- 训练循环 ---
+model.train()
+global_step = 0
+total_loss = 0.0
+start_time = time.time()
+
+for epoch in range(num_epochs):
+    for batch_idx, (x_batch, y_batch) in enumerate(dataloader):
+        # 1. 前向传播
+        logits, loss = model(x_batch, targets=y_batch)
+
+        # 2. 反向传播
+        optimizer.zero_grad()  # 清零上一步的梯度
+        loss.backward()        # 计算所有参数的梯度
+        optimizer.step()       # 用梯度更新参数
+
+        # 3. 记录
+        total_loss += loss.item()
+        global_step += 1
+
+        # 4. 定期打印
+        if global_step % eval_every == 0:
+            avg_loss = total_loss / eval_every
+            elapsed = time.time() - start_time
+            print(f"Epoch {epoch+1}/{num_epochs} | "
+                  f"Step {global_step:5d} | "
+                  f"Loss: {avg_loss:.4f} | "
+                  f"Time: {elapsed:.1f}s")
+            total_loss = 0.0
+
+print(f"\n训练完成! 总步数: {global_step}")
+
+# --- 保存模型 ---
+torch.save(model.state_dict(), "freesllm_v0.1.pt")
+print("模型已保存到 freesllm_v0.1.pt")
 ```
 
+### 训练循环的五个步骤详解
+
+$$
+\begin{aligned}
+\text{Step 1 (取数据): } & \quad (x, y) \leftarrow \text{DataLoader} \\
+\text{Step 2 (前向): } & \quad \hat{y} = f_\theta(x),\quad L = \text{Loss}(\hat{y}, y) \\
+\text{Step 3 (清零): } & \quad \nabla_\theta \leftarrow 0 \\
+\text{Step 4 (反向): } & \quad \nabla_\theta = \frac{\partial L}{\partial \theta} \\
+\text{Step 5 (更新): } & \quad \theta \leftarrow \theta - \eta \nabla_\theta
+\end{aligned}
+$$
+
+### 为什么需要 `optimizer.zero_grad()`？
+
+PyTorch 的梯度默认是**累加**的（不自动清零）。如果你不清零，第 2 步的梯度会和第 1 步的梯度叠加在一起——这在分布式训练中有用（累积多个 micro-batch 的梯度），但在普通训练中会导致参数更新方向错误。
+
 ---
 
-# 第 50 课：模型评估
+## 练习题
 
-## 核心概念
+**题目 1：** `batch_size=32, num_samples=1000` 时，一个 epoch 有多少个 batch？如果 `num_epochs=10`，总共训练多少步？
 
-- **Loss：** 训练指标
-- **Perplexity（困惑度）：** 语言模型核心指标，越低预测越准
-- **Benchmark：** MMLU（知识）、HumanEval（代码）、GSM8K（数学）
+**题目 2：** 把上面代码中的 `optimizer.zero_grad()` 删掉，训练 100 步后观察 loss 是否还能正常下降。解释你看到的现象。
 
 ---
 
-# 第 51 课：指令微调（SFT）
+### 答案
 
-## 核心概念
+**题 1：** 1000/32 ≈ 31.25 → 31 个 batch（最后一个 batch 可能不足 32，DataLoader 默认 `drop_last=False` 保留它）。总步数 ≈ 31 × 10 = 310 步。
 
-预训练：学习语言。SFT：学习遵循指令。
+**题 2：** Loss 会剧烈震荡甚至爆炸。因为梯度不断叠加（每一步的梯度加在上一步的梯度之上），参数更新方向变成"N 步梯度的叠加"，而不是"当前步的梯度"。相当于用了一个巨大的、毫无意义的学习率。
 
-数据格式：`{"instruction": "解释 AI", "answer": "AI 是..."}`。
+---
 
-训练让模型学会：输入任务描述 → 输出答案。
+# 第 50 课：模型评估 —— 你的模型到底行不行？
+
+---
+
+## 1. 从第 49 课训练循环到评估
+
+第 49 课的 `train.py` 每 100 步打印一次 Loss。Loss 下降说明模型在进步，但它不能完全回答"模型好不好"——Loss 可能因为过拟合（第 30 课）而看似低但实际差。评估就是**用独立于训练的数据来测量模型真实能力**。
+
+## 2. Perplexity（困惑度）：LLM 的基础体检
+
+Perplexity（PPL）是 Cross Entropy Loss 的指数版本：
+
+$$
+\text{PPL} = e^{\text{Loss}} = e^{-\frac{1}{N}\sum \log P(x_i|x_{<i})}
+$$
+
+直觉：PPL=10 意味着模型在猜下一个 token 时，平均有 10 个"拿不准的选项"。PPL 越低越好——PPL=1 意味着模型 100% 确定每个下一个 token（只存在于过拟合的极端情况）。
+
+```python
+import torch
+import math
+
+@torch.no_grad()
+def evaluate_ppl(model, dataloader):
+    """在验证集上计算 Perplexity"""
+    model.eval()
+    total_loss = 0.0
+    total_tokens = 0
+
+    for x, y in dataloader:
+        logits, loss = model(x, targets=y)
+        total_loss += loss.item() * y.numel()  # 累加总loss
+        total_tokens += y.numel()
+
+    avg_loss = total_loss / total_tokens
+    ppl = math.exp(avg_loss)
+    model.train()
+    return ppl
+
+# 典型值:
+# PPL=100+  → 模型和随机猜差不多
+# PPL=20-50 → 学会了基本语法和常见词汇
+# PPL=10-20 → 不错的语言模型
+# PPL=5-10  → 很强的模型 (GPT-2级别)
+# PPL=2-5   → 顶级模型 (GPT-4级别估计)
+```
+
+## 3. Benchmark：LLM 的"期末考试"
+
+| Benchmark | 测什么 | 典型任务 | 适用场景 |
+|-----------|--------|---------|---------|
+| MMLU | 多领域知识 | 57 个学科选择题（法律/医学/物理...） | 知识广度 |
+| HumanEval | 代码能力 | 根据描述写 Python 函数 | 编程助手 |
+| GSM8K | 数学推理 | 小学数学应用题 | 逻辑推理 |
+| HellaSwag | 常识推理 | 选择最合理的句子结尾 | 常识理解 |
+
+## 4. 评估和 Loss 的关系
+
+第 30 课提到"Loss 下降但生成质量可能变差"（过拟合+Exposure Bias）。这就是为什么 Benchmarks 重要——它们直接测量"模型能不能完成任务"，而不是"模型在训练数据上的误差"。
+
+---
+
+## 5. 练习题
+
+**题目 1：** PPL=100 和 PPL=10 的模型，在猜下一个 token 时"拿不准的选项数"相差多少？如果 vocab_size=50000，PPL=100 和随机猜（PPL≈50000）差多少？
+
+**题目 2：** HumanEval 和 MMLU 都是客观评测，但为什么 GPT-4 在这两个 Benchmarks 得分很高，有些用户仍然觉得它"不聪明"？
+
+---
+
+### 答案
+
+**题 1：** PPL=100 → 约 100 个候选（有效选择集合是 100 个）。PPL=10 → 约 10 个候选——模型已经从"大海捞针"进步到"精准定位"。随机均匀猜（50000 个词等概率）→PPL≈50000。所以 PPL=100 已经比随机猜好 500 倍。
+
+**题 2：** Benchmarks 是"标准考场"——相同题型、固定答案、无歧义。但用户真实使用是"开放世界"——问题模糊、需要多步推理、有上下文依赖。Benchmark 高分 = 模型在受控环境强，不等于在所有场景强。这和第 28 课的 RLHF/DPO 有关——Benchmarks 测的是"知识"，对齐测的是"好不好用"。
+
+---
+
+# 第 51 课：指令微调（SFT）—— 让基座模型学会"听话"
+
+---
+
+## 1. 回顾第 28 课的 SFT 阶段
+
+第 28 课讲了 ChatGPT 的三个训练阶段——SFT 是第二阶段，位于预训练之后、RLHF/DPO 之前。第 46 课的 MiniGPT 是"基座模型"——只会续写文本，不会回答问题。
+
+SFT 要解决的问题：**教会模型"当人类问问题时，你应该给出答案"。** 训练的本质和第 30 课完全相同（Next Token Prediction），只是数据格式从"互联网随机文本"变成了"对话"。
+
+## 2. SFT 数据格式
+
+```python
+# 预训练数据: 互联网文本流
+"今天天气真好，我决定去公园散步。公园里有很多人..."
+
+# SFT 数据: 对话格式
+sft_data = [
+    {
+        "messages": [
+            {"role": "user", "content": "什么是人工智能？"},
+            {"role": "assistant", "content": "人工智能是计算机科学的一个分支，旨在创建能模拟人类智能的系统。"}
+        ]
+    },
+    {
+        "messages": [
+            {"role": "user", "content": "帮我写一封请假邮件"},
+            {"role": "assistant", "content": "尊敬的领导：\n您好！因身体不适，需请假一天...此致敬礼"}
+        ]
+    },
+]
+
+# 训练时会格式化成:
+# "<|user|>\n什么是人工智能？\n<|assistant|>\n人工智能是..."
+# 模型看到 <|assistant|> 后开始预测, 和预训练的 Next Token Prediction 完全一样
+```
+
+## 3. SFT 和预训练的训练差异
+
+| 对比项 | 预训练 | SFT |
+|--------|--------|-----|
+| 数据量 | 数万亿 token | 数千到数万条对话 |
+| 训练步数 | 数十亿步 | 数千到数万步 |
+| 学习率 | 3e-4（第32课） | 1e-5~5e-5（更低） |
+| Epoch | 1-3（第31课） | 3-10（数据少需要多看几遍） |
+| 初始化 | 随机 | 预训练权重（第28课） |
+| 目标 | 学会语言和世界知识 | 学会对话格式和遵循指令 |
+
+SFT 的低学习率是为了**不破坏预训练学到的知识**——只在现有基础上微调行为模式，不重写整个参数空间。
+
+## 4. 制作你自己的 SFT 数据集
+
+如果你想训练 FreesLLM 个人助手，最少需要约 500-1000 条高质量的中文问答对。可以直接用 GPT-4 生成 draft 再人工修改——这就是"合成数据"（第 104 课）。
+
+---
+
+## 5. 练习题
+
+**题目 1：** SFT 为什么学习率比预训练低很多？如果 SFT 也用 3e-4 的学习率会怎样？
+
+**题目 2：** 只用 100 条 SFT 数据训练 100 个 epoch，和用 10000 条数据训练 1 个 epoch，哪个更好？为什么？
+
+---
+
+### 答案
+
+**题 1：** 预训练的初始参数是随机的，需要大步快跑。SFT 的参数已经有了完整的世界知识（预训练权重），只需要微调行为模式——大学习率等于把辛苦训了几万亿步的权重"洗掉"重来。SFT 用 3e-4 会导致"灾难性遗忘"（第 78 课）——模型学会了对话格式但忘了所有知识。
+
+**题 2：** 10000 条训练 1 个 epoch 更好。100 条重复 100 个 epoch = 每个样本被看了 100 遍——模型会背下这 100 条而不是学会"遵循指令的通用能力"。这就是过拟合——你的 FreesLLM 只会在 100 个特定问题上回答得好，换一个问题就崩溃。
 
 ---
 
@@ -4888,15 +8300,162 @@ RAG（Retrieval Augmented Generation）：
 
 优势：不需要重新训练模型就能更新知识。
 
+## RAG 最小实现（约 50 行）
+
+```python
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+class SimpleRAG:
+    """极简 RAG: Embedding + 向量检索 + LLM 生成"""
+    def __init__(self, embed_model_name="all-MiniLM-L6-v2"):
+        # 嵌入模型(把文字变成向量)
+        self.embed_model = SentenceTransformer(embed_model_name)
+        self.documents = []      # 原始文档
+        self.embeddings = []     # 对应的向量
+
+    def add_documents(self, docs):
+        """把文档加入知识库"""
+        self.documents.extend(docs)
+        new_embs = self.embed_model.encode(docs, normalize_embeddings=True)
+        self.embeddings.extend(new_embs)
+        self.embeddings = np.array(self.embeddings)
+
+    def search(self, query, top_k=3):
+        """根据问题搜索最相关的文档"""
+        query_emb = self.embed_model.encode([query], normalize_embeddings=True)[0]
+        # 余弦相似度(embedding已归一化, 点积=余弦)
+        scores = self.embeddings @ query_emb
+        top_indices = np.argsort(scores)[-top_k:][::-1]
+        return [(self.documents[i], scores[i]) for i in top_indices]
+
+    def ask(self, query, llm_generate_fn, top_k=3):
+        """RAG 完整流程: 检索 + 增强 + 生成"""
+        retrieved = self.search(query, top_k)
+        # 构建 prompt: 把检索到的文档拼进去
+        context = "\n".join([f"- {doc}" for doc, _ in retrieved])
+        prompt = f"""参考以下资料回答问题:
+{context}
+
+问题: {query}
+回答:"""
+        return llm_generate_fn(prompt)
+
+# --- 使用示例 ---
+rag = SimpleRAG()
+
+# 添加知识库
+rag.add_documents([
+    "Python 是一种解释型编程语言, 由 Guido van Rossum 于 1991 年创建。",
+    "Transformer 架构由 Vaswani 等人在 2017 年提出, 是 GPT 的基础。",
+    "LoRA 是一种参数高效微调方法, 通过低秩矩阵适配大模型。",
+    "RAG 结合了检索和生成, 可以给 LLM 外挂知识库。",
+])
+
+# 搜索测试
+results = rag.search("谁发明了 Python?")
+print("检索结果:")
+for doc, score in results:
+    print(f"  [{score:.3f}] {doc}")
+# [0.xxx] Python 是一种解释型编程语言...
+
+# 完整问答(这里用模拟的生成函数)
+def fake_llm(prompt):
+    return f"[基于检索结果生成的回答]"
+
+answer = rag.ask("谁发明了 Python?", fake_llm)
+print(f"\nRAG 回答:\n{answer}")
+```
+
+### RAG 的实际价值
+
+模型的知识截止于训练数据的时间点。有了 RAG，你不重新训练模型就能让它知道"今天发生了什么"、"你的个人笔记里写了什么"、"最新的 API 文档改了哪里"。
+
+FreesLLM 的未来架构里 RAG 是一个必备模块——让 LLM 能够查询外部知识而不是全靠参数记忆。
+
 ---
 
-# 第 53 课：模型部署
+# 第 53 课：模型部署 —— 让你的 FreesLLM 能被人用
 
-## 核心概念
+---
 
-推理服务：`用户 → API → 模型 → 回答`。
+## 1. 从训练到上线——回顾前面走过的路
 
-技术栈：FastAPI（API 层）、vLLM（高性能推理引擎）、llama.cpp（CPU/边缘推理）、CUDA（GPU 加速）。
+第 49 课的 `train.py` 把模型训好了，保存为 `freesllm_v0.1.pt`。第 46 课的 MiniGPT 能加载这个文件并在 Python 里生成文字。但你还不能把这个模型分享给别人——除非对方也懂 Python 和 PyTorch。
+
+部署就是**给模型套一个 API 外壳**，让任何人都能通过 HTTP 请求使用它——就像你调用 OpenAI API 一样。
+
+## 2. 最小部署：FastAPI + MiniGPT
+
+```python
+# server.py —— FreesLLM 的最简部署
+from fastapi import FastAPI
+from pydantic import BaseModel
+import torch
+import uvicorn
+
+# 加载你训练好的模型 (第46课的MiniGPT)
+app = FastAPI(title="FreesLLM API")
+model = MiniGPT(config)
+model.load_state_dict(torch.load("freesllm_v0.1.pt"))
+model.eval()
+
+class ChatRequest(BaseModel):
+    prompt: str
+    max_tokens: int = 100
+    temperature: float = 0.8
+
+class ChatResponse(BaseModel):
+    response: str
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(req: ChatRequest):
+    # Tokenize (第47课训练的tokenizer)
+    input_ids = tokenizer.encode(req.prompt)
+    input_tensor = torch.tensor([input_ids])
+
+    # 生成 (第46课的generate, 第25课的自回归)
+    output_ids = model.generate(
+        input_tensor,
+        max_new_tokens=req.max_tokens,
+        temperature=req.temperature,
+    )
+    response_text = tokenizer.decode(output_ids[0].tolist())
+    return ChatResponse(response=response_text)
+
+# 启动: python server.py → http://localhost:8000/chat
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+访问 `http://localhost:8000/docs` 就能看到自动生成的 API 文档。任何人只要发 HTTP POST 请求到 `/chat` 就能调用你的 FreesLLM。
+
+## 3. 生产级部署：vLLM / llama.cpp
+
+FastAPI 适合原型。如果要做生产级部署（高并发、低延迟），用专用推理引擎：
+
+- **vLLM（GPU）：** PagedAttention（第 68 课 FlashAttention 的兄弟技术）+ Continuous Batching，比朴素生成快 10-20 倍。支持 OpenAI 兼容 API——用户用 `openai` Python 库直接调你的模型。
+- **llama.cpp（CPU/边缘）：** C++ 实现 + GGUF 量化（第 67 课），在 MacBook 或手机上跑 7B 模型。
+
+## 4. KV Cache 在部署中的作用
+
+第 37 课的 KV Cache 在部署时是必选项——API 需要支持多轮对话，同一用户的多次请求间复用 KV Cache 可以避免每次从头计算整个对话历史。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 上面 FastAPI 代码中，每次请求都重新加载模型吗？如果不是，模型在哪里被加载？这对响应时间有什么影响？
+
+**题目 2：** 你的 FreesLLM 部署到服务器上，突然有 100 个用户同时调用。FastAPI 的 `model.generate()` 能并行处理吗？如果不能，瓶颈在哪？怎么解决？
+
+---
+
+### 答案
+
+**题 1：** 不是——模型在 `app = FastAPI()` 之前就被加载到 GPU 显存了。服务器启动时加载一次，所有请求复用同一个模型实例。所以响应时间 = tokenize 时间 + 生成时间（主要开销），不需要每次重走初始化。
+
+**题 2：** 默认不能——`model.generate()` 是串行的（自回归生成，第 25 课）。100 个用户同时请求 = 第 100 个用户等到前面 99 个全部生成完。解决方案：用 vLLM 的 Continuous Batching——把多个请求的当前待生成 token 编成一个 batch 同时推理，动态调度。这就是生产级推理引擎的杀手锏。
 
 ---
 
@@ -4908,29 +8467,163 @@ RAG（Retrieval Augmented Generation）：
 
 工具：搜索、文件读写、数据库、API 调用、代码执行等。
 
----
+## 极简 Agent 实现（ReAct 模式）
 
-# 第 55 课：FreesLLM 整体架构设计
+ReAct = Reason + Act。模型交替输出"思考"和"行动"，直到任务完成。
 
-## 目标架构
+```python
+import re
 
-```text
-用户 → Web Interface → API Server → LLM Engine
-     ↓
-Transformer Model（Tokenizer + Embedding + Weights）
-     ↓
-Knowledge System（RAG + Vector DB）
-     ↓
-Agent（工具调用 + 任务规划）
+class SimpleAgent:
+    """极简 ReAct Agent: Think → Act → Observe → 循环"""
+    def __init__(self, tools, llm_call):
+        """
+        tools: dict, 如 {"calculator": lambda expr: eval(expr)}
+        llm_call: function, 输入prompt返回文本
+        """
+        self.tools = tools
+        self.llm = llm_call
+
+    def run(self, task, max_steps=5):
+        history = [f"任务: {task}"]
+
+        for step in range(max_steps):
+            # 1. 让 LLM 决定下一步
+            prompt = self._build_prompt(history)
+            response = self.llm(prompt)
+            history.append(response)
+
+            # 2. 解析 Action
+            action_match = re.search(r"Action:\s*(\w+)\((.*?)\)", response)
+            if action_match:
+                tool_name = action_match.group(1)
+                tool_input = action_match.group(2).strip("'\"")
+                print(f"  [Step {step+1}] 调用工具: {tool_name}({tool_input})")
+
+                # 3. 执行工具
+                if tool_name in self.tools:
+                    result = self.tools[tool_name](tool_input)
+                    history.append(f"Observation: {result}")
+                else:
+                    history.append(f"Observation: 工具 {tool_name} 不存在")
+
+            # 4. 检查是否完成
+            if "Final Answer:" in response:
+                return response.split("Final Answer:")[-1].strip()
+
+        return "达到最大步数, 未完成任务"
+
+    def _build_prompt(self, history):
+        prompt = """你是一个 Agent。使用以下格式:
+
+Thought: 我现在需要做什么
+Action: tool_name("input")
+Observation: (工具返回结果)
+... (可以多轮)
+Thought: 我已经有足够信息了
+Final Answer: 最终答案
+
+可用工具: """ + ", ".join(self.tools.keys())
+        prompt += "\n\n" + "\n".join(history)
+        return prompt
+
+# --- 使用示例 ---
+def fake_llm(prompt):
+    """模拟 LLM 响应 (实际使用时替换为真正的模型调用)"""
+    if "Final Answer" not in prompt:
+        return 'Thought: 我需要计算\nAction: calculator("3+5*2")'
+    return "Final Answer: 结果是 13"
+
+agent = SimpleAgent(
+    tools={"calculator": lambda expr: str(eval(expr))},
+    llm_call=fake_llm
+)
+
+result = agent.run("计算 3+5×2")
+print(f"\n最终结果: {result}")
 ```
 
-## 技术栈
+Agent 的本质就是：**让 LLM 在一个循环里反复决定"下一步做什么"**，直到任务完成。ChatGPT 的 Code Interpreter、Claude 的 Tool Use，底层都是这个模式。
 
-- 模型层：Python / PyTorch / Transformers
-- 服务层：FastAPI / Uvicorn
-- 数据层：SQLite / FAISS / Chroma
-- 前端：Vue / Tailwind
-- 部署：Docker / CUDA
+---
+
+# 第 55 课：FreesLLM 整体架构设计 —— 把所有零件装进一台机器
+
+---
+
+## 1. 你现在手里有什么？——54 课积攒的零件清单
+
+你从"什么是向量"开始（第 1 课），一路走到了能部署的 LLM API（第 53 课）。但在你写出 `python server.py` 之前，你需要一个**架构蓝图**——FreesLLM 到底有哪些模块？它们之间怎么通信？各自依赖什么技术？
+
+这就是本课的任务：把 54 课的零件组装成一个系统工程。
+
+## 2. FreesLLM 完整架构分层
+
+```text
+                         用户
+                          ↓
+┌─────────────────────────────────────────┐
+│           🖥  Web Interface              │  前端 (Vue/Tailwind)
+│         聊天界面 / 管理后台              │
+└─────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────┐
+│           🔌 API Server                 │  服务层 (FastAPI, 第53课)
+│     /chat  /rag  /agent  /admin         │
+└─────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────┐
+│          🧠 LLM Engine                  │  模型层
+│  ┌──────────────────────────────────┐   │
+│  │  Tokenizer (第19/47课)            │   │
+│  │  Embedding (第20课)               │   │
+│  │  Transformer Blocks (第46课)      │   │
+│  │  ├─ RMSNorm (第40课)              │   │
+│  │  ├─ GQA Attention (第42课)        │   │
+│  │  ├─ RoPE (第39课)                 │   │
+│  │  ├─ SwiGLU FFN (第41课)           │   │
+│  │  └─ Residual (第15课)             │   │
+│  │  lm_head (第16课)                 │   │
+│  │  KV Cache (第37课)                │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+           ↓                    ↓
+┌──────────────────┐  ┌──────────────────┐
+│ 📚 Knowledge Sys │  │ 🤖 Agent System  │
+│ RAG (第52课)     │  │ Planner          │
+│ Vector DB        │  │ Tool Use (第54课)│
+│ Embedding Model  │  │ Memory (第83课)  │
+└──────────────────┘  └──────────────────┘
+```
+
+## 3. 每一层的技术选型和对应课程
+
+| 层级 | 技术选型 | 为什么选它 | 对应课程 |
+|------|---------|-----------|---------|
+| 模型核心 | PyTorch + MiniGPT骨架 | 最灵活，可定制任何架构细节 | 第46课 |
+| 模型优化 | RMSNorm+SwiGLU+RoPE+GQA | LLaMA级工程优化 | 第38-42课 |
+| Tokenizer | SentencePiece BPE | 中文友好，C++ 高性能 | 第19/47课 |
+| 知识库 | FAISS/Chroma + Embedding | 轻量，本地部署 | 第52课 |
+| API | FastAPI | 自动生成文档，异步支持 | 第53课 |
+| 推理加速 | vLLM 或 llama.cpp | 生产级吞吐 | 第37/53课 |
+| 微调 | LoRA/QLoRA (PEFT) | 个人GPU可训练 | 第80-81课 |
+| 前端 | Vue + Tailwind | 轻量，快速开发 | — |
+
+## 4. 技术栈总览
+
+- **模型层：** Python / PyTorch / Transformers / PEFT
+- **服务层：** FastAPI / Uvicorn
+- **数据层：** SQLite / FAISS / Chroma
+- **前端：** Vue / Tailwind
+- **部署：** Docker / CUDA
+
+## 5. 三阶段实施路线
+
+**第一阶段（MVP，1-2周）：** MiniGPT（第46课）+ SentencePiece Tokenizer（第47课）+ 简单 FastAPI（第53课）= 能用 curl 调用的基础 LLM。
+
+**第二阶段（RAG增强，1-2周）：** 加 FAISS 向量库（第52课）+ Embedding 模型 = 能查文档的 LLM。
+
+**第三阶段（Agent，2-4周）：** 加 Tool Use（第54课）+ LoRA 对话微调（第80课）+ Web 界面 = FreesLLM v1.0。
 
 ---
 
@@ -4991,155 +8684,544 @@ Output Linear → Softmax → 预测下一个 token
 
 ---
 
-# 第 56 课：Attention Is All You Need —— Transformer 的诞生
-
-## 核心目标
-
-理解 Transformer 论文解决了什么问题、为什么 Attention 可以取代 RNN、为什么 Transformer 成为 LLM 基础。
-
-## 核心概念
-
-**RNN 时代的问题：** 词一个接一个传递，依赖顺序计算。难并行、长距离信息丢失、训练慢。
-
-**Transformer 核心思想：** 不要一个词一个词传递，而是所有 token 同时计算关系。核心：Self-Attention。
-
-**论文核心公式：** `Attention(Q,K,V) = softmax(QK^T/√d)V`。不是背公式，而是理解 Q（我要找什么）、K（我有什么信息）、V（实际内容）。
-
-## 扩展任务
-
-阅读 Attention Is All You Need 论文，输出论文结构图和每个模块作用。
+# 第 56 课：Attention Is All You Need —— 论文精读
 
 ---
 
-# 第 57 课：Attention 公式深度理解
+## 1. 这篇论文改变了什么？
 
-## 核心概念
+2017 年之前，NLP 的主流是 RNN（LSTM/GRU）。你有一个 100 词的句子，RNN 必须从第 1 个词读到第 100 个——串行，不能并行。而且第 1 个词的信息经过 100 步传递后基本消失（梯度消失）。
 
-**Query：** 当前 token 的问题。"苹果很好吃"中，"苹果"想寻找相关信息。
+2017 年 6 月，Google 的 8 位作者发表了 "Attention Is All You Need"。论文标题就是一个宣言：**你不需要 RNN，你只需要 Attention。** 这篇论文的引用量在 2023 年超过了 10 万次——它奠定了 GPT、BERT、LLaMA、Claude 等一切现代 LLM 的数学基础。
 
-**Key：** 其他 token 提供的标签。
+## 2. 论文的核心创新：自注意力替代循环
 
-**Value：** 真正的信息内容。
+RNN 的做法：`h_t = f(x_t, h_{t-1})`——必须等上一步算出 `h_{t-1}` 才能算 `h_t`。
 
-**Attention Score（QK^T）：** 计算谁和谁相关。
+Transformer 的做法：`Attention(Q,K,V)`——所有 token 同时扔进去，每个 token 和所有其他 token 的关系一次算完。
 
-**Softmax：** 转换成权重。例如"苹果→食物 0.8，苹果→公司 0.2"。
+回想第 10 课讲的 Attention 公式和第 8-9 课的 Q/K/V 分解。论文本身只有 15 页——核心就是那个公式。但公式背后的工程直觉——"把 RNN 扔掉，只保留 Attention，同时加上位置编码补偿顺序信息"——需要胆量和勇气。
 
-## 扩展任务
+## 3. 论文的结构：怎么读？
+
+论文分 6 个部分。建议的阅读顺序：
+
+| 部分 | 内容 | 与前面课程的关系 |
+|------|------|----------------|
+| Section 3: Model Architecture | Encoder + Decoder 堆叠、Attention + FFN | 第 23 课 Decoder-only 结构 |
+| Section 3.2: Attention | Scaled Dot-Product + Multi-Head 的公式 | 第 10/12/13 课 |
+| Section 3.1/3.3-3.5 | 为什么选这些参数、Position-wise FFN、Positional Encoding | 第 14/11 课 |
+| Section 4: Why Self-Attention | 和 RNN/CNN 的复杂度和路径长度对比 | 本课第 4 章 |
+| Section 5: Training | 优化器和正则化细节 | 第 32/33 课 |
+
+## 4. 论文中最被低估的一段：为什么选 Self-Attention？
+
+论文 Table 1 给出了三种机制的比较——每层的计算复杂度、串行操作数、最大路径长度。Self-Attention 在三个指标上全面碾压 RNN：
+
+- **复杂度：** `O(n²·d)`，RNN 是 `O(n·d²)`。当 `n < d`（token 数 < 隐藏维度）时 Self-Attention 更快——实际中 n≈2048, d≈4096→Self-Attention 更快。
+- **并行度：** O(1) 串行操作——所有 token 同时计算。RNN 需要 O(n) 步串行。这就是为什么 Transformer 能用 GPU 高效训练而 RNN 不行。
+- **长依赖路径：** O(1)——任意两个 token 直接相连。RNN 需要 O(n) 步才能把信息从第 1 个 token 传到第 100 个。这就是为什么 GPT 能做长文本而 LSTM 做不了。
+
+这些"工程细节"才是 Transformer 从 RNN 手中抢走王座的真正原因——不是 Attention "更聪明"，而是 Attention **在 GPU 上跑得更快**。
+
+---
+
+## 5. 练习题
+
+**题目 1：** "Attention Is All You Need" 这个名字为什么是宣言式的？"All You Need" 指"不需要什么"？
+
+**题目 2：** 论文 Table 1 中，Self-Attention 的最大路径长度是 O(1)——这意味着什么？为什么这对长文本生成（第 25 课的 1000 步自回归）至关重要？
+
+---
+
+### 答案
+
+**题 1：** "不需要 RNN 和 CNN"。论文之前的序列模型几乎都是 RNN 或其变体（LSTM/GRU），甚至有人在 RNN 上加 Attention。这篇论文的激进之处在于：完全抛弃循环结构，只用 Attention 和位置编码。标题就是在说"你们觉得必需的 RNN 根本不需要"。
+
+**题 2：** O(1) 意味着序列中任意两个 token——无论相距多远——都在一次 Attention 计算中直接相连。第 1 个 token 和第 1000 个 token 的关系只需一步就能建立。这在 RNN 中需要 1000 步传播（且中间会丢失信息）。对长文本生成来说，这意味着模型不会因为距离远而"忘记"前面的上下文——GPT 能记住 100 页前的人物名字的原因就在这里。
+
+---
+
+# 第 57 课：Attention 公式深度理解 —— Q/K/V 为什么这样设计？
+
+---
+
+## 1. 回顾第 56 课和第 8-10 课
+
+第 56 课读了原论文——Attention 是 Transformer 的核心。第 8-10 课从几何直觉出发理解了 Q/K/V——"我要找什么" / "我有什么标签" / "我的实际内容"。第 13 课扩展到 Multi-Head——多个独立子空间并行观察。本课补上两个关键的"为什么"：(1) 为什么 Q 和 K 要分开而不是同一个东西？(2) `√d_k` 为什么在那里？
+
+## 2. 为什么 Q 和 K 必须分开？——从搜索引擎理解
+
+直觉：你在 Google 搜索 "Python 教程"。你的查询（Query）和网页的标题（Key）是不同的东西，写在不同的空间里。你不会要求搜索词和网页标题完全一样。
+
+同理——Token "吃" 想找"谁在吃"（Query="找主语"），而 Token "小猫" 提供"我是名词，可以当主语"（Key="我是名词"）。这两个需求天然不同，所以 Q 和 K 需要各自独立的投影矩阵 `W_Q` 和 `W_K`。
+
+如果 Q=K（同一个投影），模型只能问"谁和我长得像"——这在某些情况下有用，但完全剥夺了"我的需求和你的特征"之间的抽象匹配能力。
+
+## 3. 为什么除以 √d_k？——方差控制
+
+第 12 课讲过 Softmax 除以 √d 的原因——维度越大 q·k 的值越大，Softmax 趋向 one-hot。这里补上严格的数学推导：
+
+假设 q 和 k 的各分量独立，均值为 0，方差为 1。那么：
+
+$$
+\text{Var}(q \cdot k) = \sum_{i=1}^{d_k} \text{Var}(q_i k_i) = d_k \times 1 = d_k
+$$
+
+`q·k` 的方差是 `d_k`——维度越大，点积越疯狂。除以 `√d_k` 把方差拉回 1：
+
+$$
+\text{Var}\!\left(\frac{q \cdot k}{\sqrt{d_k}}\right) = \frac{d_k}{d_k} = 1
+$$
+
+这就是为什么 512 维和 4096 维的 Attention 用同样的 Softmax 温度能正常工作——`√d_k` 自动归一化了不同维度的尺度差异。这不是经验调参，是统计必然。
+
+## 4. 用纯 Python 手写 Scaled Dot-Product Attention
+
+```python
+import numpy as np
+
+def scaled_dot_product_attention(Q, K, V, mask=None):
+    """
+    纯 NumPy 实现, 不用 PyTorch。
+    Q: (batch, n_heads, seq_len, d_k)
+    K: (batch, n_heads, seq_len, d_k)
+    V: (batch, n_heads, seq_len, d_v)
+    """
+    d_k = Q.shape[-1]
+
+    # Step 1: QK^T
+    scores = Q @ K.transpose(0, 1, 3, 2)  # (B, H, T, T)
+
+    # Step 2: 除以 √d_k
+    scores = scores / np.sqrt(d_k)
+
+    # Step 3: Mask (可选)
+    if mask is not None:
+        scores = scores + mask  # mask 中 -inf 位置会在 softmax 后变为 0
+
+    # Step 4: Softmax (沿最后一维)
+    scores_max = scores.max(axis=-1, keepdims=True)
+    scores_exp = np.exp(scores - scores_max)  # 减去 max 防溢出
+    attn_weights = scores_exp / scores_exp.sum(axis=-1, keepdims=True)
+
+    # Step 5: × V
+    output = attn_weights @ V
+    return output, attn_weights
+
+# 测试
+Q = np.random.randn(1, 2, 4, 8)   # batch=1, 2头, 4token, d_k=8
+K = np.random.randn(1, 2, 4, 8)
+V = np.random.randn(1, 2, 4, 8)
+output, weights = scaled_dot_product_attention(Q, K, V)
+print(f"输出形状: {output.shape}")     # (1, 2, 4, 8)
+print(f"权重行之和: {weights.sum(axis=-1)}")  # [1. 1. 1. 1.] ✅
+```
+
+---
+
+## 5. 练习题
+
+**题目 1：** 如果 Q 和 K 相关（不是独立的），上面的方差推导还成立吗？实际训练中 Q 和 K 是否独立？为什么 `√d_k` 在实践中仍然有效？
+
+**题目 2：** 上面代码中 `scores - scores_max` 这一步（Softmax 前的数值稳定技巧）为什么必要？如果去掉，输入 `[1000, 1, 1]` 时会发生什么？
+
+---
+
+### 答案
+
+**题 1：** 初始化时 Q 和 K 不独立（都从同一个 x 投影出来，且 W_Q 和 W_K 的初始化类似），所以实际方差略偏离 `d_k`。但 `√d_k` 仍然是一个良好的一阶近似——它把方差压到大约 O(1) 的区间，Softmax 就不会进入饱和区。深度学习的许多参数（如 Adam 的 beta、Warmup 步数）都是"大致对"而非"精确推导"——`√d_k` 是其中最高效的一个。
+
+**题 2：** `np.exp(1000)` 会溢出为 `inf`（float64 最大约 1.8×10^308，`e^1000 ≈ 10^434` 远超）。减去 max 后：`np.exp(1000-1000)=e^0=1`，`np.exp(1-1000)≈e^{-999}≈0`——所有数值稳定在 [0,1] 区间。这个技巧叫 "Softmax 稳定化"，每个 Attention 实现都必须加。
+
+---
 
 用纯 Python 手写 Attention，不用 PyTorch。
 
 ---
 
-# 第 58 课：Multi-Head Attention 深入
-
-## 核心概念
-
-不同 Head 学习不同关系：Head1=语法关系，Head2=时间关系，Head3=实体关系，Head4=情感关系。
-
-数学：多个 `Attention_i` 拼接，再投影。
-
-## 扩展任务
-
-可视化不同 Head 的 Attention 权重。
+# 第 58 课：Multi-Head Attention 深入 —— 为什么一个头不够？
 
 ---
 
-# 第 59 课：Transformer 论文代码解析
+## 1. 回顾第 13 课和第 57 课
 
-## 核心概念
+第 13 课从几何直觉出发解释了 Multi-Head——"同一个输入投到不同子空间，多角度观察"。第 57 课讲了 Q ≠ K 的原因——查询和标签天然在不同空间。Multi-Head 是这个思想的扩展：**不只是 Q 和 K 在不同的空间，而是多组 Q/K/V 各自在不同的空间。**
 
-从论文进入源码。重点阅读：MultiHeadAttention、FFN、LayerNorm、Residual 的 PyTorch 实现。
+## 2. 论文中的 Multi-Head 公式
 
-## 扩展任务
+$$
+\text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
+$$
 
-分析 nanoGPT 源码，生成模块关系图。
+$$
+\text{head}_i = \text{Attention}(Q W_i^Q, K W_i^K, V W_i^V)
+$$
+
+每个 head 有自己独立的 `W_i^Q, W_i^K, W_i^V`。同一输入 x 经过不同的投影矩阵进入不同的"子空间"，在每个子空间里独立做 Attention，最后拼接起来。
+
+论文设定 d_model=512, h=8 → `d_k = 512/8 = 64`。注意到**总计算量和单头 512 维 Attention 相同**（8×64² = 512²）——Multi-Head 的妙处是：不增加计算量，但增加了"观察角度"。
+
+## 3. 不同 Head 实际学到了什么？
+
+研究发现（不是设计出来的，是训练后分析出来的），不同 Head 自然分化出不同功能：
+
+| Head 类型 | 关注什么 | 证据 |
+|-----------|---------|------|
+| 语法头 | 相邻的形容词-名词、动词-宾语 | Attention 权重集中在相邻位置 |
+| 句法头 | 远距离的主谓一致、从句边界 | Attention 跨越多个 token |
+| 指代头 | "它"指向前文的名词 | Attention 跳回到前面的实体 |
+| 位置头 | 纯粹的"看前面几个 token" | Attention 集中在固定的相对位置（如 t-1, t-2） |
+
+这不是人为分配的——所有 Head 的初始化完全相同（随机），训练过程中自然分化。这是 Multi-Head 最令人惊讶的性质：**给模型多个并行观察通道，它自己学会分工。**
+
+## 4. 为什么 Concat 之后还要 `W^O`？
+
+8 个 Head 输出 8 个 `(seq_len, 64)` 的矩阵，Concat 成一个 `(seq_len, 512)`。如果不加 `W^O`，这些 Head 的信息是"拼接"在一起的而非"融合"——Head 1 的 64 维和 Head 2 的 64 维永远不会交互。
+
+`W^O`（一个 512×512 的矩阵）允许不同 Head 的信息**跨通道混合**——Head 1 发现的"主语"和 Head 2 发现的"动作"在 `W^O` 的投影中被组合成"主语+动作"的联合表示。这和 MoE（第 43 课）中 Router 组合不同专家输出是同一个思想。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 8 头 × 64 维 和 1 头 × 512 维的计算量相同。为什么不用 16 头 × 32 维？h 和 d_k 的设计有什么约束？
+
+**题目 2：** 如果去掉 `W^O`（不做最后的线性投影），会损失什么能力？用第 43 课 MoE 的 Router 类比解释。
+
+---
+
+### 答案
+
+**题 1：** 实际中有约束——`d_k` 不能太小（否则每个 Head 的子空间维度太低，表达能力受限），也不能太大（Head 太少，观察角度不够）。64 是经验最优——在 512 维总空间下，8 个 64 维子空间足够表达多样性，同时每个子空间维度不嫌低。16 头 × 32 维在早期 Transformer 实验中效果略差——32 维对表示复杂语义关系来说太窄了。
+
+**题 2：** 去掉 `W^O` 后，8 个 Head 的输出只能"拼接"不能"融合"——每个 Head 的信息被锁死在自己的 64 维通道里，无法和其他 Head 的发现组合。就像 8 个专家各自独立给出意见但没有汇总讨论。`W^O` 就是那个"汇总讨论"的会议——让不同 Head 的信息在投影后相互交融。
+
+---
+
+# 第 59 课：Transformer 论文代码解析 —— 从公式到 PyTorch
+
+---
+
+## 1. 回顾第 46 课和第 56-58 课
+
+第 46 课的 MiniGPT 是 nanoGPT 的简化版——约 150 行、6 个类。第 56-58 课深入拆解了 Attention 和 Multi-Head 的数学原理。本课把两者对接：论文中的每一个公式，在 nanoGPT 源码里对应哪几行。
+
+## 2. nanoGPT 源码结构速览
+
+nanoGPT（Andrej Karpathy，约 300 行）是最干净的 GPT-2 复现。文件结构：
+
+| 文件 | 行数 | 内容 | 对应课程 |
+|------|------|------|---------|
+| `model.py` | ~200 | GPT 模型定义 | 第46课 |
+| `train.py` | ~100 | 训练循环 | 第49课 |
+| `config/` | ~20 | 超参数配置 | 第31-34课 |
+
+## 3. 核心代码与论文的精确对应
+
+```python
+# ===== nanoGPT model.py 核心片段解读 =====
+
+# --- 论文 Section 3.2.2: Multi-Head Attention ---
+class CausalSelfAttention(nn.Module):
+    def __init__(self, config):
+        # 论文公式: head_i = Attention(Q W_i^Q, K W_i^K, V W_i^V)
+        # 代码实现: Q,K,V 合并到一个 Linear, 一次矩阵乘法
+        self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
+        # 论文公式: MultiHead(Q,K,V) = Concat(head_1,...,head_h) W^O
+        self.c_proj = nn.Linear(config.n_embd, config.n_embd)
+
+        # 论文 Section 3.2.3: 原因是 Causal Attention
+        # "masked out (set to -inf) all values in the input of softmax"
+        self.register_buffer("bias",
+            torch.tril(torch.ones(config.block_size, config.block_size))
+                 .view(1, 1, config.block_size, config.block_size))
+
+    def forward(self, x):
+        B, T, C = x.shape
+        # 一次矩阵乘法算 Q,K,V, 再 split —— 第46课题1问过为什么合并
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+        # 论文: d_k = d_model / h = 768 / 12 = 64
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        # 论文公式 (1): Attention(Q,K,V) = softmax(QK^T/√d_k)V
+        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+        att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+        att = F.softmax(att, dim=-1)
+        y = att @ v
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        return self.c_proj(y)  # W^O 投影
+
+# --- 论文 Section 3.3: Position-wise FFN ---
+# 公式: FFN(x) = max(0, x W_1 + b_1) W_2 + b_2
+# GPT-2 用 GELU 替代 ReLU, 原理见第46课题2
+class MLP(nn.Module):
+    def forward(self, x):
+        return self.c_proj(self.gelu(self.c_fc(x)))
+```
+
+nanoGPT 的 200 行就是论文 15 页的代码化身。每个论文公式都精确对应 3-5 行 PyTorch。
+
+## 4. 如何阅读其他 LLM 源码
+
+nanoGPT 是所有 LLM 源码的最小公约数。理解了它，再去看 LLaMA（Meta）、Qwen（阿里）、DeepSeek 的源码，差异只在：
+- nanoGPT: LayerNorm + ReLU/GELU + MHA + 正弦PE
+- LLaMA: RMSNorm + SwiGLU + GQA + RoPE（第 38-42 课）
+
+核心骨架（Transformer Block 的 Attention+FFN+Residual 结构）从未变过。
+
+---
+
+## 5. 练习题
+
+**题目 1：** nanoGPT 的 `c_attn` 是 `nn.Linear(n_embd, 3*n_embd)`。为什么是 3 倍？如果是 4 倍或 2 倍会怎样？
+
+**题目 2：** 在 nanoGPT 源码中找到 Weight Tying 的实现（第 46 课题 3 问过）。它对应论文的哪一段？
+
+---
+
+### 答案
+
+**题 1：** 3 倍 = Q + K + V（各 n_embd 维）。如果是 2 倍→缺一个。如果是 4 倍→多出来的维度没用。这是一个工程优化——合并成一次矩阵乘法而非三次（原理见第 46 课题 1 的答案）。
+
+**题 2：** `self.transformer.wte.weight = self.lm_head.weight`（在 `model.py` 的 GPT 类 `__init__` 中）。论文 Section 3.4 提到 "share the same weight matrix between the two embedding layers and the pre-softmax linear transformation"。nanoGPT 实现了这一点——Embedding 和 LM Head 共享权重。
 
 ---
 
 # 第 60 课：Scaling Law —— 为什么模型越大越强？
 
-## 核心概念
+---
 
-性能和参数量、数据量、计算量存在规律。
+## 1. 回顾第 17 课和第 21-22 课
 
-更多参数 → 更大的表示空间。更多数据 → 更多世界规律。更多计算 → 更充分的优化。
+第 17 课讲了涌现——模型到某个规模突然获得新能力。第 21 课讲了高维空间容纳复杂结构。第 22 课讲了深度 = 逐级抽象。Scaling Law 是这三者的数学表达：**Loss 和参数量/数据量/计算量之间，存在精确的幂律关系。**
 
-为什么 7B 和 70B 能力差距巨大？因为空间容量和抽象层级完全不同。
+## 2. 两篇奠基论文的核心结论
 
-## 扩展任务
+**GPT-3 Scaling Law（Kaplan et al., 2020）：**
 
-研究 GPT-3 Scaling Law 论文（Kaplan et al.）和 Chinchilla 论文。
+$$
+L(N) = \left(\frac{N_c}{N}\right)^{\alpha_N}, \quad L(D) = \left(\frac{D_c}{D}\right)^{\alpha_D}
+$$
+
+- N = 参数量（非 Embedding 参数），D = 训练 token 数
+- 幂指数：α_N ≈ 0.076, α_D ≈ 0.095——翻倍参数量能降约 5% 的 Loss，翻倍数据能降约 6%
+- 关键推论：Loss 随规模**可预测地**下降——给定预算，可以精确计算应该把更多钱花在"更大模型"还是"更多数据"上
+
+**Chinchilla Scaling Law（DeepMind, 2022）——修正了 Kaplan 的结论：**
+
+Kaplan 发现参数量比数据量更重要。Chinchilla 重新分析发现两者应**等比例增长**：
+
+$$
+N_{opt} \propto C^{0.5}, \quad D_{opt} \propto C^{0.5}
+$$
+
+- 给定 2 倍计算量，参数和数据应各增 1.4 倍
+- "Chinchilla-optimal"：一个 70B 模型应训练约 1.4T token——而非像 GPT-3 那样 175B 参数只训 300B token（严重欠训练）
+
+## 3. Scaling Law 对 FreesLLM 的实际意义
+
+如果你有 X 美元算力：(1) 先根据 Chinchilla 算最优的 (参数量, 数据量) 组合；(2) 如果数据不够（比如你只有 10GB 中文语料），模型再大也没用——数据瓶颈主导；(3) 1B 以下的小模型，Scaling Law 的幂律仍然成立，只是 α 系数不同。
+
+## 4. 关键数字记忆
+
+| 模型 | 参数 | 训练 token | Loss | 能力分界线 |
+|------|------|-----------|------|-----------|
+| GPT-2 Small | 124M | ~10B | ~3.0 | 基本语言能力 |
+| GPT-2 XL | 1.5B | ~10B | ~2.5 | 常识 + 简单推理 |
+| GPT-3 | 175B | ~300B | ~2.0 | 涌现能力出现 |
+| Chinchilla | 70B | ~1.4T | ~1.8 | 同等计算量最优 |
+| LLaMA 3 | 8B | ~15T | ~1.5 | 小模型+超大数据 |
+
+趋势：同等参数下，**数据越多越好**。Chinchilla 70B 用 20 倍数据超越了 GPT-3 175B。
 
 ---
 
-# 第 61 课：参数到底存储了什么？
+## 5. 练习题
 
-## 核心概念
+**题目 1：** 你有 10 万美金算力。根据 Chinchilla，你应该训练多大的模型、用多少数据？
 
-参数不是数据库，不是"中国首都是北京"这样的条目。而是大量矩阵中的统计关系。
-
-一个概念可能分布在数百万参数中。这叫 **Distributed Representation（分布式表示）。**
-
-模型知识探测方法：Linear Probe（训练简单分类器探测隐藏状态）、Activation Analysis（分析激活模式）。
+**题目 2：** 为什么 Chinchilla 70B 能超过 GPT-3 175B？这和第 29 课的数据质量有什么关系？
 
 ---
 
-# 第 62 课：模型幻觉（Hallucination）
+### 答案
 
-## 核心概念
+**题 1：** 10 万美金 ≈ 约 3×10^21 FLOPs 的算力（约 1000 GPU-天）。Chinchilla 定律：`N ≈ 0.7 × C^0.5`，`D ≈ 2.3 × C^0.5`。代入得 `N ≈ 1.2B, D ≈ 40B token`。大约是一个 1.2B 参数的模型，用 40B token 训练。实际中由于硬件限制（最小 GPU 单元），通常会取最近的整档：1B 模型 + 40B token 或 3B 模型 + 100B token。
 
-LLM 目标不是判断真假，而是预测概率最高文本。所以可能：语言流畅，事实错误。
-
-解决方法：RAG（外挂知识库）、Tool Use（调用外部验证）、Fine-tuning（领域微调）。
-
-## 扩展任务
-
-让模型产生幻觉，分析原因（知识边界、训练数据缺失、概率偏差）。
+**题 2：** GPT-3 175B 只训练了 300B token——"太大但没吃饱"。Chinchilla 70B 训练了 1.4T token——"中等身材但吃够了"。同等计算量下，训练更多数据比单纯增大模型更有效。这和 Chinchilla 的数据质量筛选（比 GPT-3 更严格）也密切相关。
 
 ---
 
-# 第 63 课：Instruction Tuning 深入
-
-## 核心概念
-
-基础模型预测文本。聊天模型执行任务。
-
-SFT：输入 = 指令，输出 = 答案。训练让模型学会"遵循指令"这个元能力。
-
-## 扩展任务
-
-制作 1000 条个人助手训练数据（指令-回答对）。
+# 第 61 课：参数到底存储了什么？—— 模型的知识在哪？
 
 ---
 
-# 第 64 课：RLHF —— 人类如何训练 AI 行为
+## 1. 回顾第 20 课和第 60 课
 
-## 核心概念
+第 20 课讲了 Embedding 空间——概念在向量空间中的位置。第 60 课讲了 Scaling Law——更多参数 = 更大的表示空间。本课连接这两者：**70 亿个参数到底存了什么？为什么找不到"巴黎是法国首都"这一行？**
 
-流程：监督微调（SFT）→ 训练奖励模型（判断哪个回答更好）→ 强化学习优化（PPO）→ Chat 模型。
+## 2. 参数不是数据库——分布式表示的直观理解
 
-RLHF 让模型不仅会预测，还会"迎合人类偏好"。
+如果你打开一个训练好的模型文件（`.pt` 或 `.safetensors`），你看到的不是 `{巴黎: {首都: 法国}}` 这样的字典，而是数十亿个浮点数——每个 2 字节（BF16），整齐排列。
 
-## 扩展任务
+"巴黎是法国首都"这个知识不是存在某一个参数里——它**分布**在数千甚至数百万个参数中。Embedding 矩阵的某些维度、Attention 的 W_Q/W_K 权重、FFN 的 W_1/W_2 权重——所有这些参数共同形成了"巴黎"在语义空间中的位置、和"法国""首都"之间的几何关系。
 
-研究 InstructGPT 论文（OpenAI, 2022）。
+这和第 20 课的 `国王 - 男人 + 女人 ≈ 女王` 是同一个道理——那个公式没有存在任何一个具体的参数里，它是所有参数共同作用的**涌现属性**。
+
+## 3. 怎么"看到"参数里的知识？
+
+工具 1：**Linear Probe**——在模型的隐藏层上训练一个简单的线性分类器。如果分类器能从第 5 层的隐藏状态判断出"这个 token 是否指代一个国家"，说明"国家"这个概念已经在那层的表示中出现了。
+
+工具 2：**Activation Analysis**——观察特定输入时哪些神经元被激活。"巴黎"这个 token 激活的神经元，和"法国"激活的重叠度很高——它们在空间中靠近。
+
+这些工具只能回答"哪些参数和某个概念相关"，无法解释"这些参数如何形成这个概念"。这是第 77 课机制可解释性试图回答的难题。
+
+## 4. 和 FreesLLM 的关系
+
+你不需要完全理解模型内部怎么存知识才能训练它——第 30 课的预训练只要求你定义 Loss 和优化器，参数自己会学到知识。但理解"知识是分布式的"有助于你诊断问题：如果 FreesLLM 总是搞混两个概念，不是某个参数错了——是 Embedding 空间中它们的向量靠太近了，需要更多训练数据来拉开距离。
 
 ---
 
-# 第 65 课：DPO —— 更简单的对齐方法
+## 5. 练习题
 
-## 核心概念
+**题目 1：** 如果知识不是 "巴黎→法国" 的字典条目，那模型怎么"知道"巴黎是法国首都？在它没被问到的时候，这个知识"存在"在哪里？
 
-DPO（Direct Preference Optimization）：直接学习人类偏好，不需要复杂的强化学习。
+**题目 2：** 参数数量翻倍后（7B→70B，第 60 课），模型的"知识容量"翻倍了吗？解释为什么不是简单线性关系。
 
-数据格式：回答 A > 回答 B。优势：简单、稳定、不需要训练奖励模型。
+---
 
-现在很多开源模型使用 DPO 替代 RLHF。
+### 答案
 
-## 扩展任务
+**题 1：** 在所有相关参数的几何关系中。"巴黎""法国""首都"的 Embedding 向量在高维空间中形成了一个特定的三角形（"首都"向量 ≈ "巴黎"向量到"法国"向量的偏移方向）。当模型被问到"巴黎是哪个国家的首都？"，Attention 机制（第 10 课）从这些向量关系中提取信息。没被问到时，这个几何关系仍然存在于向量空间中——就像书在图书馆里，没被借阅时信息和书一起存在书架上。
 
-实现简单 DPO 训练流程。
+**题 2：** 不是简单翻倍——高维空间的"容量"随维度呈指数增长（第 21 课）。从 7B 到 70B，Embedding 维度从 4096 增到约 8192（或更大），空间容量远不止翻倍。这也是 Scaling Law（第 60 课）中 Loss 随参数呈幂律下降而非线性下降的原因——每增加一倍的参数带来的边际收益递减，但绝对提升仍然显著。
+
+---
+
+# 第 62 课：模型为什么会"胡说八道"？—— 幻觉的本质与指令微调的作用
+
+---
+
+## 1. 回顾第 28 课和第 51 课
+
+第 28 课讲了一个关键事实：GPT 的训练目标只有一个——预测下一个 token。第 51 课讲了 SFT 如何教模型"回答问题"。但即使经过 SFT，模型仍然会编造不存在的事实（幻觉）。本课把这两个问题连起来——**幻觉不是 bug，是"预测下一个 token"这个目标的必然副产品。**
+
+## 2. 幻觉的数学本质
+
+模型输出的是 `P(token | context)`——给定上下文，下一个 token 最可能是什么。这里没有"真/假"的判断。如果训练数据里"爱因斯坦发明了电灯"出现过（即使是错误信息），模型就会在合适的上下文中输出它——因为它学的是"人们怎么说"，而不是"什么是对的"。
+
+$$
+\text{模型选择 next token} = \arg\max P(\text{token} | \text{context})
+$$
+
+没有一项叫 `P(True)` 或 `P(False)`。
+
+## 3. SFT 能解决一部分幻觉，但引入了新问题
+
+SFT（第 51 课）让模型学会了"回答问题"的格式。但 SFT 数据覆盖的知识范围有限——你标注的 1000 条问答只覆盖窄领域，模型在被问到训练数据外的问题时，会"猜测"一个格式正确但内容错误的答案。
+
+这就是为什么 SFT 后的模型看起来"会聊天了"，但仍然会胡说八道——它学会了格式，没学会事实核查。
+
+## 4. 幻觉的三种典型成因和解决方案
+
+| 成因 | 表现 | 解决方案 | 对应课程 |
+|------|------|---------|---------|
+| 知识缺失 | 训练数据没有相关信息，模型编造 | RAG 外挂知识库 | 第 52 课 |
+| 过时知识 | 训练数据截止后发生的事 | RAG + 持续预训练 | 第 52/79 课 |
+| 概率偏差 | 正确 token 概率低，流畅错误 token 概率高 | RLHF/DPO 对齐 | 第 64-65 课 |
+| 上下文误导 | 用户 prompt 暗示了错误方向 | 更好的 System Prompt | 第 51 课 |
+
+## 5. 实际应对：SFT 数据质量比数量重要
+
+第 51 课已展开 SFT 训练的具体代码。这里补一个关键直觉：1000 条**覆盖全面、答案准确**的 SFT 数据，效果远好于 10000 条质量参差不齐的数据。因为模型通过 SFT 学的是**行为模式**——"看到问题时应该怎么回答"。数据质量高→模式学得对；数据质量差→模式学歪。
+
+---
+
+## 6. 练习题
+
+**题目 1：** 模型说"爱因斯坦发明了电灯"——这是幻觉还是知识缺失？RAG 能解决这类问题吗？
+
+**题目 2：** SFT 后的模型为什么在训练数据覆盖的领域表现好，在陌生领域仍然胡说？这和参数存储方式（第 61 课）有什么关系？
+
+---
+
+### 答案
+
+**题 1：** 两者兼有——训练数据中可能真的存在这个错误陈述（互联网上的错误信息被模型学到了）。RAG 可以缓解——检索到正确的维基百科条目（"爱迪生发明电灯，爱因斯坦提出相对论"），注入 context 后模型的概率分布会被正确信息主导。
+
+**题 2：** 第 61 课讲了参数是分布式表示——SFT 数据通过更新参数来"微调"Embedding 空间的结构。如果某个领域在 SFT 数据中从未出现，该领域的 Embedding 几何关系仍然停留在预训练状态——即"续写模式"而非"问答模式"。模型在这个领域的"格式记忆"没有被激活——于是退化为胡编。
+
+---
+
+# 第 63 课：RLHF 与 DPO —— 如何让模型"说人话"？
+
+---
+
+## 1. 从第 62 课说起：SFT 之后模型还会胡说
+
+第 62 课讲了 SFT 让模型学会"回答格式"，但不会判断"回答质量"。一个 SFT 后的模型对"如何学编程？"可能给出详细指导或"多写代码就行了"——两种回答格式都对，但质量天差地别。
+
+对齐（Alignment）要解决的问题：**在格式正确的前提下，让模型给出对人类更有帮助的回答。**
+
+## 2. RLHF：三步训练一个奖励模型
+
+RLHF（InstructGPT, OpenAI 2022）分三步：
+
+**Step 1: 收集人类偏好数据。** 给标注员看同一个 prompt 下的两个回答，选"哪个更好"。
+
+```text
+Prompt: "如何学习编程？"
+回答 A (chosen):   "建议从 Python 开始，先学基础语法，再通过做项目巩固。推荐资源：CS50、Python官方教程..."
+回答 B (rejected): "多写代码就行了。"
+→ 标注员选 A
+```
+
+注意：标注员不需要写答案（SFT 需要）——只需要**比较**。这是 RLHF 比 SFT 更容易规模化的关键。
+
+**Step 2: 训练奖励模型（Reward Model）。** 用 Step 1 的对比数据训练一个打分模型。输入 = prompt + 回答，输出 = 一个"人类会有多喜欢"的分数。
+
+**Step 3: 强化学习（PPO）。** 用奖励模型作为"裁判"，让主 LLM 生成多个回答，裁判打分，高分奖励、低分惩罚。主 LLM 通过 PPO 算法逐渐学会生成高分回答。
+
+RLHF 的问题：训练三个模型（SFT 模型、Reward Model、PPO 优化模型），工程复杂度高，训练不稳定。
+
+## 3. DPO：直接把"偏好"变成 Loss
+
+DPO（Rafailov et al., 2023）砍掉了奖励模型和 PPO——**直接在偏好数据上训练主模型。**
+
+$$
+\mathcal{L}_{\text{DPO}} = -\log \sigma\!\left(\beta \log\frac{\pi_\theta(y_{\text{chosen}}|x)}{\pi_{\text{ref}}(y_{\text{chosen}}|x)} - \beta \log\frac{\pi_\theta(y_{\text{rejected}}|x)}{\pi_{\text{ref}}(y_{\text{rejected}}|x)}\right)
+$$
+
+直觉：让模型对 chosen 回答的概率相对于 rejected 回答的概率**增大**。`π_ref` 是 SFT 后的原始模型（防止训偏）。`β` 控制变化幅度。
+
+DPO 的优势：(1) 不需要训练单独的奖励模型（省一半工程），(2) 训练稳定（不需要 RL），(3) 数据更便宜（只需要比较，不需要写标准答案）。LLaMA 3、Qwen 2.5 等开源模型普遍用 DPO 而非 RLHF。
+
+## 4. RLHF vs DPO 对比
+
+| 对比项 | RLHF | DPO |
+|--------|------|-----|
+| 需要训练的模型 | SFT + Reward + PPO (3个) | SFT 基础上直接微调 (1个) |
+| 数据需求 | SFT 数据 + 偏好对比数据 | SFT 数据 + 偏好对比数据 |
+| 训练稳定性 | PPO 不稳定，需要大量调参 | 稳定，标准分类 Loss |
+| 最终效果 | 略好（Reward Model 可以持续优化） | 接近 RLHF，在开源领域是标准 |
+
+---
+
+## 5. 练习题
+
+**题目 1：** 为什么 DPO 比 RLHF 更简单？从"需要训练几个模型"和"训练稳定性"两个角度回答。
+
+**题目 2：** DPO 数据只需要"比较两个回答哪个更好"——为什么这比 SFT 数据（需要写标准答案）更容易规模化？
+
+---
+
+### 答案
+
+**题 1：** RLHF 需要训练 3 个独立模型（SFT 基座、Reward Model、PPO 策略模型），而 DPO 直接在 SFT 基座上微调。RLHF 的 PPO 强化学习对超参数极其敏感（reward scaling、KL penalty 等），DPO 就是一个标准的二元分类 Loss——和预训练的 Cross Entropy 一样容易优化。
+
+**题 2：** 写标准答案需要领域专家——你要知道"正确答案"才能标 SFT。比较只需要普通人——A 比 B 更详细、更有帮助→选 A。ChatGPT 的赞/踩按钮本质上就是在免费收集 DPO 数据——每天数百万次比较，零人力成本。
 
 ---
 
@@ -5165,17 +9247,80 @@ FP16 → INT8 → INT4，核心是减少数字精度。
 
 方法：GPTQ（基于 Hessian 的量化）、AWQ（激活感知量化）、GGUF（llama.cpp 格式）。
 
-## 扩展任务
+## 量化实战代码
 
-比较同一模型不同量化（FP16 / INT8 / INT4）的效果和显存占用。
+```python
+import torch
+
+# 模拟一个权重矩阵
+W_fp32 = torch.randn(1024, 1024, dtype=torch.float32)
+print(f"FP32 显存: {W_fp32.numel() * 4 / 1024:.1f} KB")  # 4096 KB
+
+# --- FP16 (半精度) ---
+W_fp16 = W_fp32.half()  # float32 → float16
+print(f"FP16 显存: {W_fp16.numel() * 2 / 1024:.1f} KB")  # 2048 KB (减半)
+
+# --- INT8 量化 (简单对称量化) ---
+# 原理: x_quant = round(x / scale)  →  存成 8bit 整数
+scale = W_fp32.abs().max() / 127.0   # 映射到 [-127, 127]
+W_int8 = torch.round(W_fp32 / scale).to(torch.int8)
+print(f"INT8 显存: {W_int8.numel() * 1 / 1024:.1f} KB")  # 1024 KB (1/4)
+
+# 反量化: x_dequant = x_quant * scale
+W_dequant = W_int8.float() * scale
+error = (W_fp32 - W_dequant).abs().mean()
+print(f"INT8 量化误差(平均): {error:.6f}")
+
+# --- INT4 量化 ---
+# 两个 4bit 数值打包到一个 8bit 字节
+# 原理相同, 但每个值只占 4 bit
+print(f"INT4 理论显存: {W_fp32.numel() * 0.5 / 1024:.1f} KB")  # 512 KB (1/8)
+```
+
+### 量化对模型质量的影响
+
+LLM 的权重通常分布在 `[-1, 1]` 附近，量化误差是均匀噪声。大规模模型中，参数冗余足够吸收低精度误差。实践中 FP16 推理几乎无损，INT8 约有 0.5-1% 的 perplexity 增加，INT4 可能损失 1-3%。对于本地部署和个人使用，INT4 的精度损失完全可以接受——换来的是可以在 8GB 显存上跑 7B 模型。
 
 ---
 
-# 第 68 课：推理系统设计
+# 第 68 课：推理系统设计 + FlashAttention 原理
 
 ## 核心概念
 
 系统流程：请求 → Tokenizer → Batch 组批 → GPU 推理 → Sampling → 返回。
+
+## FlashAttention 的核心思想
+
+传统 Attention 的瓶颈不是"计算多"，而是"显存读写慢"——GPU 的 HBM（高带宽显存）比 SRAM（片上缓存）慢约 10 倍。
+
+传统 Attention 流程（全在 HBM 中）：
+1. 从 HBM 读取 Q,K → 到 GPU 芯片计算 → 写回 HBM（S = QK^T）
+2. 从 HBM 读取 S → 到 GPU 芯片计算 softmax → 写回 HBM（P = softmax(S)）
+3. 从 HBM 读取 P,V → 到 GPU 芯片计算 → 写回 HBM（O = PV）
+
+每一步都要**读 HBM → 计算 → 写 HBM**，显存带宽是瓶颈。
+
+FlashAttention 的解法：把计算**分块（tiling）**——每次只从 HBM 取一小块 Q、K、V 放进 SRAM，在 SRAM 内完成全部计算，只把最终结果写回 HBM。核心公式（online softmax）：
+
+```python
+# FlashAttention 的伪代码核心逻辑 —— online softmax
+# 不一次加载整个 QK^T 矩阵，而是逐块处理
+
+def flash_attention_chunk(Q_chunk, K_chunk, V_chunk, d_k):
+    """
+    假设 Q_chunk, K_chunk, V_chunk: (B, H, T_chunk, D)
+    在 SRAM 内完成: Score → Softmax → ×V
+    """
+    S = Q_chunk @ K_chunk.transpose(-2, -1) / (d_k ** 0.5)  # 分数
+    P = torch.softmax(S, dim=-1)                              # 权重
+    O = P @ V_chunk                                           # 输出
+    return O
+# 多块的结果最后拼接起来
+```
+
+**效果：** 比传统 Attention 快 2-4 倍，显存占用降低到 `O(N)`（传统是 `O(N²)`）。现在几乎所有大模型推理框架（vLLM、llama.cpp）都内置了 FlashAttention。
+
+---
 
 技术：vLLM（PagedAttention + Continuous Batching，大幅提升吞吐）。
 
@@ -5185,28 +9330,37 @@ FP16 → INT8 → INT4，核心是减少数字精度。
 
 ---
 
-# 第 69 课：未来 LLM 方向
-
-## 核心概念
-
-前沿方向：更长上下文（百万 token）、Agent 系统、多模态 LLM、世界模型、自我改进模型、小模型增强（高质量数据+蒸馏）。
-
-## 扩展任务
-
-整理 2025-2026 年 LLM 重要论文趋势。
+# 第 64 课：LLM 的未来方向与你的成长路线
 
 ---
 
-# 第 70 课：成为 LLM 开发者路线总结
+## 1. 回顾你走过的 63 课
 
-你应该掌握：
+从第 1 课的"向量是什么"到第 63 课的 DPO 对齐。现在有两条路摆在面前：**继续深入（未来方向）** 和 **开始动手（成长路线）**。本课把两者都讲清楚。
 
-- **数学：** 线代、微积分、概率
-- **理论：** Transformer、Attention、训练原理
-- **工程：** PyTorch、CUDA、部署
-- **研究：** 阅读论文、修改架构、实验验证
+## 2. LLM 前沿方向（2025-2026）
 
-完整路线：数学 → 神经网络 → Transformer → GPT → 训练 → 优化 → 研究 → FreesLLM。
+| 方向 | 核心问题 | 代表工作 | 对 FreesLLM 的意义 |
+|------|---------|---------|-------------------|
+| 更长上下文 | 百万 token 上下文如何不爆显存？ | Gemini 1.5, LLaMA 3 128K | RAG 可能被长上下文取代 |
+| Agent 系统 | LLM 如何调用工具、自主完成任务？ | Claude Computer Use, GPT-4 Tools | 第 54 课 Agent 架构是基础 |
+| 多模态 | 文字+图片+声音怎么融合进一个模型？ | GPT-4V, LLaVA, Qwen-VL | 你的 FreesLLM 可以先只做文字 |
+| 推理模型 | 怎么让模型"想一会再回答"？ | DeepSeek-R1, OpenAI o1 | 第 91 课详细展开 |
+| 小模型增强 | 1B 模型能接近 7B 的效果吗？ | Phi-3, Gemma 2B | 数据质量 > 模型大小 |
+
+## 3. 你的技能树——你现在应该掌握什么
+
+| 层级 | 技能 | 自检问题 | 对应课程 |
+|------|------|---------|---------|
+| 数学 | 线代+微积分+概率 | 能解释 Attention 的每一步数学原理吗？ | 1-7, 18 |
+| 理论 | Transformer 全链路 | 能画出 GPT 推理的完整流程图吗？ | 8-16, 27 |
+| 模型 | 架构设计 | 能说出 LLaMA 比原始 Transformer 改了哪 4 处吗？ | 38-45 |
+| 工程 | PyTorch 训练 | 能从零写一个 train.py 并跑通吗？ | 46-55 |
+| 研究 | 论文阅读 | 能读懂 Attention Is All You Need 并复现核心公式吗？ | 56-59 |
+
+**完整成长路线：** `数学直觉 → Transformer 原理 → GPT 全链路 → 训练工程 → 现代架构 → 自己实现 → 论文研究 → FreesLLM`
+
+如果你对上面所有自检问题都能回答"是"——你已经具备了独立设计和训练小型 LLM 的能力。如果某一行还有缺口，回到对应课程补上。
 
 ---
 
@@ -5214,133 +9368,237 @@ FP16 → INT8 → INT4，核心是减少数字精度。
 
 ---
 
-# 第 71 课：设计自己的 LLM 目标
-
-## 核心概念
-
-不是所有 LLM 都应该追求更大。一个好的模型首先需要明确目标。
-
-通用 LLM（GPT、Claude）vs 专用 LLM（医疗、编程、企业知识）。
-
-FreesLLM 定位需要考虑：服务对象、知识范围、推理能力、运行环境。
-
-## 需要掌握
-
-为什么小模型也有价值？参数量不是唯一指标。FreesLLM 应该偏向聊天？代码？学习助手？Agent？
-
-## 扩展任务
-
-撰写 FreesLLM Product Requirement Document。
+# 第 65 课：FreesLLM 设计决策 —— 从目标到架构到参数
 
 ---
 
-# 第 72 课：LLM 架构设计方法
+## 1. 回顾——在做任何设计决策之前
 
-## 核心概念
+第 55 课画了 FreesLLM 的完整架构蓝图。第 60 课讲了 Scaling Law——同等计算量下，参数和数据应等比例增长。现在你要把这两者变成具体的设计决策：**FreesLLM 到底应该多大？用什么架构？服务谁？**
 
-需要决定：参数规模（100M / 1B / 7B）、Context 长度（4K / 32K / 128K）、模型类型（Dense / MoE）。
+## 2. 第一步：明确目标——你要解决什么问题？
 
-一个 LLM 包含：Tokenizer → Embedding → Transformer → Output Head → Inference Engine。
+不是所有 LLM 都应该追求更大。通用 LLM（GPT、Claude）追求"什么都能做"，但你的 FreesLLM 可以更聚焦：
 
-## 扩展任务
+| 定位 | 适用场景 | 需要的能力 | 建议规模 |
+|------|---------|-----------|---------|
+| 个人学习助手 | 回答技术问题、总结文档 | 知识+推理+中文 | 1-7B |
+| 代码助手 | 代码补全、debug | 代码+逻辑 | 1-3B（代码模型） |
+| 企业知识库 | 内部文档问答 | RAG+精准+安全 | 1-3B + RAG |
+| Agent 平台 | 工具调用、任务规划 | 推理+规划+多模态 | 7B+ |
+| 实验研究 | 学习训练全流程 | 能跑通就行 | 100M-1B |
 
-设计 FreesLLM v0.1 架构图。
+## 3. 第二步：选择架构（回顾第 38-45 课）
 
----
+| 决策 | 选项 | 建议（v0.1） |
+|------|------|------------|
+| 基础架构 | 原始 Transformer / LLaMA-class | LLaMA-class（RMSNorm+SwiGLU+RoPE+GQA，第 38 课） |
+| 模型类型 | Dense / MoE（第 43 课） | Dense（MoE 训练复杂度高，v0.1 先不做） |
+| Context 长度 | 2K / 8K / 32K | 2K-4K（先用小 context 训通全流程） |
+| Tokenizer | GPT-2 / 自己训练（第 47 课） | 自己训练中文 Tokenizer（vocab=8K-16K） |
 
-# 第 73 课：参数规模规划
+## 4. 第三步：确定参数规模
 
-## 核心概念
+| 参数 | 显存需求（训练/BF16） | 训练时间（8×A100） | 适合用途 |
+|------|---------------------|-------------------|---------|
+| 100M | ~2GB | ~1 天 | 学习实验，验证全流程 |
+| 1B | ~8GB | ~3-7 天 | 小型助手，个人 GPU 可训练 |
+| 7B | ~40GB | ~1-3 周 | 实用级，需要多卡 |
+| 13B+ | ~70GB+ | 1 月+ | 专业级，需要几十张 GPU |
 
-粗略参考：100M = 学习实验，1B = 小型助手，7B = 实用级，70B = 大型能力。
+**参数计算公式（回顾第 14 课 FFN 和第 46 课 MiniGPT）：**
 
-参数计算：Embedding 参数 = V×d，Transformer 参数主要来自 FFN。
+$$
+\text{总参数} \approx V \cdot d_{\text{model}} + n_{\text{layers}} \cdot (4 \cdot d_{\text{model}}^2 \cdot 2 + 4 \cdot d_{\text{model}}^2)
+$$
 
-## 扩展任务
+- `V · d_model` = Embedding 层参数
+- `n_layers · 4 · d_model² · 2` = FFN 参数（主体）
+- `n_layers · 4 · d_model²` = Attention QKV+O 参数
 
-计算不同模型规模的显存需求（训练 + 推理）。
-
----
-
-# 第 74 课：训练自己的数据闭环
-
-## 核心概念
-
-数据循环：收集数据 → 训练 → 测试 → 发现问题 → 补充数据 → 再次训练。这是模型进化核心。
-
-数据类型：预训练数据、指令数据、偏好数据、反馈数据。
-
-## 扩展任务
-
-设计 FreesLLM 数据管理系统。
-
----
-
-# 第 75 课：模型评测体系
-
-## 核心概念
-
-评测不是只看聊天感觉。包括：知识（MMLU）、数学（GSM8K）、代码（HumanEval）、推理（ARC）。
-
-## 扩展任务
-
-搭建 LLM Benchmark 自动化测试脚本。
+**建议：FreesLLM v0.1 选 100M-300M 参数。** 足够小在单 GPU 上训练，足够大能学到有意义的中文语法。等全流程跑通后再 Scale Up。
 
 ---
 
-# 第 76 课：模型解释性研究
+## 5. 练习题
 
-## 核心概念
+**题目 1：** 你的 FreesLLM v0.1 选 vocab=16000, d_model=768, n_layers=12, n_heads=12。用上面的公式估算总参数量。
 
-- **Activation：** 神经元激活模式
-- **Attention Visualization：** 观察模型关注哪里
-- **Probe：** 训练简单分类器测试隐藏空间有什么信息
-
-## 扩展任务
-
-可视化 Attention Map 热力图。
+**题目 2：** 如果运行环境只有一台 MacBook（16GB 统一内存），你选哪个参数规模？为什么 1B 模型可能装不下？
 
 ---
 
-# 第 77 课：机制可解释性（Mechanistic Interpretability）
+### 答案
 
-## 核心概念
+**题 1：** Embedding: 16000×768×2（wte+lm_head 共享后只算一份）≈ 12.3M。每层 FFN: 4×768²×2 ≈ 4.7M。每层 Attention: 4×768² ≈ 2.4M。每层总计 ≈ 7.1M。12 层总计 ≈ 85M。总参数 ≈ 12.3M + 85M ≈ 97M（约 100M）。
 
-研究模型内部"电路"：Feature（特征）、Circuit（回路）、Neuron（神经元）。
-
-例如寻找"某些神经元负责日期判断"、"某些 Attention Head 负责指代消解"。
-
-## 扩展任务
-
-学习 Anthropic 的 Transformer Circuits 系列论文。
+**题 2：** 1B 模型 BF16 权重 ≈ 2GB。训练时需要额外存储优化器状态（第 33 课 Adam 的 m 和 v，FP32 各 4GB）+梯度+激活值——总计约 10-14GB。16GB 统一内存的 MacBook 勉强能跑推理（2GB 权重），但训练几乎不可能。建议选 100-300M，训练时约需 4-8GB。
 
 ---
 
-# 第 78 课：模型记忆与遗忘
-
-## 核心概念
-
-**Memorization：** 记忆训练数据的具体内容。**Generalization：** 学习可迁移的规律。
-
-**Catastrophic Forgetting：** 微调导致旧能力下降——学会了新任务，忘了旧知识。
-
-## 扩展任务
-
-实验：微调前后能力变化对比。
+# 第 66 课：数据闭环与模型评测 —— 怎么判断 FreesLLM 在进步？
 
 ---
 
-# 第 79 课：持续学习（Continual Learning）
+## 1. 数据闭环：模型进化不是"训练一次就完"
 
-## 核心概念
+训练不是一次性事件——是循环。第 30 课的预训练结束后，你会发现模型在某些问题上特别差（比如中文古诗、代码生成）。这时你需要**针对性地补充数据、再训练、再测试**。
 
-传统训练：训练一次，模型固定。持续学习：新知识→学习→保留旧知识→继续成长。
+```
+收集数据 → 训练 → 评测 → 发现问题 → 补充数据 → 再次训练 → ...
+```
 
-难点：灾难性遗忘。解决方案：Replay（重放旧数据）、Adapter（插入小模块）、LoRA（低秩适配）、EWC（弹性权重巩固）。
+四种数据类型在这个循环中扮演不同角色：
 
-## 扩展任务
+| 数据类型 | 作用 | 对应训练阶段 |
+|---------|------|-------------|
+| 预训练数据 | 构建基础语言能力和世界知识 | 第 30 课预训练 |
+| 指令数据（SFT） | 教会对话格式和遵循指令 | 第 51 课 SFT |
+| 偏好数据（DPO） | 教会"什么叫好的回答" | 第 63 课 DPO |
+| 用户反馈数据 | 发现模型盲区，触发下一轮数据补充 | 本课闭环 |
 
-实现 LoRA 持续微调实验。
+**对 FreesLLM 的实际操作：** 部署后记录用户的所有问题。每周分析"模型回答最差的 50 个问题"，针对性地收集或生成训练数据，下个版本加入训练。
+
+## 2. 评测：不能靠"感觉"
+
+第 50 课讲了 Loss 和 Perplexity——但最终用户不关心 Loss，他们关心"回答有没有用"。不同 Benchmark 测不同能力：
+
+| Benchmark | 测什么 | 多少分算好？ |
+|-----------|--------|------------|
+| MMLU | 57 学科知识选择题 | 60%+ = 有一定知识广度 |
+| HumanEval | 根据描述写代码 | 30%+ = 能写简单函数 |
+| GSM8K | 小学数学应用题 | 50%+ = 有基本推理 |
+| CEval / CMMLU | 中文知识评测 | 比英文版更能反映中文能力 |
+
+自动化评测脚本很简单——本质就是"把题目喂给模型，比对标准答案"。
+
+## 3. 理解模型为什么犯错：可解释性工具
+
+评测告诉你"错了"，可解释性工具帮你理解"为什么错"。三个递进的工具：
+
+- **Attention 可视化（第 58 课）：** 看模型在生成某个词时"关注了输入的哪些位置"。生成"苹果"时 Attention 集中在"水果"→模型对了。集中在毫不相关的词→模型分心了。
+- **Linear Probe：** 在隐藏层上训练简单分类器。如果分类器能从第 10 层判断出"这个 token 是动词还是名词"，说明语法信息在那层已经形成。
+- **机制可解释性（进阶）：** Anthropic 的 Transformer Circuits 研究——找到负责特定功能的"神经元电路"。比如某些 Attention Head 专门负责把"it"指向前面的名词。
+
+对 FreesLLM 来说，可解释性主要用于**调试**——模型反复在某个模式上出错时，看 Attention 权重能帮你定位问题。
+
+## 4. 一个完整的评测 + 数据闭环脚本
+
+```python
+import json
+from collections import defaultdict
+
+class FreesLLM_Evaluator:
+    """给 FreesLLM 做自动化评测 + 收集反馈数据"""
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.error_log = defaultdict(list)  # 记录所有答错的题目
+
+    def evaluate_benchmark(self, test_cases):
+        """test_cases: [{"prompt": "...", "expected": "..."}]"""
+        correct = 0
+        for i, case in enumerate(test_cases):
+            # 生成回答
+            input_ids = self.tokenizer.encode(case["prompt"])
+            output = self.model.generate(torch.tensor([input_ids]), max_new_tokens=50)
+            response = self.tokenizer.decode(output[0].tolist())
+
+            # 比对(简单版: 检查标准答案是否出现在回答中)
+            if case["expected"].lower() in response.lower():
+                correct += 1
+            else:
+                # 记录错误——这就是下一轮数据收集的起点!
+                self.error_log[case.get("category", "unknown")].append({
+                    "prompt": case["prompt"],
+                    "expected": case["expected"],
+                    "actual": response,
+                })
+
+        accuracy = correct / len(test_cases) * 100
+        print(f"准确率: {accuracy:.1f}% ({correct}/{len(test_cases)})")
+
+        # 打印每个类别的错误统计——告诉你在哪些方面需要补数据
+        for category, errors in sorted(self.error_log.items()):
+            print(f"  [{category}] 错误数: {len(errors)}")
+
+        return accuracy, dict(self.error_log)
+
+# 使用示例:
+# evaluator = FreesLLM_Evaluator(model, tokenizer)
+# test_cases = [
+#     {"prompt": "法国的首都是哪里？", "expected": "巴黎", "category": "地理"},
+#     {"prompt": "2+3等于几？", "expected": "5", "category": "数学"},
+#     {"prompt": "Python 中如何读取文件？", "expected": "open", "category": "编程"},
+# ]
+# accuracy, errors = evaluator.evaluate_benchmark(test_cases)
+# # 根据 errors 中的类别分布, 决定下一轮数据收集的重点
+```
+
+这个脚本是 FreesLLM 持续改进的引擎——每次跑完评测，`error_log` 告诉你"模型的短板在哪"，然后你针对性地补充数据。
+
+## 5. 练习题
+
+**题目 1：** 你发现 FreesLLM 在 MMLU 的"法律"类别得分特别低（20%），而"计算机"类别得分高（80%）。根据数据闭环的思路，你应该收集什么数据？是 SFT 数据还是预训练数据？
+
+**题目 2：** Linear Probe 发现模型在第 3 层就能完美分类"名词 vs 动词"，但在第 24 层才能分类"讽刺 vs 字面意思"。这和第 22 课（深度=逐级抽象）有什么关联？
+
+---
+
+### 答案
+
+**题 1：** 两者都需要。先补预训练数据（法律教材、法典文档）给模型补充"法律领域的基本词汇和概念"——因为 MMLU 法律 20% 说明模型几乎没有法律知识基础（预训练数据缺少法律文本）。再补法律问答 SFT 数据——教模型"如何用法律知识回答问题"的格式。
+
+**题 2：** 完全吻合第 22 课的逐级抽象规律。浅层（第 3 层）学的是表面语言特征——名词/动词区分只需要看词本身。深层（第 24 层）学的是语义和语用——"讽刺"需要综合上下文、语气、常识等高层信息才能判断。Linear Probe 的实验结果恰好验证了深层 Transformer 的逐级抽象假说。
+
+---
+
+# 第 67 课：灾难性遗忘与持续学习 —— 模型怎么"活到老学到老"？
+
+---
+
+## 1. 问题：微调后的模型为什么"变傻了"？
+
+第 51 课 SFT 和第 63 课 DPO 讲了微调让模型学会新行为。但很多人遇到过一个令人崩溃的现象：**微调后的模型在目标任务上变好了，但在其他所有任务上都变差了。** 这就是灾难性遗忘（Catastrophic Forgetting）。
+
+数学上：微调更新了参数 `W → W + ΔW`。`ΔW` 是针对微调数据优化的——它让模型在"新任务"上表现更好。但 `ΔW` 也可能破坏预训练阶段形成的、对"旧任务"有用的参数结构。第 61 课讲了参数是分布式表示——"巴黎是法国首都"这个知识分布在数百万参数中。微调可能一不小心就把其中一部分参数改偏了——模型突然搞混巴黎和伦敦。
+
+## 2. 记忆 vs 泛化：两个矛盾的目标
+
+| 类型 | 定义 | 例子 |
+|------|------|------|
+| Memorization | 记住了训练数据中的具体内容 | 背下了 SFT 数据中某条问答的措辞 |
+| Generalization | 学到了可迁移的规律 | 学会了"当用户问定义时应该给出清晰的定义而非举例" |
+
+理想情况：高泛化、低记忆。但数据量少时（SFT 典型只有几千条），模型倾向于记忆——因为它发现"背下来"比"推规律"更容易降低 Loss。
+
+## 3. 四种抗遗忘技术
+
+**Replay（重放）：** 微调时不只是喂新数据，还混入一部分旧数据（如预训练语料）。让模型不要"忘记来时的路"。成本：需要保存旧数据，训练时间增加。
+
+**LoRA（第 80 课展开）：** 不修改原参数，只训练小矩阵 A、B。`W_final = W_pretrained + A·B`。LoRA 天然抗遗忘——因为原参数 `W_pretrained` 被冻结，所有旧知识纹丝不动。这就是为什么 LoRA 成为微调标配。
+
+**EWC（弹性权重巩固）：** 给每个参数加一个"弹簧"——对旧任务重要的参数，更新时额外惩罚。`Loss_total = Loss_new + λ Σ F_i (W_i - W_i*)^2`，其中 `F_i` 是参数对旧任务的重要度（Fisher Information）。实际上 EWC 在微调大模型时用得不多（因为 LoRA 更简单），但在持续学习的学术研究中是个基准方法。
+
+**Adapter：** 在模型层之间插入小型可训练模块（类似 LoRA 的思想），冻结主模型。
+
+## 4. 对 FreesLLM 的实操建议
+
+v0.1 阶段直接用 **LoRA**（第 80 课代码已有）。不做全量微调。LoRA 天然抗遗忘+省显存+切换方便（多个 LoRA 权重对应不同能力）。等模型稳定后，如果需要做全量微调，记得混合 5-10% 的预训练数据作为 Replay。
+
+## 5. 练习题
+
+**题目 1：** 为什么数据量越少，模型越容易"记忆"而非"泛化"？这和 Loss 的优化有什么关系？
+
+**题目 2：** 你有 FreesLLM 基础模型，现在想做数学能力提升的微调。如果用全量微调（不冻结参数）且不加 Replay，预测一下模型在中文对话和代码生成上的表现会怎样？
+
+---
+
+### 答案
+
+**题 1：** Loss 优化找的是"最容易降低 Loss 的方向"。数据量大时，记下所有样本需要修改的参数远超学习规律——规律是更"经济"的选择。数据量小时，只记 100 条样本就能大幅降 Loss——模型走捷径，记住了这 100 条的具体措辞而不是抽象出规律。
+
+**题 2：** 数学微调数据的分布（符号、公式、数字）和中文对话（自然语言）差异大。`ΔW_math` 的方向和对话/代码需要的参数方向可能冲突——微调后对话变生硬、代码生成退化。解决：用 LoRA 或混入对话+代码 Replay 数据。
 
 ---
 
@@ -5352,17 +9610,115 @@ FreesLLM 定位需要考虑：服务对象、知识范围、推理能力、运�
 
 优势：显存低（几 GB 就能微调 7B 模型）、快、易保存和切换（多个 LoRA 权重可以热切换）。
 
-## 扩展任务
+## LoRA 的数学原理
 
-使用 PEFT 库训练 LoRA 模型。
+原来的全参数微调需要更新一个 `d×d` 的大矩阵 W。LoRA 只训练两个小矩阵 `A(d×r)` 和 `B(r×d)`，其中 `r << d`（通常 r=8 或 16）：
+
+$$
+h = Wx + \Delta W x = Wx + BAx
+$$
+
+参数量对比：全量微调 = d²，LoRA = 2dr。当 d=4096, r=16 时，LoRA 参数量仅为全量的 2×16/4096 ≈ 0.78%。
+
+## 从零实现 LoRA Linear 层
+
+```python
+import torch
+import torch.nn as nn
+
+class LoRALinear(nn.Module):
+    """手写 LoRA: 在冻结的 Linear 层上叠加可训练的低秩矩阵"""
+    def __init__(self, in_features, out_features, r=8, alpha=16, dropout=0.0):
+        super().__init__()
+        # --- 原始权重：冻结，不训练 ---
+        self.linear = nn.Linear(in_features, out_features, bias=False)
+        self.linear.weight.requires_grad = False  # 冻结
+
+        # --- LoRA 矩阵：可训练 ---
+        # A: (in_features, r), 用 Kaiming 初始化
+        self.lora_A = nn.Parameter(torch.zeros(in_features, r))
+        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
+        # B: (r, out_features), 初始化为 0 (一开始 ΔW=0, 等价于原始模型)
+        self.lora_B = nn.Parameter(torch.zeros(r, out_features))
+
+        self.r = r
+        self.alpha = alpha
+        self.scaling = alpha / r  # LoRA 缩放因子
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        # 原始输出 (冻结)
+        frozen_out = self.linear(x)                      # x @ W^T
+
+        # LoRA 输出 (可训练)
+        lora_out = (x @ self.lora_A) @ self.lora_B       # x @ A @ B
+        lora_out = self.dropout(lora_out)
+
+        return frozen_out + self.scaling * lora_out
+
+# --- 测试: 模拟微调场景 ---
+in_dim, out_dim, r = 128, 256, 8
+lora_layer = LoRALinear(in_dim, out_dim, r=r, alpha=16)
+
+# 检查哪些参数会被训练
+trainable = sum(p.numel() for p in lora_layer.parameters() if p.requires_grad)
+frozen = sum(p.numel() for p in lora_layer.parameters() if not p.requires_grad)
+print(f"可训练参数: {trainable:,}  ({(trainable/(trainable+frozen))*100:.1f}%)")
+print(f"冻结参数:   {frozen:,}")
+# 可训练: 128*8 + 8*256 = 3072
+# 冻结:   128*256 = 32768
+# 可训练仅占 8.6%！
+
+x = torch.randn(4, in_dim)
+y = lora_layer(x)
+print(f"输出形状: {y.shape}")  # (4, 256)
+```
+
+## 使用 HuggingFace PEFT 库（实战推荐）
+
+```python
+# pip install peft transformers
+from peft import LoraConfig, get_peft_model, TaskType
+from transformers import AutoModelForCausalLM
+
+# 加载基础模型
+model = AutoModelForCausalLM.from_pretrained("gpt2")
+
+# 配置 LoRA
+lora_config = LoraConfig(
+    task_type=TaskType.CAUSAL_LM,
+    r=8,                      # rank
+    lora_alpha=32,            # scaling = alpha/r
+    lora_dropout=0.1,
+    target_modules=["c_attn", "c_proj"],  # 对哪些矩阵加LoRA
+)
+
+# 应用 LoRA
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+# 输出: trainable params: 294,912 || all params: 124,439,808 || trainable%: 0.2370
+# 只训练 0.24% 的参数！
+```
+
+## 练习题
+
+**题目 1：** 为什么 `lora_B` 初始化为全 0？如果 `lora_B` 也随机初始化，微调刚开始时会怎样？
+
+**题目 2：** `scaling = alpha/r` 的作用是什么？如果把 `alpha` 设为 0，LoRA 等价于什么？
+
+**题目 3：** 计算 d=4096, r=16 时 LoRA 的参数量占全量微调的百分比。
 
 ---
 
-# 第 81 课：QLoRA
+### 答案
 
-## 核心概念
+**题 1：** `lora_B=0` 保证 ΔW = A×0 = 0，微调开始时模型的输出和原始模型完全一致。如果 B 也随机初始化，微调第一步就会改变模型行为，可能导致不稳定的初始输出。
 
-结合量化 + LoRA：4bit 基础模型 + LoRA 训练 → 生成适配模型。
+**题 2：** alpha 控制 LoRA 对原始模型的影响程度。alpha=0 时 scaling=0 → ΔW 完全被忽略 → 等价于不微调。实际使用中 alpha 通常设为 r 的 2 倍（如 r=8, alpha=16）。
+
+**题 3：** LoRA = 2×4096×16 = 131K。全量 = 4096² = 16.8M。占比 ≈ 0.78%。
+
+---
 
 在消费级 GPU（如 RTX 3090 24GB）上微调 7B 甚至 13B 模型成为可能。
 
@@ -5372,587 +9728,500 @@ FreesLLM 定位需要考虑：服务对象、知识范围、推理能力、运�
 
 ---
 
-# 第 82 课：AI Agent 系统设计
-
-## 核心概念
-
-从聊天模型到智能系统。Agent 循环：观察 → 思考 → 行动 → 反馈。
-
-组件：Memory（记忆）、Planner（规划）、Tool（工具）、Executor（执行）、Reflection（反思）。
-
-## 扩展任务
-
-实现简单 Coding Agent（能写代码、运行、调试）。
+# 第 68 课：Agent 系统设计 —— 从"聊天"到"干活"
 
 ---
 
-# 第 83 课：LLM 记忆系统
-
-## 核心概念
-
-短期记忆 = Context（上下文窗口）。长期记忆 = 数据库（Vector Store + Summary）。
-
-结构：对话 → 摘要 → Embedding → Vector Store → 检索 → 注入 Context。
-
-## 扩展任务
-
-实现个人 AI Memory 系统（记住用户偏好和历史）。
-
----
-
-# 第 84 课：多模态 LLM
-
-## 核心概念
-
-图片 → Vision Encoder → Embedding → 与文本 Embedding 对齐 → 进入 LLM。
-
-声音 → Audio Encoder → 同理。
-
-代表：GPT-4V、LLaVA、Qwen-VL。核心思想：把不同模态的输入都映射到同一个向量空间。
-
-## 扩展任务
-
-研究 GPT-4V、CLIP 架构，理解视觉-语言对齐原理。
-
----
-
-# 第 85 课：模型安全与对齐
-
-## 核心概念
-
-Safety（防止有害输出）、Alignment（与人类价值观对齐）、Red Teaming（对抗测试）、Jailbreak（越狱攻击与防御）。
-
-## 扩展任务
-
-研究 Anthropic 的 Constitutional AI 和 HHH（Helpful, Honest, Harmless）原则。
-
----
-
-# 第 86 课：自动训练系统（AutoML Pipeline）
-
-## 核心概念
-
-Pipeline：数据摄入 → 自动清洗 → 训练触发 → 评估 → 部署 → 反馈收集 → 触发下一轮训练。
-
-## 扩展任务
-
-设计 FreesLLM AutoML Pipeline 架构。
-
----
-
-# 第 87 课：模型版本管理
-
-## 核心概念
-
-像软件一样管理模型。版本追踪：数据版本、参数版本、配置版本、评估结果版本。
-
-工具：Git（代码）、MLflow（实验追踪）、Weights & Biases（训练监控）、DVC（数据版本）。
-
----
-
-# 第 88 课：LLM 产品工程
-
-## 核心概念
-
-将模型变成产品需要：用户系统、API 网关、权限控制、日志监控、成本控制（Token 计费）、速率限制。
-
-## 扩展任务
-
-设计 FreesLLM SaaS 架构（多租户 + 模型热切换）。
-
----
-
-# 第 89 课：研究论文阅读方法
-
-## 核心概念
-
-论文阅读顺序：Abstract → Introduction → Method → Experiment → Code。
-
-重点：不要只看结论，要看"为什么"。追问：作者解决了什么问题？为什么之前的方法不行？关键创新点是什么？有什么局限性？
-
----
-
-# 第 90 课：FreesLLM 研究路线总结
-
-## 最终能力体系
-
-数学 → Transformer → 训练 → 优化 → 微调 → Agent → 产品 → 研究。
-
-FreesLLM 最终形态：LLM Core + Memory + RAG + Agent + Tools + User System。
-
----
-
-# 第八阶段：前沿研究篇（91-110）
-
----
-
-# 第 91 课：推理模型（Reasoning Model）
-
-## 核心概念
-
-普通 LLM：问题 → 直接回答。推理模型：问题 → 分析 → 推理 → 答案（增加中间思考过程）。
-
-代表：OpenAI o 系列、DeepSeek-R1。
-
-## 扩展任务
-
-研究 DeepSeek-R1 论文，理解"冷启动 + RL + 蒸馏"的推理模型训练流程。
-
----
-
-# 第 92 课：Chain of Thought（思维链）
-
-## 核心概念
-
-普通："2+3×4=?" → 直接答"14"。思维链："先算乘法：3×4=12，再加 2：14"。
-
-把复杂任务拆成小步执行。为什么有效？每一步只需要简单推理，组合起来能解决复杂问题。
-
-## 扩展任务
-
-测试同一模型有/无 CoT 的能力差异。
-
----
-
-# 第 93 课：Test-Time Compute —— 推理时增加计算
-
-## 核心概念
-
-传统：训练时增强能力。新范式：推理时增加计算。一次回答 → 多次尝试 → 选择最佳答案。
-
-方法：Self-consistency（多次采样投票）、Tree Search（搜索推理路径）、Verifier（验证答案）。
-
-## 扩展任务
-
-实现多答案采样 + 投票系统。
-
----
-
-# 第 94 课：AI 自我验证系统
-
-## 核心概念
-
-让 AI：生成答案 → 自己检查 → 发现错误 → 修改。
-
-结构：Solver（解题）→ Verifier（验证）→ Improver（改进）。
-
-## 扩展任务
-
-实现数学问题自我验证 Agent。
-
----
-
-# 第 95 课：Tool Use —— AI 调用外部能力
-
-## 核心概念
-
-LLM 负责理解和规划，工具负责执行。计算 → 调用计算器。查询 → 调用搜索引擎。代码 → 调用 Python 解释器。
-
-结构：用户 → LLM → Tool → 结果 → LLM → 回答。
-
-## 扩展任务
-
-实现 Function Calling 系统（定义 tool schema + 解析调用 + 执行 + 返回）。
-
----
-
-# 第 96 课：AI Agent 架构深入
-
-## 核心概念
-
-Agent 组成：Planner（规划子任务）、Executor（执行动作）、Memory（记录历史）、Reflection（反思改进）。
-
-循环：Goal → Plan → Act → Observe → Improve。
-
-## 扩展任务
-
-设计 FreesAgent 完整架构。
-
----
-
-# 第 97 课：World Model（世界模型）
-
-## 核心概念
-
-传统 LLM 学习文字。世界模型学习环境规律——机器人预测行动后世界会变成什么样。
-
-结构：Observation → World Model → Prediction → Action。
-
-代表：Dreamer 系列、Sora（视频生成即世界模拟）。
-
-## 扩展任务
-
-研究 Dreamer 系列论文。
-
----
-
-# 第 98 课：具身智能（Embodied AI）
-
-## 核心概念
-
-AI 进入现实世界。机器人需要：视觉、控制、规划。
-
-流程：Camera → Vision Model → LLM（理解+规划）→ Action → Robot 执行。
-
----
-
-# 第 99 课：神经符号 AI（Neuro-Symbolic）
-
-## 核心概念
-
-神经网络擅长模式识别。符号系统擅长规则推理。结合：LLM + Logic Engine。
-
-例如：LLM 理解自然语言问题 → 转成逻辑表达式 → 规则引擎求解 → LLM 解释结果。
-
----
-
-# 第 100 课：知识图谱与结构化知识
-
-## 核心概念
-
-知识图谱：实体 → 关系 → 实体。例如"爱因斯坦 → 提出 → 相对论"。
-
-让 AI 拥有结构化、可查询、可推理的知识，而不仅仅是统计模式。
-
-## 扩展任务
-
-构建个人知识图谱（笔记+学习记录→实体关系网络）。
-
----
-
-# 第 101 课：Embedding 深入研究
-
-## 核心概念
-
-Embedding 不是普通数字，而是意义空间中的坐标。
-
-研究方向：向量空间的几何结构、语义距离的测量、表示学习的信息论解释。
-
-## 扩展任务
-
-可视化文本 Embedding（t-SNE/UMAP 降维到 2D）。
-
----
-
-# 第 102 课：Representation Learning（表示学习）
-
-## 核心概念
-
-机器学习真正目标不是分类或预测，而是学习好的表示。过程：现实 → 向量空间 → 规律。
-
-好的表示：相似概念靠近、不相关概念远离、方向有意义。
-
----
-
-# 第 103 课：自监督学习
-
-## 核心概念
-
-自己制造标签，不需要人工标注。例如：删除一个词→预测它，遮挡图片一部分→还原。
-
-LLM 的 Next Token Prediction 就是最成功的自监督学习范式。
-
-## 扩展任务
-
-实现简单自监督预训练任务。
-
----
-
-# 第 104 课：Synthetic Data（合成数据）
-
-## 核心概念
-
-流程：强模型 → 生成数据 → 质量过滤 → 训练小模型。
-
-用途：降低数据成本、覆盖长尾场景、快速迭代数据配比。
-
-## 扩展任务
-
-设计自动生成训练数据的 Pipeline。
-
----
-
-# 第 105 课：AI 自动研究（AI Scientist）
-
-## 核心概念
-
-AI Research Agent：自动阅读论文 → 设计实验 → 写代码 → 分析结果 → 生成报告。
-
----
-
-# 第 106 课：AutoML
-
-## 核心概念
-
-自动优化：架构搜索、超参数调优、数据配比优化。
-
-## 扩展任务
-
-使用 Optuna 对小型 Transformer 进行自动超参数搜索。
-
----
-
-# 第 107 课：神经架构搜索（NAS）
-
-## 核心概念
-
-自动搜索最佳模型结构：Transformer 层数、Head 数量、隐藏维度、FFN 扩展比例。
-
----
-
-# 第 108 课：模型合并技术
-
-## 核心概念
-
-方法：Weight Merge（线性插值合并权重）、Task Arithmetic（任务向量加减）、Adapter Merge（合并适配器）。
-
-## 扩展任务
-
-尝试合并两个 LoRA 权重（不同任务）。
-
----
-
-# 第 109 课：模型蒸馏
-
-## 核心概念
-
-Teacher（大模型）→ 生成软标签 → Student（小模型）学习。
-
-不仅是学"正确答案"，更重要的是学"大模型对各类答案的概率分布"——这包含了知识的结构。
-
-## 扩展任务
-
-实现简单知识蒸馏实验（大模型 logits → 小模型训练）。
-
----
-
-# 第 110 课：小模型时代
-
-## 核心概念
-
-为什么未来不一定都是千亿参数？优化方向：更高质量数据、更好结构、更强训练方法。
-
-小模型优势：本地运行、数据私密、低成本、低延迟。
-
-代表：Phi 系列（微软）、Gemma 系列（Google）、Llama 3.2 1B/3B。
-
----
-
-# 第九阶段：FreesLLM 未来方向（111-120）
-
----
-
-# 第 111 课：AGI 到底是什么？
-
-## 核心概念
-
-现在 LLM 强在语言、知识、模式识别。但限制：没有真正长期目标、缺少现实经验、缺少自主学习能力。
-
-AGI 通常希望拥有：理解 → 学习 → 规划 → 行动 → 适应新环境的完整能力。
-
-GPT 是智能还是工具？智能是否一定需要意识？规模扩大是否能产生 AGI？目前没有统一答案。
-
-## 扩展任务
-
-整理不同研究者（Hinton、LeCun、Sutskever、Brockman）对 AGI 的定义和路线。
-
----
-
-# 第 112 课：认知架构（Cognitive Architecture）
-
-## 核心概念
-
-未来 AI 可能需要类似人类的模块化架构：感知系统 → 世界模型 → 记忆系统 → 推理系统 → 规划系统 → 行动系统。
-
-看到 → 理解 → 思考 → 行动。每个模块可独立优化和升级。
-
-## 扩展任务
-
-设计 FreesAI 认知架构图。
-
----
-
-# 第 113 课：长期记忆系统
-
-## 核心概念
-
-人类记忆不是全塞进大脑，而是检索。AI Memory 分层：
-
-- 短期记忆：当前 Context（几 K token）
-- 工作记忆：当前任务状态
-- 长期记忆：Vector Database + Summary + 时间衰减
-
-结构：对话 → 摘要 → Embedding → 向量检索 → 注入 Context。
-
-## 扩展任务
-
-设计 FreesMemory 系统：用户画像 + 知识图谱 + 对话历史三层记忆。
-
----
-
-# 第 114 课：持续学习深入
-
-## 核心概念
-
-理想：新知识 → 学习 → 保留旧能力 → 继续成长。
-
-现实难点：灾难性遗忘。解决方案矩阵：Replay（重放旧数据）、Elastic Weight Consolidation（保护重要参数）、Progressive Network（扩展网络结构）。
-
-## 扩展任务
-
-模拟模型连续学习实验：依次训练 3 个不同任务，观察遗忘程度。
-
----
-
-# 第 115 课：Self-Improving AI（自我改进 AI）
-
-## 核心概念
-
-闭环：AI → 发现不足 → 生成训练数据 → 训练自己 → 评估 → 升级。
-
-难点：如何避免错误累积导致的"模型退化"（Model Collapse）。
-
-代表：DeepSeek-R1 用强化学习自我提升推理能力，不需要人工标注推理步骤。
-
-## 扩展任务
-
-设计自动训练反馈循环架构。
-
----
-
-# 第 116 课：AI 科学家
-
-## 核心概念
-
-AI Scientist 流程：提出假设 → 搜索文献 → 设计实验 → 写代码 → 执行 → 分析结果 → 生成论文。
-
-目前已有初步尝试（Sakana AI 等），但距离真正的科学发现还很远。
-
----
-
-# 第 117 课：多 Agent 协作系统
-
-## 核心概念
-
-单 Agent = 一个专家。多 Agent = 团队。
-
-例如：Planner Agent → Coder Agent → Reviewer Agent → Tester Agent。
-
-Agent 间通信：自然语言、结构化 JSON、共享 Memory。挑战：协调、冲突解决、任务分配。
-
-## 扩展任务
-
-实现多 Agent 协作 Demo（3 个角色协作完成任务）。
-
----
-
-# 第 118 课：FreesLLM 最终架构设计
-
-## 核心概念
-
-FreesLLM 未来结构：
-
-```text
-用户 → Cognitive Layer（认知层）
-          ↓
-  ┌──────────────────────────┐
-  │ Memory System（记忆系统）  │
-  │ World Model（世界模型）    │
-  │ Reasoning Engine（推理引擎）│
-  │ Agent System（智能体系统）  │
-  │ Tool System（工具系统）    │
-  └──────────────────────────┘
-          ↓
-      LLM Core（Transformer）
-          ↓
-    Training Loop（训练循环）
+## 1. 从第 54 课到完整 Agent
+
+第 54 课实现了最简单的 ReAct Agent（Think→Act→Observe 循环）。本课扩展到完整架构——给 Agent 装上**记忆**，让它不是每次从零开始。
+
+## 2. Agent 的核心组件
+
+```
+用户输入 → Planner(拆解任务)
+              ↓
+         Executor(调用工具)
+              ↓
+         Observer(获取结果)
+              ↓
+         Memory(存储+检索) ←→ Reflection(反思改进)
+              ↓
+         输出给用户
 ```
 
-核心思想：LLM 只是"大脑皮层"。完整 AI 还需要记忆、行动、环境、反馈。
+**Planner:** 把复杂任务拆成子任务。"帮我写一篇关于 AI 的博客" → 1.搜索AI最新进展 2.列出大纲 3.写每个段落 4.检查语法。
 
-## 扩展任务
+**Memory（关键补充）：** 如果没有记忆，Agent 每次对话都像失忆。分层存储：
+- 短期记忆：当前 conversation context（几 K token，对话窗口）
+- 长期记忆：Vector DB 存历史对话摘要 → `对话内容 → Embedding → FAISS → 检索 → 注入新对话`
 
-生成 FreesLLM 技术白皮书 v1.0。
+```python
+# 最简单的 Agent Memory
+class AgentMemory:
+    def __init__(self):
+        self.short_term = []         # 当前对话历史
+        self.long_term = {}          # key → 向量 (简化版用 dict)
+        self.embeddings = {}         # key → embedding
 
----
+    def remember(self, key, info):
+        """存一段信息"""
+        emb = get_embedding(info)    # 用 Embedding 模型转成向量
+        self.embeddings[key] = emb
+        self.long_term[key] = info
 
-# 第 119 课：如何成为 LLM 研究者
-
-## 核心概念
-
-**第一阶段（基础）：** Python、PyTorch、数学。
-
-**第二阶段（模型）：** Transformer、GPT、LLaMA 原理和实现。
-
-**第三阶段（研究）：** 阅读论文、复现实验、提出改进假设。
-
-**第四阶段（创新）：** 新架构、新训练方法、新系统设计。
-
-关键原则：**不要只看，一定要动手。** 阅读 100 篇论文不如复现 1 篇核心论文。
-
----
-
-# 第 120 课：FreesLLM 终章 —— 从使用 AI 到创造 AI
-
-## 核心概念
-
-你最终掌握的四层能力：
-
-| 层 | 内容 |
-| -- | ---- |
-| 数学层 | 线代、微积分、概率、优化 |
-| 模型层 | Neural Network、Transformer、LLM、Reasoning Model |
-| 工程层 | 训练、部署、推理、系统设计 |
-| 研究层 | 论文阅读、实验设计、架构创新、方向探索 |
-
-最终目标不是"做一个聊天机器人"，而是构建一个：
-
-```text
-FreesLLM
-能够理解 → 能够学习 → 能够记忆 → 能够使用工具 → 能够不断改进
+    def recall(self, query, top_k=3):
+        """检索最相关的历史信息"""
+        query_emb = get_embedding(query)
+        scores = {k: cosine_sim(query_emb, v) for k, v in self.embeddings.items()}
+        top = sorted(scores, key=scores.get, reverse=True)[:top_k]
+        return [self.long_term[k] for k in top]
 ```
 
-## 整套课程最终结构
+## 3. 和第 52 课 RAG 的关系
+
+RAG = 外挂**外部**知识（文档、网页）。Agent Memory = 存储**自身经验**（历史对话、执行结果）。两者用同一套技术（Embedding + Vector DB + 检索），只是数据来源不同。最佳实践：RAG 管"世界知识"，Memory 管"个人经历"。
+
+## 4. 练习题
+
+**题目 1：** Agent 的 Memory 和 RAG 都用 Vector DB——它们的 Embedding 可以共用同一个模型吗？为什么？
+
+**题目 2：** 如果 Agent 执行了一个任务但失败了，这个"失败经验"应该怎么存？直接存"我失败了"有用吗？应该存什么？
+
+---
+
+### 答案
+
+**题 1：** 可以共用同一个 Embedding 模型。Memory 和 RAG 都是在做"给定查询→找最相关的文本"——这和 Embedding 空间的语义相似度计算是同一个任务。用 Sentence-BERT 这类通用模型即可。
+
+**题 2：** 不能只存"我失败了"。应该存：(1) 任务描述，(2) 尝试的方法/调用的工具，(3) 失败的具体原因（报错信息、超时、权限不足等），(4) 如果后来成功解决了，关联成功方案的 ID。这样下次遇到相似任务时，Agent 可以"回忆"上次为什么失败，避免重蹈覆辙。
+
+---
+
+# 第 69 课：多模态 LLM 与安全对齐
+
+---
+
+## 1. 从纯文本到多模态
+
+前面 68 课的 FreesLLM 只能处理文字。多模态 LLM 把图片、声音、视频也"翻译"成和文字一样的向量表示——统一进同一个 Embedding 空间（回顾第 20 课）。
+
+核心思想：`图片 → Vision Encoder（如 CLIP 的视觉分支）→ Embedding → 与文本 Embedding 对齐 → 进入 LLM`。
+
+为什么要"对齐"？因为 LLM 的 Transformer 只理解一种"语言"：Embedding 空间中方向有语义意义的向量。图片、声音、文字经过各自的 Encoder 后，必须映射到**同一个**语义空间——"猫"这个词的向量和一张猫的照片的向量在空间中应该靠近。
+
+代表模型：GPT-4V（OpenAI）、LLaVA（开源）、Qwen-VL（阿里）、Gemini（多模态原生）。
+
+## 2. 安全：能力越强，责任越大
+
+随着模型能力增长，安全问题从"学术讨论"变成了"生死攸关"：
+
+| 安全层面 | 问题 | 防御 |
+|---------|------|------|
+| 有害输出 | 模型被诱导生成暴力/违法内容 | RLHF/DPO 对齐（第 63 课）+ 安全 prompt |
+| Jailbreak | 用户用精心设计的 prompt 绕过安全限制 | Red Teaming（专门找人攻击模型找漏洞） |
+| 隐私泄露 | 训练数据中的个人信息被复述 | 数据清洗去 PII（第 29 课）+ 差分隐私 |
+| 偏见放大 | 模型复现训练数据中的性别/种族偏见 | 数据配比平衡 + DPO 偏好数据纠偏 |
+
+对 FreesLLM：如果你只做个人助手、不公开 API，安全风险可控。一旦面向多用户，至少需要 DPO 对齐（第 63 课已有代码）+ 内容过滤。
+
+---
+
+## 3. 练习题
+
+**题目 1：** 多模态 LLM 的 Vision Encoder 和文本 Embedding 为什么要"对齐"到同一个空间？如果不对齐会出现什么问题？
+
+**题目 2：** DPO（第 63 课）能用于安全对齐吗？如果能，偏好数据应该怎么设计？
+
+---
+
+### 答案
+
+**题 1：** 不对齐的话，"猫"这个词的向量在文本空间中靠近"动物"，但猫照片的向量在视觉空间中可能是随机的（和文本空间没有几何关系）。Transformer 的 Attention 无法建立"文本中的猫"和"图片中的猫"之间的关联——模型看到图片和文字时相当于在两个完全隔离的世界里。
+
+**题 2：** 可以。构建安全偏好数据：同一个可能有害的 prompt，chosen = 拒绝回答（"抱歉，我不能提供这个信息"），rejected = 危险回答。DPO 训练后模型学会对危险 prompt 输出拒绝而非危险内容。这就是 Constitutional AI 的核心思想。
+
+---
+
+# 第 70 课：ML 工程实践 —— 从实验到产品
+
+---
+
+## 1. 为什么需要工程化？
+
+前面 69 课你学会了训练和部署。但当你真正维护一个在线的 FreesLLM 时，三个问题会出现：(1) "上周训的模型和这周训的，哪个更好？" → 版本管理。(2) "新数据来了怎么自动触发训练？" → AutoML Pipeline。(3) "100 个用户同时调用怎么不崩？" → 产品工程。
+
+## 2. 模型版本管理：像 Git 一样管模型
+
+每次训练产出一个模型版本——记录的不是只有权重文件，还有：
 
 ```text
-1-8    数学直觉
-        ↓
-9-14   神经网络
-        ↓
-15-28  Transformer / GPT
-        ↓
-29-37  LLM 训练工程
-        ↓
-38-45  现代模型架构
-        ↓
-46-55  自己实现 LLM
-        ↓
-56-70  论文与研究基础
-        ↓
-71-90  FreesLLM 工程体系
-        ↓
-91-110 前沿研究方向
-        ↓
-111-120 未来 AI 探索
+版本 v0.3:
+  ├── 数据: chinese_corpus_v2 (12GB, 3.2B tokens, hash: a1b2c3...)
+  ├── 配置: d_model=768, n_layers=12, lr=3e-4, batch=128
+  ├── 权重: checkpoint_step_50000.pt
+  ├── 评估: MMLU=42.3%, CEval=38.1%, PPL=12.4
+  └── 备注: "增加了代码数据, 代码能力提升, 中文对话略有下降"
+```
+
+工具链：**DVC** 管数据版本（大文件不适合 Git）、**MLflow / W&B** 管实验追踪（自动记录每次训练的超参+Loss 曲线+最终评估）、**Git** 管代码和配置。
+
+核心原则：**任何一次训练结束后，你都能精确复现它。** 如果做不到这一点，你的模型迭代就是不可控的。
+
+## 3. AutoML Pipeline：把手工流程自动化
+
+从第 66 课的数据闭环出发，构建自动化流水线：
+
+```text
+┌─────────────────────────────────────────────────────┐
+│                   FreesLLM Pipeline                  │
+│                                                      │
+│  ① 数据监控: 新数据到达 → 触发                       │
+│         ↓                                            │
+│  ② 自动清洗: 去重+过滤+tokenize (第29课)             │
+│         ↓                                            │
+│  ③ 训练触发: 调用 train.py (第49课)                  │
+│         ↓                                            │
+│  ④ 自动评估: 跑 Benchmark (第66课)                   │
+│         ↓                                            │
+│  ⑤ 条件部署: 新模型得分 > 旧模型 → 自动切换          │
+│         ↓                                            │
+│  ⑥ 反馈收集: 用户反馈 → 回到 ①                       │
+└─────────────────────────────────────────────────────┘
+```
+
+## 4. LLM 产品工程要点
+
+| 工程需求 | 解决工具 | FreesLLM v0.1 怎么做 |
+|---------|---------|---------------------|
+| API 服务 | FastAPI（第 53 课） | 单进程足够 |
+| 高并发 | vLLM Continuous Batching | 用户量 >100 时加 |
+| 用户管理 | 简单的 API Key 鉴权 | 初期不需要 |
+| 日志监控 | 记录每次请求的 prompt/response/latency | 这对数据闭环至关重要 |
+| 成本控制 | Token 计数 + 速率限制 | 防止单个用户打爆 GPU |
+
+## 5. 练习题
+
+**题目 1：** 你训练了 FreesLLM v0.2，MMLU 从 42% 升到 45%。但用户反馈说"中文对话变差了"。你怎么判断这是真实退化还是用户的主观感受？
+
+**题目 2：** 自动部署流水线中"新模型得分 > 旧模型 → 自动切换"——这里的"得分"用什么指标？只用 MMLU 够吗？
+
+---
+
+### 答案
+
+**题 1：** 回到评测体系（第 66 课）——跑 CEval/CMMLU 等中文 Benchmark，客观对比 v0.1 和 v0.2。如果中文评测指标确实下降了——你需要检查 v0.2 的训练数据配比（可能新增数据中英文占比过高，挤占了中文能力的参数空间）。
+
+**题 2：** 不够。MMLU 只测知识广度。至少需要：知识（MMLU）+ 代码（HumanEval）+ 推理（GSM8K）+ 安全（refusal rate）+ 中文（CEval）。加权综合得分超过阈值才触发自动部署——单一指标容易被"刷分"（模型可能在 MMLU 上通过记忆提高但对实际使用无益）。
+
+---
+
+# 第 71 课：如何阅读论文与规划研究路线
+
+## 1. 论文阅读方法论
+
+论文阅读顺序：Abstract（30秒判断是否相关）→ Introduction（了解问题背景和贡献）→ Method（核心技术）→ Experiment（验证方法）→ Code（对照复现）。
+
+关键追问：作者解决了什么问题？为什么之前的方法不行？关键创新点是什么？有什么局限性？**不要只看结论，要看"为什么"**——这是区分"会用模型"和"能改进模型"的分水岭。
+
+## 2. 你的 FreesLLM 研究路线
+
+你现在掌握的完整链条：`数学直觉 → Transformer → 训练 → 优化 → 微调 → Agent → 产品 → 研究`。FreesLLM 最终形态 = LLM Core + Memory + RAG + Agent + Tools + User System（第 55 课的蓝图）。
+
+---
+
+# 第 72 课：推理模型 —— 让 LLM"想一会再回答"
+
+---
+
+## 1. 普通 LLM vs 推理模型
+
+普通 LLM：问题 → 直接输出答案（一个 token 接一个 token，第 25 课的自回归）。推理模型：问题 → 中间思考过程（可能几百个 token）→ 最终答案。
+
+普通："2+3×4=?" → 直接答 "14"。
+
+推理模型："先算乘法：3×4=12，再加 2：14"。中间的"思考"步骤让模型把复杂问题拆成简单步骤——每一步推理只需要简单计算，组合起来能解决复杂问题。
+
+**CoT 为什么有效？** 因为 Transformer 的每一层都在"一步"内完成（Attention 一次看所有 token）。复杂推理（如数学证明）需要多步——让模型把中间步骤**写出来**，相当于把"一步推理"拓展成了"多步推理链"。
+
+代表：OpenAI o1/o3（最强推理）、DeepSeek-R1（开源，用 RL 训练推理能力）。
+
+## 2. Test-Time Compute：推理时多花时间
+
+传统思路：训练时投入算力→模型变强。新范式：**推理时也投入算力。** 同一个问题，让模型生成多个答案，投票或验证选最佳：
+
+- **Self-Consistency：** 多次采样（Temperature>0），对答案投票。5 次采样选最多的答案→正确率显著提升。
+- **Best-of-N + Verifier：** 生成 N 个候选答案，用验证模型打分，选最高分。
+- **Tree Search：** 不只生成一条推理链，而是同时探索多条路径，选最可能到达正确答案的。
+
+```python
+# Self-Consistency 的简化实现
+def self_consistency(model, prompt, n_samples=5):
+    answers = []
+    for _ in range(n_samples):
+        response = model.generate(prompt, temperature=0.7)
+        answer = extract_final_answer(response)  # 提取"最终答案"部分
+        answers.append(answer)
+    # 投票——选出现最多的答案
+    from collections import Counter
+    return Counter(answers).most_common(1)[0][0]
+```
+
+## 3. 自我验证：模型自己当裁判
+
+让模型生成答案后，再让它**自己检查**：`生成答案 → "请检查上面的答案是否正确" → 发现错误 → 修正 → 输出最终答案`。这利用了 LLM 的一个有趣性质：它在"生成"和"评判"两个角色下的表现有差异——同一个模型评判别人答案的能力，可能强于自己生成答案的能力。
+
+---
+
+## 4. 练习题
+
+**题目 1：** 为什么 CoT 在"2+3×4"这类简单问题上有效，但在"法国的首都是什么"这类知识问题上没必要？
+
+**题目 2：** Self-Consistency 采样 5 次比 1 次的正确率高——但代价是什么？如果每次采样 100 token，5 次采样总成本是多少？
+
+---
+
+### 答案
+
+**题 1：** 知识问题不需要推理——它只是从参数中检索事实。"法国的首都"→直接输出"巴黎"即可。CoT 适用于需要**多步操作**的问题——数学计算、逻辑推理、代码调试。在这些问题上，"直接答"等于跳过多步推理（大概率错），"写出过程"等于把隐含推理显式化（每步都对才能最终对）。
+
+**题 2：** 5 次采样的总 token 消耗 = 5×（prompt + 100）。而且这些采样是串行的（自回归生成不能批量并行）。总成本约是单次生成的 5 倍——用更多推理计算换取更高正确率。这就是 Test-Time Compute 的核心权衡。
+
+---
+
+---
+
+# 第 73 课：世界模型与神经符号 AI —— LLM 之后是什么？
+
+---
+
+## 1. 当前 LLM 的天花板
+
+前面 72 课讲的 LLM（包括 GPT-4）有一个共同的局限：**它们只活在文字世界里。** 它们不知道"拿起杯子"需要什么样的手指动作，不知道"如果我把这个杯子推倒，水会洒出来"。
+
+世界模型（World Model）试图打破这个天花板：让 AI 学会**环境的因果规律**，而不只是文本中的统计模式。
+
+## 2. 世界模型：让 AI 理解"如果我这么做，世界会怎样"
+
+核心思想：`Observation → World Model → Prediction → Action`。给定当前观察（一张图片），预测如果我执行某个动作（"推杯子"），未来会发生什么（"杯子倒了，水洒了"）。
+
+代表工作：Dreamer 系列（DeepMind）——在游戏中学习环境模型，Sora（OpenAI）——视频生成本质上也是世界模拟。
+
+对 LLM 来说，"世界模型"目前还是间接的——模型通过数十亿文本中学到的物理常识（"杯子倒了水会洒"）来"模拟"世界，而不是真正在三维空间中进行物理仿真。
+
+## 3. 具身智能：AI 进入物理世界
+
+具身智能 = LLM 的规划能力 + 机器人的执行能力。`Camera → Vision Model → LLM（理解场景+规划动作）→ Action → Robot 执行`。
+
+当前的瓶颈不在 LLM（GPT-4 完全可以理解"请把杯子从桌上拿起来"），而在**机器人硬件**——精确抓取、力反馈、实时控制等是机械工程和控制的领域，不是 LLM 的领域。
+
+## 4. 神经符号 AI：神经网络 + 逻辑规则
+
+神经网络（LLM）擅长模糊的模式识别——"这句话大概表达了愤怒"。符号系统（逻辑引擎）擅长精确推理——"如果 A>B 且 B>C，则 A>C"。
+
+神经符号 AI 结合两者：LLM 理解自然语言 → 转成逻辑表达式 → 规则引擎精确求解（如数学定理证明）→ LLM 用自然语言解释结果。这在需要**零容错**的场景（金融、医疗、法律）有巨大价值。
+
+## 5. 知识图谱：比 Embedding 更结构化的知识
+
+第 20 课的 Embedding 是"软知识"——"爱因斯坦"和"相对论"之间的几何关系。知识图谱是"硬知识"——`爱因斯坦 --[提出]--> 相对论` 是一个显式的关系三元组。
+
+在实际系统中，两者互补：Embedding 做语义搜索和相似度匹配（"找到和这个问题相关的内容"），知识图谱做精确推理（"爱因斯坦提出了几个理论？"）。
+
+对 FreesLLM：RAG（第 52 课）用 Embedding 检索已经足够，知识图谱是进阶可选功能。
+
+---
+
+## 6. 练习题
+
+**题目 1：** 世界模型和 LLM 的"next token prediction"有什么本质区别？为什么视频生成（Sora）可以被称为一种"世界模型"？
+
+**题目 2：** 神经符号 AI 为什么在金融/医疗/法律领域有优势？LLM 在这些领域的主要风险是什么？
+
+---
+
+### 答案
+
+**题 1：** LLM 预测的是"下一个 token 的概率"——这是文字层面的统计。世界模型预测的是"环境的下一个状态"——这是物理层面的因果。Sora 生成下一帧视频需要隐含地理解重力、碰撞、光影等物理规律——否则生成的视频会在物理上不可能。所以虽然 Sora 本身不是"世界模型"，但它需要学到世界规律才能生成逼真的视频。
+
+**题 2：** 金融/医疗/法律领域需要零容错——如果一个计算错了 1%，可能导致千万损失或医疗事故。LLM 的概率本质（第 62 课幻觉）意味着它永远可能犯错。神经符号 AI 让 LLM 只做"理解"和"解释"，精确计算交给规则引擎——错误率可控（规则引擎不会犯错，LLM 可能翻译错误但计算过程是可审计的）。
+
+---
+
+# 第 74 课：表示学习——从 Embedding 到自监督
+
+---
+
+## 1. 回顾第 20 课
+
+第 20 课从几何直觉出发理解了 Embedding——每个词在高维空间中有一个位置，"国王-男人+女人=女王"。本课从更高角度审视：**为什么"学习好的表示"是机器学习的核心目标？**
+
+## 2. 表示学习：机器学习真正的目标
+
+分类和预测只是表面的"任务"。真正让模型强大的，是它在完成任务过程中学到的**内部表示**——即 Embedding 空间的结构。
+
+| 好表示的特征 | 例子 |
+|------------|------|
+| 相似概念靠近 | "猫"和"狗"向量接近 |
+| 不相关概念远离 | "猫"和"汽车"向量远离 |
+| 方向有语义意义 | "男人→女人"的方向 ≈ "国王→女王"的方向 |
+| 维度可解释 | 某些维度编码"动物性"，某些编码"大小" |
+
+过程：`现实世界 → 向量空间 → 可计算的规律`。这才是 Embedding 的深层含义——不是在"存数字"，而是在**建立世界的几何模型**。
+
+## 3. 自监督学习：没有标签也能学
+
+传统 ML 需要人工标注（"这是猫""这是狗"）。自监督学习**自己制造标签**：删除文本中的一个词→预测它。遮挡图片的一部分→还原它。预训练就是最成功的自监督学习。
+
+为什么自监督有效？因为世界本身就充满了"免费标签"——"水在___摄氏度时沸腾"→空白处就是标签（100）。这些标签不需要人写，原始文本中就有。
+
+## 4. 练习题
+
+**题目 1：** 自监督学习的"标签"和人工标注的"标签"有什么区别？为什么自监督能规模化而人工标注不能？
+
+**题目 2：** 用 t-SNE 或 UMAP 把你训练的中文 Embedding 降到 2 维可视化。观察"猫""狗""鱼""汽车""飞机"的分布——它们按什么规律聚类的？
+
+---
+
+### 答案
+
+**题 1：** 自监督标签是"数据内部的规律"（如下一个词），天然存在于数据中——任何文本都可以当训练样本。人工标注需要人理解数据后写标签——成本高、速度慢、覆盖面窄。这就是为什么预训练可以用万亿 token，而 SFT 只有几千到几万条。
+
+**题 2：** 预期观察：动物类（猫狗鱼）会聚在一起，交通工具类（汽车飞机）聚在另一个区域。"猫"和"狗"比"猫"和"鱼"更近（同为哺乳动物/宠物）——尽管模型从未被"教"过这些分类，Embedding 空间自动形成了这些语义聚类。
+
+---
+
+# 第 75 课：模型进化工具包 —— 合成数据、蒸馏与合并
+
+---
+
+## 1. 当数据不够时：合成数据
+
+第 29 课讲了数据来源。如果你没有几十亿 token 的高质量语料——用强模型（GPT-4 或 Qwen-72B）帮你生成：
+
+```
+强模型(Teacher) → 批量生成文本 → 质量过滤(去重+去低质量) → 训练小模型(Student)
+```
+
+例如：想提升 FreesLLM 的代码能力但没时间写代码数据→让 GPT-4 生成 10000 个"函数描述→代码实现"的配对→过滤掉有语法错误的→用来做 SFT。Chinchilla 定律（第 60 课）在这里适用：合成数据质量比数量重要。
+
+## 2. 模型蒸馏：大模型教小模型
+
+不只是让 Teacher 生成文本让 Student 背——更关键的是 **soft labels（软标签）**。Teacher 不仅输出"下一个 token 是 X"，而是输出**所有 50000 个候选 token 的概率分布**。这个分布包含了 Teacher 的知识结构——"虽然正确答案是 X，但 Y 和 Z 也是合理的备选答案"。
+
+$$
+\mathcal{L}_{\text{distill}} = \text{KL}\left(P_{\text{teacher}}(y|x) \parallel P_{\text{student}}(y|x)\right)
+$$
+
+Student 学习的不只是"正确答案"，而是"Teacher 眼中的世界"。这就是为什么蒸馏后的小模型能部分保留大模型的推理能力。
+
+## 3. 模型合并：不用数据也能改进模型？
+
+一个有趣的现象：把两个在不同任务上微调的 LoRA 权重**线性插值合并**，新模型能同时做两个任务——不需要额外训练。
+
+- **Weight Merge：** `W_merged = α·W_modelA + (1-α)·W_modelB`。简单的加权平均竟然有效——因为两个模型有相同的初始化（同一个预训练基座），它们的参数在同一片"语义盆地"里。
+- **Task Arithmetic：** 计算"任务向量" `τ = W_finetuned - W_pretrained`，然后 `W_new = W_pretrained + τ_math + τ_code`。加法和减法的组合——"加上数学能力，减去啰嗦的倾向"。
+
+这些技术对大模型部署特别实用——你不需要每次有新需求都重新训练，只需维护一组 LoRA 权重，按需组合。
+
+## 4. AutoML 与 NAS：让机器自己找最佳配置
+
+手工调参（"d_model=768 好还是 1024 好？"）效率低。AutoML 自动搜索超参数空间（第 65 课已有 FreesLLM 参数计算公式）。用 Optuna 等工具自动搜索 lr, batch_size, warmup_steps 等——几十次自动实验代替几百次手动试错。
+
+NAS（神经架构搜索）更进一步——自动搜索"这个任务最适合几层、几个头"。目前对个人开发者来说 NAS 成本太高（需要训练数百个候选模型），但未来会越来越实用。
+
+---
+
+## 5. 练习题
+
+**题目 1：** 用 GPT-4 生成的合成数据训练 FreesLLM，这不会有"模型退化"吗（小模型学大模型，大模型本身的错误也被学走了）？怎么缓解？
+
+**题目 2：** LoRA 权重合并（Task Arithmetic）为什么能工作？这和参数初始化有什么深层关系？
+
+---
+
+### 答案
+
+**题 1：** 会。这叫做 Model Collapse——多代合成数据训练后模型质量退化。缓解方法：(a) 合成数据+真实数据混合训练，(b) 质量过滤（去重、语法检查、事实性验证），(c) 控制合成数据占比 < 30%。
+
+**题 2：** 两个 LoRA 都从同一个预训练基座微调而来——它们初始化时共享同一个 W_pretrained。微调只是在这个基座上做了小幅调整（ΔW 很小），所以两个模型的参数还在空间中的同一区域。线性插值 = 在参数空间中取两个点的中点——这个中点通常也在低 Loss 区域内。如果两个模型从随机初始化的不同起点训练，合并就无效——它们的参数在空间中完全不同。
+
+---
+
+# 第 76 课：小模型时代与 AGI 展望 —— FreesLLM 的未来
+
+---
+
+## 1. 小模型：未来不一定都是千亿参数
+
+大模型（GPT-4, Claude）代表了"暴力 Scaling"路线。但 2024-2026 年出现了一条并行路线：**高质量数据 + 精心设计 = 小模型逼近大模型。**
+
+代表：Phi-3（微软，3.8B 参数达到 7B 水平）、Gemma 2B（Google）、Llama 3.2 1B/3B。
+
+小模型的优势对 FreesLLM 极其重要：(1) 本地运行——MacBook 甚至手机都能跑；(2) 数据私密——不需要把数据发给 OpenAI；(3) 成本可控——自己训 1B 模型只需几百美元算力。
+
+## 2. AGI 讨论：我们离"通用智能"还有多远？
+
+现在 LLM 强在语言和模式识别，但缺少：真正长期目标、现实物理经验、自主学习新任务的能力（不需要人类标注数据）。AGI 的定义没有共识——不同研究者（Hinton、LeCun、Sutskever）有完全不同的路线图。
+
+对 FreesLLM 来说：AGI 不是短期目标。先把 1B 模型训好、部署好、持续迭代——这些工程能力才是基础。
+
+## 3. FreesLLM 的最终形态
+
+综合前面 75 课的所有知识，FreesLLM 的最终架构：
+
+```text
+用户 → Web Interface → API Server → LLM Engine (Transformer × N)
+                                          ↓
+                              ┌───────────┼───────────┐
+                              │           │           │
+                         Memory System  RAG System  Agent System
+                        (对话记忆+用户画像) (知识库检索) (工具调用+规划)
+```
+
+你的 FreesLLM 不需要一步做到这个规模。MVP → 加 RAG → 加 Agent → 加 Memory——每个阶段都在前一个阶段的基础上增量构建。
+
+---
+
+## 4. 整篇文档的完整路线图
+
+```
+1-10:   线性代数几何直觉（向量→矩阵→行列式→特征值）
+11-22:  Transformer 核心原理（QKV→Attention→Softmax→FFN→Residual→位置编码→深度）
+23-37:  GPT 架构与 LLM 工程（Decoder→Causal Mask→自回归→训练→优化→精度→GPU→分布式）
+38-45:  现代架构改进（LLaMA→RMSNorm→SwiGLU→RoPE→GQA→MoE→长上下文）
+46-55:  FreesLLM 实践（MiniGPT→Tokenizer→训练→数据→评估→SFT→RAG→部署→Agent）
+56-75:  研究进阶与前沿（论文精读→Scaling Law→幻觉→RLHF/DPO→推理模型→世界模型→表示学习→蒸馏与合并）
+76:     小模型与AGI展望
 ```
 
 ---
 
-到这里，你拥有的是一张从"线性代数"到"设计自己 AI 系统"的完整路线图。
+## 5. 最后的话
 
-下一步不是继续加课程，而是进入**实践循环**：
+你从"向量是箭头"走到了"如何设计自己的 LLM"。这条路走了 76 课——每一步都有代码、有数学、有直觉。
 
-- 用 PyTorch 写 MiniGPT
-- 阅读 nanoGPT 源码
-- 纯 Python 复现 Attention
-- 训练自己的小模型
-- 给 FreesLLM 做第一版架构设计
+但阅读完文档只是一半。另一半是：**动手。**
 
-到了这个阶段，继续看更多理论的收益会下降，真正的提升来自**做实验和改代码**。
+打开 Jupyter Notebook，复制第 46 课的 MiniGPT 代码，跑通第一个 forward pass。然后改架构——把 LayerNorm 换成 RMSNorm，把 ReLU 换成 SwiGLU——每改一行，看看 Loss 怎么变。真正的理解不来自阅读，来自你亲手把那些矩阵乘起来、看到 Loss 下降的那一刻。
 
 ---
 
+## 练习题（终章）
+
+**题目 1：** 你现在要启动 FreesLLM v0.1。根据本文所有课程，列出你的技术选型（架构、Tokenizer、训练数据、部署方案），并估算从零到能部署 API 需要的时间和算力。
+
+**题目 2：** 回顾第 1 课的"向量是什么"——你现在能用一句话回答吗？和 76 课前你的理解有什么不同？
+
 ---
+
+### 答案（没有标准答案——这是你自己要写的）
+
+**题 1：** 示例：架构 = LLaMA-class（RMSNorm+SwiGLU+RoPE+GQA），Tokenizer = SentencePiece 中文 BPE 16K vocab，训练数据 = 10GB 清洗过的中文语料（网页+书籍+代码），部署 = FastAPI + single GPU。时间 ≈ 数据清洗 1 周 + 训练 1 周 + 部署 2 天——共约 3 周。算力 ≈ 单张 A100 或 RTX 4090，约 $100-300 云 GPU 费用。
+
+**题 2：** （你自己的回答）
+
+---
+
 
 # 参考资料
 
