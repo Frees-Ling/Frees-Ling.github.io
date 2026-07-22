@@ -87,9 +87,9 @@ export const profileConfig: ProfileConfig = {
             url: "https://space.bilibili.com/1066292128?spm_id_from=333.1007.0.0",
         },
         {
-            name:"Google Drive",
-            icon: "fa6-brands:google-drive",
-            url: "/Drive/index.html"
+            name:"开往-友链接力",
+            icon: "https://www.travellings.cn/assets/b.png",
+            url: "https://www.travellings.cn/go.html"
         }
 	],
 };
