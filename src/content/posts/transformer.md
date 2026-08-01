@@ -8,6 +8,7 @@ category: 'Note'
 draft: false
 lang: ''
 ---
+
 # 前言
 
 这是 99% 学线性代数的人都会遇到的问题。
@@ -62,7 +63,7 @@ $$
 
 ---
 
-# 第一层：什么叫空间？
+# 第一层：什么叫空间
 
 很多人觉得：空间 = 三维。
 
@@ -115,7 +116,7 @@ x
 
 ---
 
-# 第二层：向量到底是什么？
+# 第二层：向量到底是什么
 
 很多人说：向量就是 `(3,2)`。
 
@@ -162,22 +163,29 @@ x
 import numpy as np
 
 # 定义一个向量：向右 3，向上 2
+
 v = np.array([3, 2])
 print(f"向量 v: {v}")        # [3 2]
 print(f"v 的长度: {np.linalg.norm(v):.2f}")  # 勾股定理: sqrt(3²+2²) ≈ 3.61
 
 # 另一个向量：向左 2，向上 4
+
 w = np.array([-2, 4])
 
 # 向量加法 —— 就是"先做 v 这个移动，再做 w 这个移动"
+
 v_plus_w = v + w
 print(f"v + w = {v_plus_w}")  # [1 6]
+
 # 你先向右3上2，再向左2上4 ⇒ 最终向右1上6 ✅
 
 # 数乘 —— 把移动放大或缩小
+
 v_scaled = 3 * v
 print(f"3 × v = {v_scaled}")  # [9 6]
+
 # 向右3上2 放大3倍 ⇒ 向右9上6 ✅
+
 ```
 
 你会发现，向量加法就是数组逐位相加，数乘就是每个分量都乘以那个数字。不是魔法，就是数组运算。
@@ -185,18 +193,25 @@ print(f"3 × v = {v_scaled}")  # [9 6]
 **来看一个"向量就是移动"的直观证据：**
 
 ```python
+
 # 假设起点是 (0,0)
+
 start = np.array([0, 0])
 v1 = np.array([3, 0])   # 向右3
 v2 = np.array([0, 2])   # 向上2
 
 # 第一步：向右走3
+
 step1 = start + v1      # (3, 0)
+
 # 第二步：向上走2
+
 step2 = step1 + v2      # (3, 2)
 
 print(f"起点{start} → 向右3 → {step1} → 向上2 → {step2}")
+
 # 输出: 起点[0 0] → 向右3 → [3 0] → 向上2 → [3 2]
+
 ```
 
 你每一步的"移动"就是一个向量，最终位置就是所有向量相加的结果。这也是为什么向量加法叫"平行四边形法则"——如果你把两个箭头的起点放在一起，终点就是它们构成的平行四边形的对角。
@@ -217,7 +232,7 @@ print(f"起点{start} → 向右3 → {step1} → 向上2 → {step2}")
 
 ---
 
-# 第三层：矩阵到底是什么？
+# 第三层：矩阵到底是什么
 
 这是整个线性代数最重要的一句话。
 
@@ -293,38 +308,48 @@ $$
 import numpy as np
 
 # 定义一个点 (1, 2)
+
 point = np.array([1, 2])
 
 # --- 矩阵1: 横向拉伸2倍 ---
+
 A_stretch = np.array([[2, 0],
                        [0, 1]])
 result_stretch = A_stretch @ point   # @ 就是矩阵乘向量
 print(f"横向拉伸: {point} → {result_stretch}")
+
 # 输出: [1 2] → [2 2]
 # x从1变成2（拉长），y保持2不变 ✅
 
 # --- 矩阵2: 纵向拉伸3倍 ---
+
 A_vertical = np.array([[1, 0],
                         [0, 3]])
 result_vertical = A_vertical @ point
 print(f"纵向拉伸: {point} → {result_vertical}")
+
 # 输出: [1 2] → [1 6] ✅
 
 # --- 矩阵3: 旋转90° ---
+
 A_rotate = np.array([[0, -1],
                       [1,  0]])
 result_rotate = A_rotate @ point
 print(f"旋转90°: {point} → {result_rotate}")
+
 # 输出: [1 2] → [-2 1]
 # 画出来: ↗ 旋转后指向 ↖
 
 # --- 矩阵4: 剪切 (shear) ---
+
 A_shear = np.array([[1, 1],
                      [0, 1]])
 result_shear = A_shear @ point
 print(f"剪切: {point} → {result_shear}")
+
 # 输出: [1 2] → [3 2]
 # x方向被"推"了一下
+
 ```
 
 仔细看 `A_stretch @ point` 这一步。`@` 就是矩阵乘向量，它做的就是"把这个点扔进空间变化器，吐出一个新位置"。代码跑一遍比看十遍公式都管用。
@@ -333,7 +358,7 @@ print(f"剪切: {point} → {result_shear}")
 
 ---
 
-# 第四层：矩阵乘向量是什么意思？
+# 第四层：矩阵乘向量是什么意思
 
 例如：
 
@@ -373,7 +398,7 @@ $$
 
 ---
 
-# 第五层：为什么矩阵可以乘矩阵？
+# 第五层：为什么矩阵可以乘矩阵
 
 这是很多人完全不理解的地方。
 
@@ -404,7 +429,7 @@ $$
 
 ---
 
-# 第六层：为什么矩阵乘法不能交换？
+# 第六层：为什么矩阵乘法不能交换
 
 例如，先拉长：
 
@@ -430,7 +455,7 @@ $$
 
 ---
 
-# 第七层：行列式 (det) 到底是什么？
+# 第七层：行列式 (det) 到底是什么
 
 很多教材写个 `ad-bc` 就结束了。
 
@@ -476,16 +501,19 @@ $$
 import numpy as np
 
 # 拉伸矩阵: 面积扩大2倍
+
 A = np.array([[2, 0],
               [0, 1]])
 print(f"det(A) = {np.linalg.det(A):.1f}")  # 2.0 ✅
 
 # 翻转矩阵: 面积不变但方向反了
+
 B = np.array([[-1, 0],
               [ 0, 1]])
 print(f"det(B) = {np.linalg.det(B):.1f}")  # -1.0 ✅
 
 # 压扁矩阵: 面积变0
+
 C = np.array([[1, 1],
               [1, 1]])
 print(f"det(C) = {np.linalg.det(C):.1f}")  # 0.0 ✅
@@ -536,7 +564,7 @@ A = [[0.5, 0],
 
 ---
 
-# 第八层：逆矩阵是什么？
+# 第八层：逆矩阵是什么
 
 如果矩阵是拉长：
 
@@ -564,22 +592,28 @@ A = [[0.5, 0],
 import numpy as np
 
 # 拉伸矩阵: x方向×2, y方向×3
+
 A = np.array([[2, 0],
               [0, 3]])
 
 # 逆矩阵: x方向/2, y方向/3 —— 恢复原状
+
 A_inv = np.linalg.inv(A)
 print(f"A 的逆矩阵:\n{A_inv}")
+
 # [[0.5  0. ]
 #  [0.   0.33]]
 
 # 验证: A × A_inv 应该 = 单位矩阵（什么都没变）
+
 I = A @ A_inv
 print(f"A × A⁻¹:\n{I}")
+
 # [[1. 0.]
 #  [0. 1.]]
 
 # 把(2,3)扔进去，再撤销回来
+
 v = np.array([2, 3])
 v_transformed = A @ v      # (4, 9)
 v_recovered = A_inv @ v_transformed  # (2, 3)
@@ -588,7 +622,7 @@ print(f"原向量{v} → 变换后{v_transformed} → 逆回去{v_recovered}")
 
 ---
 
-### 练习题
+## 练习题
 
 **题目：** 矩阵 `[[0, 0], [0, 3]]` 有没有逆矩阵？为什么？
 
@@ -596,7 +630,7 @@ print(f"原向量{v} → 变换后{v_transformed} → 逆回去{v_recovered}")
 
 ---
 
-# 第九层：特征向量到底是什么？
+# 第九层：特征向量到底是什么
 
 这是线性代数最美的概念。
 
@@ -626,7 +660,7 @@ $$
 
 ---
 
-# 第十层：特征值是什么？
+# 第十层：特征值是什么
 
 - 特征值 = 3：长度变三倍
 - 特征值 = 0.5：缩短
@@ -646,24 +680,30 @@ NumPy 一行搞定。我们来实战一下：
 import numpy as np
 
 # 拉伸矩阵: x方向×2, y方向×3
+
 A = np.array([[2, 0],
               [0, 3]])
 
 # 求特征值和特征向量
+
 eigenvalues, eigenvectors = np.linalg.eig(A)
 
 print("特征值:", eigenvalues)        # [2. 3.]
 print("特征向量 (两列):\n", eigenvectors)
+
 # [[1. 0.]    ← 水平方向，特征值=2
 #  [0. 1.]]   ← 竖直方向，特征值=3
 
 # 验证: A × v = λ × v
+
 v1 = eigenvectors[:, 0]   # 第一个特征向量 (1,0)
 lambda1 = eigenvalues[0]  # 第一个特征值 2
 
 print(f"A @ v1 = {A @ v1}")           # [2. 0.]
 print(f"λ × v1 = {lambda1 * v1}")     # [2. 0.]
+
 # 相等 ✅ 这就是 Ax = λx 的含义
+
 ```
 
 **实际用途：** 以后你学到 PCA（主成分分析），本质上就是在求数据的协方差矩阵的特征向量——找到数据"最散开的方向"。这些方向就是你降维时应该保留的。Transformer 里的 Embedding 空间也有类似的结构：某些方向代表"动物性"，某些代表"语法性别"——这些方向本质上就是高维空间中的特征方向。
@@ -698,7 +738,7 @@ for i in range(2):
 
 ---
 
-# 为什么 AI 一定要学线性代数？
+# 为什么 AI 一定要学线性代数
 
 因为神经网络其实一直在做这件事。
 
@@ -840,7 +880,7 @@ $$
 
 ---
 
-## 第三课：为什么向量可以相加？
+## 第三课：为什么向量可以相加
 
 假设：
 
@@ -863,7 +903,7 @@ $$
 
 ---
 
-## 第四课：为什么可以乘数字？
+## 第四课：为什么可以乘数字
 
 假设 `(2,1)` 表示右两步，上一步。
 
@@ -900,7 +940,7 @@ $$
 
 ---
 
-## 那矩阵到底是什么？
+## 那矩阵到底是什么
 
 这里先给你留一个问题。
 
@@ -988,7 +1028,7 @@ $$
 
 ---
 
-## 为什么这件事情这么重要？
+## 为什么这件事情这么重要
 
 因为你刚刚已经碰到了 **矩阵最核心的思想**。
 
@@ -1288,17 +1328,21 @@ import torch.nn as nn
 
 # nn.Linear(输入维度, 输出维度) 就是一个矩阵 W
 # 内部做的事: y = x @ W^T + b
+
 layer = nn.Linear(2, 2)
 
 # 这就是那个矩阵 W —— 也就是"空间变换器"
+
 print("矩阵 W 的值（空间变换规则）:")
 print(layer.weight.data)
+
 # 输出类似:
 # tensor([[ 0.5341, -0.3214],
 #         [ 0.2187,  0.6912]])
 # 这个矩阵里的数字一开始是随机的，训练会不断调整它们
 
 # 把一个向量扔进去
+
 x = torch.tensor([1.0, 2.0])  # 点 (1, 2)，就像你纸上那个点
 y = layer(x)                    # 这就是 x 经过空间变换后的新位置
 
@@ -1306,16 +1350,19 @@ print(f"\n原始点: {x.tolist()}")
 print(f"经过线性层后: {y.tolist()}")
 ```
 
-### 连续两层 = 两次空间变换
+## 连续两层 = 两次空间变换
 
 ```python
+
 # 两层神经网络 = 两个空间变换器串联
+
 layer1 = nn.Linear(2, 4)   # 2维 → 4维（扩大空间）
 layer2 = nn.Linear(4, 2)   # 4维 → 2维（压缩回来）
 
 x = torch.tensor([1.0, 2.0])
 
 # Forward pass —— 就是连续扔进两个空间变换器
+
 h = layer1(x)              # 第一次变换：进入4维空间
 y = layer2(h)              # 第二次变换：回到2维空间
 
@@ -1323,25 +1370,31 @@ print(f"原始: {x.tolist()}")
 print(f"经过两层后: {y.tolist()}")
 ```
 
-### 如果只有矩阵乘法（没有激活函数），会怎样？
+## 如果只有矩阵乘法（没有激活函数），会怎样
 
 ```python
+
 # 两层纯线性 = 可以合并成一个矩阵
+
 layer1 = nn.Linear(4, 4, bias=False)
 layer2 = nn.Linear(4, 4, bias=False)
 
 # 两层连续变换 = W2 @ (W1 @ x) = (W2 @ W1) @ x = 一个大矩阵
+
 W_combined = layer2.weight @ layer1.weight
 print(f"W_combined 形状: {W_combined.shape}")  # (4, 4)
 
 # 所以多层纯线性 = 一层线性，叠再多也没用
 # 这就是为什么必须有激活函数（ReLU等）
+
 ```
 
-### 加上激活函数：空间可以"弯折"
+## 加上激活函数：空间可以"弯折"
 
 ```python
+
 # 带 ReLU 的简单网络 —— 终于像一个真正的神经网络了
+
 model = nn.Sequential(
     nn.Linear(2, 4),    # 空间变换1: 2维 → 4维
     nn.ReLU(),          # 非线性: 把负的砍成0（空间被"折叠"）
@@ -1355,9 +1408,10 @@ print(f"带激活函数的输出: {y.tolist()}")
 # ReLU(-2.0) = 0 → 负数被"砍掉"
 # 这一步让空间不能简单地用一个矩阵描述
 # 这就是"非线性"的威力
+
 ```
 
-### ReLU 到底做了什么？
+## ReLU 到底做了什么
 
 ReLU 的数学定义：`ReLU(x) = max(0, x)`。
 
@@ -1378,9 +1432,11 @@ x = torch.tensor([-2.0, -1.0, 0.0, 1.0, 2.0, 3.0])
 relu_out = torch.relu(x)
 print(f"输入:  {x.tolist()}")
 print(f"ReLU后: {relu_out.tolist()}")
+
 # 输入:  [-2.0, -1.0, 0.0, 1.0, 2.0, 3.0]
 # ReLU后: [0.0, 0.0, 0.0, 1.0, 2.0, 3.0]
 # 所有负数 → 0，正数和零 → 保持不变
+
 ```
 
 如果只有矩阵乘法，网络的输入到输出永远是直线的线性变换——无论叠多少层。但你一旦在每两层之间插入 ReLU，空间被反复"弯折"，就能拟合任何复杂的函数形状。这就是为什么几十层的 Transformer 能理解语言。
@@ -1469,7 +1525,7 @@ print(model(x))
 
 ---
 
-## 2. 为什么需要基底？
+## 2. 为什么需要基底
 
 假设你站在上海。别人问："你在哪里？"
 
@@ -1650,7 +1706,7 @@ $$
 
 ---
 
-## 7. 为什么 AI 里面大量出现？
+## 7. 为什么 AI 里面大量出现
 
 因为机器学习面对的是高维空间。
 
@@ -1701,7 +1757,7 @@ $$
 
 ---
 
-# 为什么矩阵的列就是新的基底？
+# 为什么矩阵的列就是新的基底
 
 这一节其实是线性代数真正开始"开窍"的地方。
 
@@ -1711,7 +1767,7 @@ $$
 
 ---
 
-## 1. 一个机器怎么描述变化？
+## 1. 一个机器怎么描述变化
 
 假设有一个空间变化机器：
 
@@ -1796,7 +1852,7 @@ $$
 
 ---
 
-## 5. 为什么矩阵乘法长这样？
+## 5. 为什么矩阵乘法长这样
 
 现在看：
 
@@ -1842,7 +1898,7 @@ $$
 
 ---
 
-## 6. 这和神经网络有什么关系？
+## 6. 这和神经网络有什么关系
 
 现在看神经网络：
 
@@ -1905,7 +1961,7 @@ B 是一个放大机器：`↑` 进去，`↑↑↑` 出来。
 
 ---
 
-## 2. 为什么顺序重要？
+## 2. 为什么顺序重要
 
 这是很多人第一次学矩阵乘法最痛苦的地方：为什么 `AB ≠ BA`？
 
@@ -1937,7 +1993,7 @@ B 是一个放大机器：`↑` 进去，`↑↑↑` 出来。
 
 ---
 
-## 3. 矩阵乘法到底是什么？
+## 3. 矩阵乘法到底是什么
 
 矩阵 `A` 是一个机器，矩阵 `B` 也是一个机器。
 
@@ -1963,7 +2019,7 @@ B 是一个放大机器：`↑` 进去，`↑↑↑` 出来。
 
 ---
 
-## 5. AI 里面为什么需要很多层？
+## 5. AI 里面为什么需要很多层
 
 假设输入一句话："狗追猫"，进入模型。
 
@@ -2027,7 +2083,7 @@ $$
 
 ---
 
-# 第七课：行列式 —— 为什么一个数字能代表"空间被压扁了"？
+# 第七课：行列式 —— 为什么一个数字能代表"空间被压扁了"
 
 你之前可能学过：
 
@@ -2079,7 +2135,7 @@ $$
 
 ---
 
-## 2. 行列式可以为负？
+## 2. 行列式可以为负
 
 如果矩阵包含翻转：
 
@@ -2101,7 +2157,7 @@ $$
 
 ---
 
-## 3. 为什么 det = 0 代表"信息丢失"？
+## 3. 为什么 det = 0 代表"信息丢失"
 
 假设：
 
@@ -2127,7 +2183,7 @@ $$
 
 ---
 
-## 4. 这和 AI 有什么关系？
+## 4. 这和 AI 有什么关系
 
 PCA 降维、SVD 分解，本质上都在找：
 
@@ -2203,7 +2259,7 @@ x 方向放大 2 倍，y 方向放大 3 倍。
 
 ---
 
-## 3. 那普通箭头呢？
+## 3. 那普通箭头呢
 
 比如 `(1,1)`，也就是 `↗`。
 
@@ -2213,7 +2269,7 @@ x 方向放大 2 倍，y 方向放大 3 倍。
 
 ---
 
-## 4. 特征向量到底是什么？
+## 4. 特征向量到底是什么
 
 一句话：
 
@@ -2235,7 +2291,7 @@ x 方向放大 2 倍，y 方向放大 3 倍。
 
 ---
 
-## 5. 为什么 AI 需要这个？
+## 5. 为什么 AI 需要这个
 
 假设你有很多数据：10000 个人的照片，每张 10000 维。想压缩。
 
@@ -2308,7 +2364,7 @@ PCA 做什么？找数据变化最大的方向。这个方向就是：**最大�
 
 ---
 
-## 2. 点积是什么？
+## 2. 点积是什么
 
 公式：
 
@@ -2348,7 +2404,7 @@ $$
 
 ---
 
-## 4. 为什么 AI 需要这个？
+## 4. 为什么 AI 需要这个
 
 模型把"猫"转换成一个向量：`[0.2, 0.7, -0.1, ...]`，"狗"：`[0.3, 0.6, -0.2, ...]`，"汽车"：`[-0.8, 0.1, 0.9, ...]`。
 
@@ -2500,7 +2556,7 @@ $$
 
 ---
 
-## 5. 为什么 Q 和 K 要分开？
+## 5. 为什么 Q 和 K 要分开
 
 这是关键。
 
@@ -2514,7 +2570,7 @@ $$
 
 ---
 
-## 6. 那 V 是什么？
+## 6. 那 V 是什么
 
 $$
 V = XW_V
@@ -2594,7 +2650,7 @@ Softmax → 变成权重
 
 ---
 
-# 第十一课：位置编码 —— 为什么 GPT 知道词的顺序？
+# 第十一课：位置编码 —— 为什么 GPT 知道词的顺序
 
 前面你已经学懂 Attention 了，但是这里会出现一个巨大问题。
 
@@ -2620,7 +2676,7 @@ Attention 可能认为它们的信息组成非常接近。但是人类知道：�
 
 ---
 
-## 2. 人类理解语言依靠什么？
+## 2. 人类理解语言依靠什么
 
 你听一句话"小明打小红"。你脑子里不是三个孤立的词 `{小明, 打, 小红}`，而是一个顺序：`小明 → 打 → 小红`。
 
@@ -2654,7 +2710,7 @@ Attention 其实更像处理一个集合 `{猫, 吃, 鱼}`。它不知道谁在�
 
 ---
 
-## 5. 为什么不用直接加数字？
+## 5. 为什么不用直接加数字
 
 第 1 个位置加 1，第 2 个加 2... 看起来简单。但是有问题。
 
@@ -2674,7 +2730,7 @@ $$
 
 ---
 
-## 6. 正弦是什么？
+## 6. 正弦是什么
 
 正弦就是一个周期运动。例如钟摆：左 → 中 → 右 → 中 → 左。数学就是 sin。
 
@@ -2689,7 +2745,7 @@ $$
 
 ---
 
-## 7. 这和线性代数有什么关系？
+## 7. 这和线性代数有什么关系
 
 位置编码本质：是在向量空间里增加一个新的方向。
 
@@ -2754,8 +2810,9 @@ def sinusoidal_position_encoding(max_len, d_model):
     position = torch.arange(0, max_len).unsqueeze(1).float()  # (max_len, 1)
 
     # 公式里的 10000^(2i/d) 这一项 —— 每个维度一个不同的"波长"
+
     div_term = torch.exp(
-        torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
+        torch.arange(0, d_model, 2).float()*(-math.log(10000.0) / d_model)
     )
 
     pe[:, 0::2] = torch.sin(position * div_term)  # 偶数维度: sin
@@ -2764,14 +2821,17 @@ def sinusoidal_position_encoding(max_len, d_model):
     return pe
 
 # 生成位置编码: 最多100个位置, 每个512维
+
 pe = sinusoidal_position_encoding(max_len=100, d_model=512)
 
 print(f"位置编码矩阵形状: {pe.shape}")  # (100, 512)
 print(f"第1个位置的编码 (前8维): {pe[0, :8]}")
 print(f"第2个位置的编码 (前8维): {pe[1, :8]}")
+
 # 每个位置的编码都不一样 —— 这就是"位置指纹"
 
 # --- 可视化: 看低维度部分怎么随位置变化 ---
+
 plt.figure(figsize=(12, 4))
 for i in range(4):  # 画前4个维度
     plt.plot(pe[:50, i].numpy(), label=f'维度 {i}')
@@ -2784,7 +2844,7 @@ plt.grid(True)
 
 从这个图可以看到：低维度的波变化慢（周期长），高维度的波变化快（周期短）。每个位置在不同维度上取值不同，组合起来就形成了"独一无二"的编码。就像每首曲子由不同频率的音符组成——同一个位置，低频维度给一个大致的定位，高频维度给精细的区分。
 
-### 为什么 RoPE 现在更流行？
+## 为什么 RoPE 现在更流行
 
 原始 Transformer 用正弦位置编码（绝对位置），但现在的 LLaMA、Qwen 等模型用 **RoPE（旋转位置编码）**。RoPE 的思想不是"把位置编码加到向量上"，而是**把向量的 Query 和 Key 按位置旋转一定角度**——这样 `QK^T` 的时候自动带上**相对位置**信息。好处是：模型更容易泛化到训练时没见过的长度。
 
@@ -2810,7 +2870,7 @@ plt.grid(True)
 
 ---
 
-# 第十二课：Softmax —— 为什么 Attention 的分数要变成概率？
+# 第十二课：Softmax —— 为什么 Attention 的分数要变成概率
 
 Attention 里面有一个关键步骤：
 
@@ -2822,7 +2882,7 @@ $$
 
 ---
 
-## 1. 为什么不能直接用点积？
+## 1. 为什么不能直接用点积
 
 Attention 计算完 `q · k` 之后，得到一堆数字，比如：
 
@@ -2842,7 +2902,7 @@ Attention 计算完 `q · k` 之后，得到一堆数字，比如：
 
 ---
 
-## 2. Softmax 做了什么？
+## 2. Softmax 做了什么
 
 Softmax 把任意一堆数字变成"概率分布"：
 
@@ -2860,7 +2920,7 @@ Softmax 把任意一堆数字变成"概率分布"：
 
 ---
 
-## 3. 为什么除以 √d？
+## 3. 为什么除以 √d
 
 这是 Attention 论文里一个精妙的设计。
 
@@ -2870,7 +2930,7 @@ Softmax 把任意一堆数字变成"概率分布"：
 
 ---
 
-## 4. Softmax 为什么像"注意力开关"？
+## 4. Softmax 为什么像"注意力开关"
 
 Softmax 的效果是"赢家通吃"：
 
@@ -2910,28 +2970,34 @@ import torch.nn.functional as F
 
 # 假设: 3个token("小猫","吃","鱼"), embedding维度=4
 # 这是简化版，真实模型用矩阵 W_Q, W_K, W_V 投影
+
 Q = torch.randn(3, 4)  # 每个token的Query
 K = torch.randn(3, 4)  # 每个token的Key
 V = torch.randn(3, 4)  # 每个token的Value
 
 # 第1步: QK^T —— 计算"谁和谁相关"
+
 scores = Q @ K.T            # (3,3) 的注意力分数矩阵
 print("注意力分数:\n", scores)
 
 # 第2步: 除以√d —— 稳定尺度
+
 d_k = 4
 scores_scaled = scores / (d_k ** 0.5)
 
 # 第3步: Softmax —— 变成概率分布
+
 attn_weights = F.softmax(scores_scaled, dim=-1)
 print("\n注意力权重 (每行之和=1):\n", attn_weights)
 print("每行之和:", attn_weights.sum(dim=-1))  # [1.0, 1.0, 1.0]
 
 # 第4步: × V —— 用权重提取信息
+
 output = attn_weights @ V   # (3,4)
 print("\nAttention输出:\n", output)
 
 # 每一行 = 对应token"融合了所有相关信息后"的新表示
+
 ```
 
 **自己动手改一改：** 把 Q、K、V 换成你想要的数字，手动追踪每一步，彻底把 Attention 公式从"魔法"变成"流程"。
@@ -2986,7 +3052,9 @@ print("\nAttention输出:\n", output)
      ↓
 Embedding：每个词变成向量
      ↓
+
 + 位置编码：加入位置信息
+
      ↓
 Q = XW_Q, K = XW_K, V = XW_V：投影到三个空间
      ↓
@@ -3032,7 +3100,7 @@ $$
 
 ---
 
-## 2. 为什么不能直接乘 V？
+## 2. 为什么不能直接乘 V
 
 如果直接 `8V_1 + 7V_2 + 2V_3`：
 
@@ -3060,7 +3128,7 @@ $$
 
 ---
 
-## 4. 为什么除以 √d？
+## 4. 为什么除以 √d
 
 向量维度越大，点积可能越大。GPT 的向量可能是 512 维、1024 维、4096 维。
 
@@ -3107,7 +3175,7 @@ $$
 
 ---
 
-## 1. 一个观察角度够吗？
+## 1. 一个观察角度够吗
 
 看一句话："小明因为生病，所以没有参加考试。"
 
@@ -3126,7 +3194,7 @@ $$
 
 ---
 
-## 2. 什么叫 Head？
+## 2. 什么叫 Head
 
 一个 Head = 一套独立的 Q/K/V 投影。
 
@@ -3176,7 +3244,7 @@ Head 1 学习空间中的某些方向（比如表示语法）。Head 2 学习另
 
 ---
 
-## 5. 为什么最后要 Concat + W_O？
+## 5. 为什么最后要 Concat + W_O
 
 每个 Head 输出 `head_1, head_2, ...`，拼起来：
 
@@ -3235,7 +3303,7 @@ $$
 
 ---
 
-## 3. 为什么要扩大维度？
+## 3. 为什么要扩大维度
 
 低维空间表达能力有限。描述一个城市，只有"人口、面积"很粗糙。增加"收入、交通、天气、文化、历史..."描述更丰富。
 
@@ -3245,7 +3313,7 @@ $$
 
 ---
 
-## 4. 为什么需要激活函数？
+## 4. 为什么需要激活函数
 
 如果没有激活，只有 `W_2 W_1 x`。矩阵乘矩阵还是矩阵。无论多少层，最后还是一个线性变换 `Wx`。没有复杂能力。
 
@@ -3255,7 +3323,7 @@ $$
 
 ---
 
-## 5. 为什么 GPT 参数大部分在 FFN？
+## 5. 为什么 GPT 参数大部分在 FFN
 
 隐藏维度 d=4096，FFN 扩大 4d=16384。
 
@@ -3275,14 +3343,16 @@ import torch.nn as nn
 
 class FeedForward(nn.Module):
     """Transformer 的 FFN 模块 —— 就是两个 Linear 中间夹一个激活函数"""
-    def __init__(self, d_model=512, d_ff=2048, dropout=0.1):
-        super().__init__()
+    def **init**(self, d_model=512, d_ff=2048, dropout=0.1):
+        super().**init**()
         self.w1 = nn.Linear(d_model, d_ff)    # 512 → 2048 (扩大)
         self.w2 = nn.Linear(d_ff, d_model)    # 2048 → 512 (压缩回来)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+
         # x shape: (batch, seq_len, d_model)
+
         x = self.w1(x)          # 投影到更大的"思考空间"
         x = torch.relu(x)       # 非线性：关掉没用的方向
         x = self.dropout(x)     # 随机丢弃一些神经元（防止过拟合）
@@ -3290,6 +3360,7 @@ class FeedForward(nn.Module):
         return x
 
 # 测试
+
 ffn = FeedForward(d_model=512, d_ff=2048)
 x = torch.randn(2, 10, 512)    # 2句，每句10个词，每个词512维
 out = ffn(x)
@@ -3297,38 +3368,53 @@ print(f"输入形状: {x.shape}")    # (2, 10, 512)
 print(f"输出形状: {out.shape}")  # (2, 10, 512) ← 维度和输入一致！
 
 # 数一下参数
+
 total_params = sum(p.numel() for p in ffn.parameters())
 print(f"FFN 总参数量: {total_params:,}")
+
 # 512×2048 + 2048 + 2048×512 + 512 ≈ 2.1M
 
 # 对比一下 Attention 的参数量
+
 attn_params = 512 * 512 * 4     # Q, K, V, O 四个矩阵，每个 512×512
 print(f"Attention(单头) 参数量: {attn_params:,}")  # ≈ 1.0M
+
 # 可以看到 FFN 参数大约是 Attention 的 2 倍 —— 所以大模型的知识主要存在 FFN 里
+
 ```
 
-### SwiGLU：现代 LLM 用的升级版
+## SwiGLU：现代 LLM 用的升级版
 
 你之前学到的标准 FFN 用 ReLU 激活。但 LLaMA、Qwen 等现代模型用 **SwiGLU**（SiLU + Gated Linear Unit）。它比 ReLU 更强，因为它多了一个"门"来控制信息流：
 
 ```python
 class SwiGLUFFN(nn.Module):
     """现代 LLM(LLaMA, Qwen等)使用的 FFN —— SwiGLU"""
-    def __init__(self, d_model=512, d_ff=2048):
-        super().__init__()
+    def **init**(self, d_model=512, d_ff=2048):
+        super().**init**()
+
         # 注意: 三个Linear —— 一个做"门"，一个做"值"，一个做输出
+
         self.gate_proj = nn.Linear(d_model, d_ff, bias=False)
         self.up_proj   = nn.Linear(d_model, d_ff, bias=False)
         self.down_proj = nn.Linear(d_ff, d_model, bias=False)
 
     def forward(self, x):
+
         # gate: 用 SiLU 激活 —— 平滑版的 ReLU
+
         gate = torch.nn.functional.silu(self.gate_proj(x))
+
         # up: 值部分
+
         up = self.up_proj(x)
+
         # 门控制: gate 决定"多少信息通过"
+
         x = gate * up
+
         # 压缩回来
+
         return self.down_proj(x)
 ```
 
@@ -3404,7 +3490,7 @@ FFN 也有残差。每层都像："原来的我 + 一点新理解"。
 
 ---
 
-## 4. 为什么大模型需要残差？
+## 4. 为什么大模型需要残差
 
 96 层 GPT。没有残差：`x_96 = F_96(...F_1(x))`，原始信息可能消失。
 
@@ -3436,13 +3522,16 @@ import torch.nn as nn
 
 class TransformerBlock(nn.Module):
     """一个完整的 Transformer Block —— 这就是 GPT 的基本构建块"""
-    def __init__(self, d_model=512, n_heads=8, d_ff=2048, dropout=0.1):
-        super().__init__()
+    def **init**(self, d_model=512, n_heads=8, d_ff=2048, dropout=0.1):
+        super().**init**()
+
         # --- Attention 子层 ---
+
         self.attn = nn.MultiheadAttention(d_model, n_heads, dropout=dropout, batch_first=True)
         self.ln1 = nn.LayerNorm(d_model)
 
         # --- FFN 子层 ---
+
         self.ffn = nn.Sequential(
             nn.Linear(d_model, d_ff),
             nn.ReLU(),
@@ -3452,12 +3541,15 @@ class TransformerBlock(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+
         # --- 子层 1: Attention + 残差 + LayerNorm ---
+
         attn_out, _ = self.attn(x, x, x)   # Self-Attention
         x = x + self.dropout(attn_out)      # 残差: "不要忘记原来的自己"
         x = self.ln1(x)                     # LayerNorm: "整理一下状态"
 
         # --- 子层 2: FFN + 残差 + LayerNorm ---
+
         ffn_out = self.ffn(x)               # FFN: "自己消化理解"
         x = x + self.dropout(ffn_out)       # 残差
         x = self.ln2(x)                     # LayerNorm
@@ -3465,16 +3557,18 @@ class TransformerBlock(nn.Module):
         return x
 
 # 测试
+
 block = TransformerBlock(d_model=512)
 x = torch.randn(2, 10, 512)  # 2句, 10词, 512维
 out = block(x)
 print(f"输入形状: {x.shape}, 输出形状: {out.shape}")  # 完全相同
 
 # 关键验证: 输出不应该和输入一样(如果 Residual 和 Attention 正常工作)
+
 print(f"输入和输出相同? {torch.allclose(x, out)}")  # False ✅ 说明信息确实被加工了
 ```
 
-### 为什么 Pre-Norm（先 Norm 再 Attention/FFN）能解决梯度消失？
+## 为什么 Pre-Norm（先 Norm 再 Attention/FFN）能解决梯度消失
 
 $$
 \begin{aligned}
@@ -3522,8 +3616,8 @@ import torch.nn.functional as F
 
 class GPTWithOutput(nn.Module):
     """简化的 GPT：Embedding → Transformer Block → 输出"""
-    def __init__(self, vocab_size=10000, d_model=512, n_heads=8, n_layers=6):
-        super().__init__()
+    def **init**(self, vocab_size=10000, d_model=512, n_heads=8, n_layers=6):
+        super().**init**()
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.pos_encoding = nn.Parameter(torch.randn(1, 1024, d_model))
         self.blocks = nn.ModuleList([
@@ -3538,20 +3632,28 @@ class GPTWithOutput(nn.Module):
         targets: (batch, seq_len) 目标 token，训练时传入，推理时不用
         """
         B, T = idx.shape
+
         # Embedding
+
         x = self.embedding(idx)                # (B, T, d_model)
         x = x + self.pos_encoding[:, :T, :]    # 加位置编码
+
         # Transformer Blocks
+
         for block in self.blocks:
             x = block(x)
+
         # 输出层
+
         x = self.ln_final(x)                   # 最后归一化
         logits = self.lm_head(x)               # (B, T, vocab_size) —— 每个位置对每个词的"分数"
 
         loss = None
         if targets is not None:
+
             # Cross Entropy Loss:
             # -log(P(正确答案)) → 越小越好
+
             loss = F.cross_entropy(
                 logits.view(-1, logits.size(-1)),  # (B*T, vocab_size)
                 targets.view(-1)                     # (B*T,)
@@ -3564,7 +3666,9 @@ class GPTWithOutput(nn.Module):
         for _ in range(max_new_tokens):
             logits, _ = self(idx)               # (B, T, vocab_size)
             logits = logits[:, -1, :] / temperature  # 只取最后一个位置 + 温度调节
+
             # Top-k 过滤
+
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, -1:]] = float('-inf')
@@ -3574,8 +3678,11 @@ class GPTWithOutput(nn.Module):
         return idx
 
 # --- 测试 ---
+
 model = GPTWithOutput(vocab_size=1000, d_model=128, n_heads=4, n_layers=4)
+
 # 模拟输入: "我喜欢吃" (4个token)
+
 input_ids = torch.tensor([[12, 56, 89, 100]])       # (1, 4)
 target_ids = torch.tensor([[56, 89, 100, 234]])     # (1, 4) —— 每个位置预测下一个token
 
@@ -3584,11 +3691,12 @@ print(f"Logits 形状: {logits.shape}")   # (1, 4, 1000) —— 4个位置，每
 print(f"Loss: {loss.item():.4f}")
 
 # 推理: 从 "我喜欢吃" 开始生成
+
 generated = model.generate(input_ids, max_new_tokens=10)
 print(f"生成的 token 序列: {generated.tolist()}")
 ```
 
-### Cross Entropy Loss 的数学直觉
+## Cross Entropy Loss 的数学直觉
 
 损失函数的本质是"让正确 token 的概率尽可能大"：
 
@@ -3602,15 +3710,19 @@ $$
 import math
 
 # 正确答案概率 90% → Loss 很小
+
 print(f"P=0.9, Loss={-math.log(0.9):.4f}")  # 0.1054
 
 # 正确答案概率 50% → Loss 适中
+
 print(f"P=0.5, Loss={-math.log(0.5):.4f}")  # 0.6931
 
 # 正确答案概率 1% → Loss 很大
+
 print(f"P=0.01, Loss={-math.log(0.01):.4f}") # 4.6052
 
 # 正确答案概率 0.0001% → Loss 巨大(≈做错了被惩罚)
+
 print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 ```
 
@@ -3634,7 +3746,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-# 第十七课：为什么"预测下一个词"会产生智能？
+# 第十七课：为什么"预测下一个词"会产生智能
 
 这是 AI 里面最深的问题之一。
 
@@ -3703,7 +3815,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-## 6. 所以 GPT 到底是什么？
+## 6. 所以 GPT 到底是什么
 
 从数学角度：
 
@@ -3715,7 +3827,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-# 第十七课（续）：为什么"预测下一个词"会产生智能？
+# 第十七课（续）：为什么"预测下一个词"会产生智能
 
 ---
 
@@ -3750,7 +3862,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-## 3. Transformer 到底在学习什么？
+## 3. Transformer 到底在学习什么
 
 模型内部不是存"苹果=水果"这种表格，而是建立一个巨大的高维空间。
 
@@ -3788,7 +3900,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-## 7. 那 GPT 真的是理解吗？
+## 7. 那 GPT 真的是理解吗
 
 这是一个哲学问题。不同观点：
 
@@ -3799,7 +3911,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-# 第十八课：反向传播 —— 神经网络到底如何学习？
+# 第十八课：反向传播 —— 神经网络到底如何学习
 
 这一节是深度学习真正的"发动机"。
 
@@ -3819,7 +3931,7 @@ print(f"P=0.000001, Loss={-math.log(0.000001):.4f}") # 13.8155
 
 ---
 
-## 2. 什么叫"好"？
+## 2. 什么叫"好"
 
 假设我们希望输出 `y = 10`，但模型输出 `y = 6`。怎么办？我们需要衡量错多少。
 
@@ -3835,7 +3947,7 @@ $$
 
 ---
 
-## 3. 梯度是什么？
+## 3. 梯度是什么
 
 假设模型 `y = wx`，其中 `x=2, w=3`，所以 `y=6`，目标 10。
 
@@ -3851,7 +3963,7 @@ $$
 
 ---
 
-## 4. 怎么更新参数？
+## 4. 怎么更新参数
 
 $$
 W = W - \eta \nabla W
@@ -3866,7 +3978,7 @@ $$
 
 ---
 
-## 5. 但是深度网络有很多层怎么办？
+## 5. 但是深度网络有很多层怎么办
 
 GPT 不是 `y = Wx`，而是几十层。
 
@@ -3892,7 +4004,7 @@ $$
 
 ---
 
-## 7. Transformer 里面怎么反向传播？
+## 7. Transformer 里面怎么反向传播
 
 GPT 预测：输入"我喜欢吃"，目标输出"苹果"。但模型预测"香蕉 90%"。Loss 增加。
 
@@ -3902,7 +4014,7 @@ GPT 预测：输入"我喜欢吃"，目标输出"苹果"。但模型预测"香�
 
 ---
 
-## 8. 为什么需要 GPU？
+## 8. 为什么需要 GPU
 
 因为大量矩阵计算。一个 `4096×4096` 矩阵乘法超过千万次运算。GPT 有上千个矩阵。
 
@@ -3912,7 +4024,7 @@ GPU 擅长并行矩阵运算。所以 AI 爆发。
 
 ---
 
-## 9. PyTorch 为什么能自动训练？
+## 9. PyTorch 为什么能自动训练
 
 你以后写 `loss.backward()`，实际上 PyTorch 在自动构建计算图，用链式法则计算每个参数的梯度。
 
@@ -3923,35 +4035,43 @@ GPU 擅长并行矩阵运算。所以 AI 爆发。
 假设模型只有一个参数 `w`，输入 `x=2`，目标输出 `y_true=10`。
 
 ```python
+
 # --- 手动计算梯度 (Forward + Backward) ---
+
 x = 2.0
 w = 3.0              # 初始参数
 y_true = 10.0
 
 # Forward: y_pred = w * x
+
 y_pred = w * x       # = 6.0
 
 # Loss: L = (y_pred - y_true)^2
-L = (y_pred - y_true) ** 2   # = 16.0
+
+L = (y_pred - y_true)** 2   # = 16.0
 
 # Backward (链式法则):
 # dL/dw = dL/dy_pred × dy_pred/dw
 # dL/dy_pred = 2(y_pred - y_true) = 2*(6-10) = -8
 # dy_pred/dw = x = 2
 # dL/dw = -8 * 2 = -16
-grad_w_manual = 2 * (y_pred - y_true) * x    # = -16.0
+
+grad_w_manual = 2 *(y_pred - y_true)* x    # = -16.0
 
 print(f"手动梯度 dL/dw: {grad_w_manual}")
 
 # 梯度下降: w_new = w - lr * grad
+
 lr = 0.1
 w_new = w - lr * grad_w_manual
 print(f"更新后 w: {w:.2f} → {w_new:.2f}")  # 3.0 → 4.6
+
 # w 变大了，因为梯度是负的（减负数 = 加）
 # y_pred = 4.6*2 = 9.2，更接近10了 ✅
+
 ```
 
-### 自动版：PyTorch autograd 做同样的事
+## 自动版：PyTorch autograd 做同样的事
 
 ```python
 import torch
@@ -3961,15 +4081,18 @@ w = torch.tensor(3.0, requires_grad=True)  # 需要计算梯度的参数
 y_true = torch.tensor(10.0)
 
 # Forward
+
 y_pred = w * x
-L = (y_pred - y_true) ** 2
+L = (y_pred - y_true)** 2
 
 # Backward —— 就是这一行！
+
 L.backward()
 
 print(f"PyTorch 自动梯度 dL/dw: {w.grad}")  # -16.0 ✅ 和手动一模一样
 
 # 更新参数
+
 with torch.no_grad():          # 更新时不追踪梯度
     w -= 0.1 * w.grad           # w = 3 - 0.1*(-16) = 4.6
     w.grad.zero_()              # 清空梯度（否则会累积）
@@ -3977,24 +4100,27 @@ with torch.no_grad():          # 更新时不追踪梯度
 print(f"更新后 w: {w.item():.2f}")  # 4.6 ✅
 ```
 
-### 链式法则验证：三层简单网络
+## 链式法则验证：三层简单网络
 
 ```python
 import torch
 
-# 一个简单的三层计算: L = (w3 * (w2 * (w1 * x)) - 10)^2
+# 一个简单的三层计算: L = (w3 *(w2 *(w1 * x)) - 10)^2
+
 x = torch.tensor(2.0)
 w1 = torch.tensor(1.0, requires_grad=True)
 w2 = torch.tensor(2.0, requires_grad=True)
 w3 = torch.tensor(3.0, requires_grad=True)
 
 # Forward
+
 h1 = w1 * x               # 1*2 = 2
 h2 = w2 * h1              # 2*2 = 4
 y  = w3 * h2              # 3*4 = 12
-L  = (y - 10) ** 2        # (12-10)^2 = 4
+L  = (y - 10)** 2        # (12-10)^2 = 4
 
 # Backward
+
 L.backward()
 
 print(f"dL/dw1: {w1.grad:.1f}")  # 链式: dL/dy × dy/dh2 × dh2/dh1 × dh1/dw1
@@ -4007,21 +4133,26 @@ print(f"dL/dw3: {w3.grad:.1f}")
 # dh2/dh1 = w2 = 2
 # dh1/dw1 = x = 2
 # dL/dw1 = 4 * 3 * 2 * 2 = 48
-print(f"\n手动 dL/dw1: {2*(y-10) * w3 * w2 * x}")
+
+print(f"\n手动 dL/dw1: {2*(y-10)* w3 * w2 * x}")
+
 # 输出一致 ✅
+
 ```
 
-### 为什么 PyTorch 记录计算图？
+## 为什么 PyTorch 记录计算图
 
 当你写 `y = w * x`，PyTorch 不只计算结果，还在后台悄悄记录"这个结果是怎么算出来的"——谁乘了谁、谁加了谁。这样 `backward()` 的时候就能沿着记录倒推每个参数的梯度。
 
 ```python
+
 # 可视化计算图
 #   x ──→ (*) ──→ (*) ──→ (*) ──→ ( -10 ) ──→ (^2) ──→ L
 #          ↑       ↑       ↑
 #         w1      w2      w3
 # backward 时从 L 倒推: L → (^2) → (-10) → (*) → (*) → (*) → w1,w2,w3
 # 每步都用链式法则乘上局部梯度
+
 ```
 
 ---
@@ -4062,7 +4193,7 @@ Loss → 衡量错误
 
 ---
 
-# 第十九课：Tokenizer —— GPT 如何把文字变成数学？
+# 第十九课：Tokenizer —— GPT 如何把文字变成数学
 
 前面我们一直假设"文字 → 向量 → Transformer"。但是计算机有一个问题：**它根本不认识文字。**
 
@@ -4070,7 +4201,7 @@ Loss → 衡量错误
 
 ---
 
-## 1. 为什么不能直接一个字对应一个数字？
+## 1. 为什么不能直接一个字对应一个数字
 
 最直观的方法：`猫=1, 狗=2, 鱼=3, 我=4, 你=5`。看起来很简单。
 
@@ -4102,7 +4233,7 @@ Token 本质是在压缩语言。`playing, played, player` 都共享 `play`，�
 
 ---
 
-## 4. 为什么 Token 很重要？
+## 4. 为什么 Token 很重要
 
 因为 GPT 不是按字数收费，而是 **token 数量**。
 
@@ -4120,7 +4251,7 @@ Tokenizer 输出整数 ID：`[23145, 6782, 9921]`。这些数字不是数学大�
 
 ---
 
-## 6. 为什么不用 One-hot？
+## 6. 为什么不用 One-hot
 
 One-hot：猫 `[0,0,1,0,0]`，狗 `[0,1,0,0,0]`。计算距离没有意义。
 
@@ -4144,6 +4275,7 @@ BPE 的核心算法其实就两步：**找最常见相邻对 → 合并**。不�
 from collections import Counter
 
 # --- 第1步: 准备训练数据 ---
+
 corpus = [
     "low",
     "lower",    # low + er
@@ -4154,6 +4286,7 @@ corpus = [
 print(f"原始词汇: {corpus}")
 
 # --- 第2步: 初始化为字符序列 ---
+
 vocab = Counter()
 for word in corpus:
     chars = " ".join(list(word)) + " </w>"  # </w> = 词尾标记
@@ -4164,10 +4297,13 @@ for k, v in vocab.items():
     print(f"  '{k}': {v}")
 
 # --- 第3步: BPE合并循环 ---
+
 num_merges = 5  # 合并5次
 
 for merge_step in range(num_merges):
+
     # 统计所有相邻对的频率
+
     pairs = Counter()
     for word, freq in vocab.items():
         symbols = word.split()
@@ -4178,10 +4314,12 @@ for merge_step in range(num_merges):
         break
 
     # 找最常见的一对
+
     best_pair = max(pairs, key=pairs.get)
     print(f"\n合并 #{merge_step+1}: {best_pair} (出现 {pairs[best_pair]} 次)")
 
     # 合并这一对
+
     new_vocab = Counter()
     bigram = " ".join(best_pair)
     replacement = "".join(best_pair)
@@ -4193,15 +4331,19 @@ for merge_step in range(num_merges):
 print(f"\n最终词表:")
 for k, v in vocab.items():
     print(f"  '{k}': {v}")
+
 # 你会发现 'l o w' 合并成了 'low', 'e r' 合并成了 'er', 等等
+
 ```
 
-### 使用现成的 Tokenizer
+## 使用现成的 Tokenizer
 
 实际开发中，用 Hugging Face 的 tokenizers 库（Rust 实现，极快），或者直接用 `tiktoken`（OpenAI 用的那个）：
 
 ```python
+
 # 方法1: tiktoken (GPT-4 用的)
+
 import tiktoken
 
 enc = tiktoken.get_encoding("cl100k_base")  # GPT-4 的 tokenizer
@@ -4213,14 +4355,17 @@ print(f"Token IDs: {tokens}")
 print(f"Token 数量: {len(tokens)}")
 
 # 解码回去
+
 decoded = enc.decode(tokens)
 print(f"解码: {decoded}")
 
 # 方法2: Hugging Face tokenizers
 # pip install tokenizers
+
 from tokenizers import Tokenizer, models, trainers
 
 # 训练自己的 BPE tokenizer
+
 tokenizer = Tokenizer(models.BPE())
 trainer = trainers.BpeTrainer(vocab_size=5000, special_tokens=["<pad>", "<unk>"])
 tokenizer.train_from_iterator(corpus, trainer)
@@ -4247,7 +4392,7 @@ print(f"\n自训练 tokenizer 输出: {output.tokens}")  # ['low', 'est']
 
 ---
 
-# 第二十课：Embedding —— 为什么一个向量可以表示"意义"？
+# 第二十课：Embedding —— 为什么一个向量可以表示"意义"
 
 这一节回到了你最开始的问题：**线性代数到底有什么真实意义？为什么一堆数字可以表示现实世界？**
 
@@ -4257,7 +4402,7 @@ print(f"\n自训练 tokenizer 输出: {output.tokens}")  # ['low', 'est']
 
 ---
 
-## 1. 计算机看到的是什么？
+## 1. 计算机看到的是什么
 
 计算机看到"猫"，其实只是几个字符，对应 Unicode `U+732B`。这个数字没有任何意义。
 
@@ -4269,7 +4414,7 @@ print(f"\n自训练 tokenizer 输出: {output.tokens}")  # ['low', 'est']
 
 ---
 
-## 2. Embedding 是什么？
+## 2. Embedding 是什么
 
 > 把一个离散对象，转换成连续向量。
 
@@ -4279,7 +4424,7 @@ print(f"\n自训练 tokenizer 输出: {output.tokens}")  # ['low', 'est']
 
 ---
 
-## 3. 什么叫概念空间？
+## 3. 什么叫概念空间
 
 先用二维理解。假设世界只有两个维度：横轴 = 动物性，纵轴 = 友好程度。
 
@@ -4289,7 +4434,7 @@ GPT 里不是 2 维，可能是 4096 维。每个词的位置由 4096 个方向�
 
 ---
 
-## 4. 为什么训练会形成这种空间？
+## 4. 为什么训练会形成这种空间
 
 关键：预测任务。模型看到"小猫喜欢吃"，后面经常是"鱼"。模型发现"小猫"和"鱼"经常共同出现。
 
@@ -4315,7 +4460,7 @@ $$
 
 ---
 
-## 6. Embedding 矩阵是什么？
+## 6. Embedding 矩阵是什么
 
 词表 50000 个 token，每个 4096 维。Embedding 矩阵 `E` 大小 `50000×4096`。
 
@@ -4323,7 +4468,7 @@ $$
 
 ---
 
-## 7. 为什么叫"嵌入"？
+## 7. 为什么叫"嵌入"
 
 原来的世界是离散的——"猫、狗、汽车、电脑"只是标签。
 
@@ -4367,15 +4512,18 @@ import torch
 import torch.nn as nn
 
 # 模拟一个已经训练好的 Embedding 层
+
 vocab = {"国王": 0, "男人": 1, "女人": 2, "女王": 3, "苹果": 4}
 vocab_size = len(vocab)
 d_model = 4  # 为了看清，只用4维
 
 # 随机初始化，然后"假装"已经被训练好了
+
 torch.manual_seed(42)
 embedding = nn.Embedding(vocab_size, d_model)
 
 # 获取每个词的向量
+
 king   = embedding(torch.tensor(vocab["国王"])).detach()
 man    = embedding(torch.tensor(vocab["男人"])).detach()
 woman  = embedding(torch.tensor(vocab["女人"])).detach()
@@ -4383,11 +4531,13 @@ queen  = embedding(torch.tensor(vocab["女王"])).detach()
 apple  = embedding(torch.tensor(vocab["苹果"])).detach()
 
 # 核心运算: 国王 - 男人 + 女人 ≈ 女王
+
 result = king - man + woman   # 向量运算
 
 # 计算 result 和每个词的余弦相似度
+
 def cosine_sim(a, b):
-    return (a @ b) / (torch.norm(a) * torch.norm(b))
+    return (a @ b) / (torch.norm(a)* torch.norm(b))
 
 print("与 result 的余弦相似度:")
 print(f"  国王: {cosine_sim(result, king):.4f}")
@@ -4398,13 +4548,16 @@ print(f"  苹果: {cosine_sim(result, apple):.4f}")   # 应该最低
 
 # 注意: 因为是随机初始化没训练，结果可能不稳定。
 # 在真正训练好的词向量(如Word2Vec)中, king-man+woman ≈ queen 非常精确。
+
 ```
 
 真实训练好的 Embedding（如 Word2Vec、GloVe）中，这个公式的精确度能达到 90% 以上。这说明 Embedding 空间不只是"词变成数字"，而是真的编码了语义关系的几何结构——"性别"这种语义属性在空间中表现为一个可以加减的**方向向量**。
 
 ```python
+
 # 寻找语义"方向"
 # 如果把 man→woman 的方向加到 king 上，就得到 queen
+
 gender_direction = woman - man     # "男人 → 女人" 的方向
 print(f"\n性别方向向量: {gender_direction}")
 
@@ -4412,6 +4565,7 @@ print(f"\n性别方向向量: {gender_direction}")
 # actor - man + woman ≈ actress
 # waiter - man + woman ≈ waitress
 # 这个方向就是 Embedding 空间中编码的"性别"维度
+
 ```
 
 ---
@@ -4434,7 +4588,7 @@ print(f"\n性别方向向量: {gender_direction}")
 
 ---
 
-# 第二十一课：为什么神经网络需要高维空间？
+# 第二十一课：为什么神经网络需要高维空间
 
 前面讲了 Embedding 是把东西放进向量空间。但你可能会产生一个疑问：
 
@@ -4470,7 +4624,7 @@ print(f"\n性别方向向量: {gender_direction}")
 
 ---
 
-## 4. 神经网络做的事情是什么？
+## 4. 神经网络做的事情是什么
 
 很多人以为神经网络是在"计算答案"。其实更准确：**它在重新排列空间。**
 
@@ -4498,7 +4652,7 @@ print(f"\n性别方向向量: {gender_direction}")
 
 ---
 
-## 6. 为什么非线性很重要？
+## 6. 为什么非线性很重要
 
 如果只有矩阵：`W_3 W_2 W_1 x`，无论多少层，最终还是一个矩阵。只能做旋转、缩放、线性变化。
 
@@ -4538,13 +4692,13 @@ GPT 里 4096 维向量，每个方向可能编码某种信息。但注意：不�
 
 ---
 
-# 第二十二课：为什么 GPT 需要很多层？—— 深度到底意味着什么？
+# 第二十二课：为什么 GPT 需要很多层？—— 深度到底意味着什么
 
 很多人问：如果矩阵可以合成，为什么不能一个大矩阵解决所有问题？
 
 ---
 
-## 1. 一层网络能做到什么？
+## 1. 一层网络能做到什么
 
 一层 = `y = σ(Wx)`。它只能做一次变换：原空间 → 新空间。
 
@@ -4552,7 +4706,7 @@ GPT 里 4096 维向量，每个方向可能编码某种信息。但注意：不�
 
 ---
 
-## 2. 为什么不能一个巨大矩阵解决问题？
+## 2. 为什么不能一个巨大矩阵解决问题
 
 因为非线性必须穿插在层之间。`W_3 σ(W_2 σ(W_1 x))` ≠ `Wx`。
 
@@ -4560,7 +4714,7 @@ GPT 里 4096 维向量，每个方向可能编码某种信息。但注意：不�
 
 ---
 
-## 3. 每一层 Transformer 到底学什么？
+## 3. 每一层 Transformer 到底学什么
 
 研究表明（大致趋势）：
 
@@ -4582,7 +4736,7 @@ GPT 里 4096 维向量，每个方向可能编码某种信息。但注意：不�
 
 ---
 
-## 5. 为什么 GPT-4 需要几十层甚至更多？
+## 5. 为什么 GPT-4 需要几十层甚至更多
 
 复杂任务需要深度抽象。数学推理可能需要多步链式推理——每步需要多层网络。代码生成需要理解算法结构——抽象层级深。
 
@@ -4608,11 +4762,11 @@ GPT-3：96 层、12288 维、96 头。
 
 ---
 
-# 第 23 课：Decoder-only 架构 —— 为什么 GPT 选择这种结构？
+# 第 23 课：Decoder-only 架构 —— 为什么 GPT 选择这种结构
 
 ---
 
-## 1. 先搞清楚一个问题：GPT 和 BERT 到底哪里不一样？
+## 1. 先搞清楚一个问题：GPT 和 BERT 到底哪里不一样
 
 你可能听过这些名字：GPT、BERT、T5、LLaMA、Claude。但它们底层的 Transformer 结构其实分三种。
 
@@ -4705,10 +4859,13 @@ import torch
 import torch.nn as nn
 
 # --- Encoder Layer: 没有 mask 的 Self-Attention ---
+
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
+    def **init**(self, d_model=512, n_heads=8):
+        super().**init**()
+
         # batch_first=True: 输入形状 (batch, seq, d_model)
+
         self.self_attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
         self.ffn = nn.Sequential(
             nn.Linear(d_model, 2048),
@@ -4719,16 +4876,19 @@ class EncoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
 
     def forward(self, x):
+
         # 没有 attn_mask! → 能看到所有位置 (双向)
+
         attn_out, _ = self.self_attn(x, x, x)   # Q=K=V=x
         x = self.norm1(x + attn_out)
         x = self.norm2(x + self.ffn(x))
         return x
 
 # --- Decoder Layer: 带 causal mask 的 Self-Attention ---
+
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model=512, n_heads=8):
-        super().__init__()
+    def **init**(self, d_model=512, n_heads=8):
+        super().**init**()
         self.self_attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
         self.ffn = nn.Sequential(
             nn.Linear(d_model, 2048),
@@ -4740,17 +4900,22 @@ class DecoderLayer(nn.Module):
 
     def forward(self, x):
         seq_len = x.size(1)
+
         # 关键！causal mask: (seq_len, seq_len), 上三角为 -inf
+
         causal_mask = torch.triu(
-            torch.ones(seq_len, seq_len) * float('-inf'), diagonal=1
+            torch.ones(seq_len, seq_len)* float('-inf'), diagonal=1
         )
+
         # 有 attn_mask! → 只能看到过去 (单向)
+
         attn_out, _ = self.self_attn(x, x, x, attn_mask=causal_mask)
         x = self.norm1(x + attn_out)
         x = self.norm2(x + self.ffn(x))
         return x
 
 # --- 测试对比 ---
+
 x = torch.randn(2, 4, 512)  # 2句, 4个token, 512维
 
 encoder = EncoderLayer()
@@ -4761,25 +4926,31 @@ dec_out = decoder(x)
 
 # 关键验证: Decoder 的第1个token不能被后面的token影响
 # 修改第4个位置, 看Decoder第1个位置的输出是否变化
+
 x_modified = x.clone()
 x_modified[:, 3, :] = 999.0  # 把第4个token改成完全不同的值
 
 dec_out_modified = decoder(x_modified)
+
 # 如果 causal mask 生效, dec_out[:, 0, :] ≈ dec_out_modified[:, 0, :]
 # (第1个token看不到第4个, 所以不被影响)
+
 diff = (dec_out[:, 0, :] - dec_out_modified[:, 0, :]).abs().mean()
 print(f"Decoder 第1个位置被第4个位置影响程度: {diff:.6f}")
+
 # 应该 ≈ 0 ✅
 
 enc_out_modified = encoder(x_modified)
 diff_enc = (enc_out[:, 0, :] - enc_out_modified[:, 0, :]).abs().mean()
 print(f"Encoder 第1个位置被第4个位置影响程度: {diff_enc:.6f}")
+
 # 应该 > 0 (Encoder 能看到所有位置, 所以被影响)
+
 ```
 
 ---
 
-## 6. 为什么 GPT 选择 Decoder-only？
+## 6. 为什么 GPT 选择 Decoder-only
 
 GPT 在 2018 年做了一件在当时看来很"冒险"的事：它把 Tranformer 的 Encoder 整个扔掉了，只剩 Decoder。
 
@@ -4817,11 +4988,11 @@ Decoder-only 还有一个巨大优势：**统一架构更简洁。** 训练时�
 
 ---
 
-# 第 24 课：Causal Mask —— GPT 为什么不能偷看未来？
+# 第 24 课：Causal Mask —— GPT 为什么不能偷看未来
 
 ---
 
-## 1. 从"作弊"说起——为什么训练时也要戴眼罩？
+## 1. 从"作弊"说起——为什么训练时也要戴眼罩
 
 上一课我们说了 Decoder 只能看到过去。但为什么**训练时**也需要这个限制？训练时整句话不是已经在那里了吗——"我喜欢吃苹果"，模型难道不能看一眼完整的句子吗？
 
@@ -4902,19 +5073,24 @@ d_k = 8
 scores_scaled = scores / (d_k ** 0.5)           # 缩放后: [1.13, 0.53, 0.74, 0.28]
 
 # --- 不加 Mask: 能看到所有4个位置 ---
+
 probs_no_mask = F.softmax(scores_scaled, dim=-1)
 print(f"无 Mask: {probs_no_mask.tolist()}")
+
 # 每个位置都有权重
 
 # --- 加 Causal Mask: 这是第2个token, 只能看到位置0和1 ---
 # 位置2和3是"未来", 设为 -inf
+
 causal_mask = torch.tensor([[0.0, 0.0, float('-inf'), float('-inf')]])
 scores_masked = scores_scaled + causal_mask
 probs_masked = F.softmax(scores_masked, dim=-1)
 print(f"有 Mask: {probs_masked.tolist()}")
+
 # 位置2和3的权重 = 0.0000, 位置0和1的权重被重新归一化
 
 # 验证: 权重之和仍然是1
+
 print(f"权重和: {probs_masked.sum():.4f}")     # 1.0000 ✅
 ```
 
@@ -4934,16 +5110,19 @@ def create_causal_mask(seq_len):
     return mask.bool()  # True=可见, False=不可见
 
 # 看下4个token的Mask长什么样
+
 seq_len = 4
 mask = create_causal_mask(seq_len)
 print("Causal Mask (True=可见):")
 print(mask)
+
 # tensor([[ True, False, False, False],
 #         [ True,  True, False, False],
 #         [ True,  True,  True, False],
 #         [ True,  True,  True,  True]])
 
 # --- 完整的 Masked Attention ---
+
 def masked_attention(Q, K, V, causal_mask):
     """
     Q, K, V: (batch, n_heads, seq_len, d_head)
@@ -4952,22 +5131,28 @@ def masked_attention(Q, K, V, causal_mask):
     d_k = K.size(-1)
 
     # Step 1+2: QK^T / √d
+
     scores = Q @ K.transpose(-2, -1) / (d_k ** 0.5)  # (B, H, T, T)
 
     # Step 3: 加 Mask —— ~causal_mask(取反): 未来位置 → True → 替换为 -inf
+
     scores = scores.masked_fill(~causal_mask, float('-inf'))
 
     # Step 4: Softmax
+
     attn_weights = F.softmax(scores, dim=-1)
 
     # 验证上三角全为0
+
     print("注意力权重 (行=查询, 列=被关注, 上三角应为0):")
     print(attn_weights[0, 0])
 
     # Step 5: × V
+
     return attn_weights @ V
 
 # 测试
+
 B, H, T, D = 1, 1, 4, 8
 Q = torch.randn(B, H, T, D)
 K = torch.randn(B, H, T, D)
@@ -5022,7 +5207,7 @@ Causal Mask 还有一个重要的工程意义：它使得 **KV Cache 成为可�
 
 ---
 
-# 第 25 课：自回归生成（Autoregressive）——GPT 为什么一个字一个字往外蹦？
+# 第 25 课：自回归生成（Autoregressive）——GPT 为什么一个字一个字往外蹦
 
 ---
 
@@ -5048,7 +5233,7 @@ $$
 
 ---
 
-## 2. 什么是"自回归"？
+## 2. 什么是"自回归"
 
 "自回归"（Autoregressive）这个名字拆开看：**自**己的输出去**回归**预测自己的下一步。
 
@@ -5065,17 +5250,22 @@ def autoregressive_generate(model, initial_tokens, max_steps=10):
     generated = list(initial_tokens.squeeze().tolist())
 
     for step in range(max_steps):
+
         # 当前已有的完整序列
+
         current = torch.tensor([generated])  # (1, current_len)
 
         # 模型预测: 每个位置输出下一个token的概率
+
         logits, _ = model(current)     # (1, current_len, vocab_size)
 
         # 只取最后一个位置的预测 (因为我们只需要"下一个")
+
         next_logits = logits[:, -1, :]  # (1, vocab_size)
         probs = torch.softmax(next_logits, dim=-1)
 
         # 采样
+
         next_token = torch.multinomial(probs, num_samples=1).item()
         generated.append(next_token)
 
@@ -5084,10 +5274,13 @@ def autoregressive_generate(model, initial_tokens, max_steps=10):
     return generated
 
 # 模拟: 假设 model 是一个假模型 (实际使用时替换为真正的 GPT)
+
 class FakeModel:
-    def __call__(self, x):
+    def **call**(self, x):
         B, T = x.shape
+
         # 返回随机 logits
+
         return torch.randn(B, T, 100), None
 
 result = autoregressive_generate(FakeModel(), torch.tensor([[1, 2, 3]]), max_steps=5)
@@ -5107,6 +5300,7 @@ print(f"\n最终序列: {result}")
 所以训练时用了 **Teacher Forcing**：不管模型上一步预测了什么，下一步输入**永远用正确答案**。
 
 ```python
+
 # Teacher Forcing 的训练过程
 # 输入:  "我 喜欢 吃"    目标: "喜欢 吃 苹果"
 # 模型一次性看到整个输入, 并行计算所有位置的预测
@@ -5115,11 +5309,14 @@ input_ids  = torch.tensor([[12, 56, 89]])       # "我喜欢吃"
 target_ids = torch.tensor([[56, 89, 100]])      # "喜欢吃苹果"
 
 # 一次 forward 同时预测所有位置
+
 logits, loss = model(input_ids, targets=target_ids)
+
 # logits[:, 0, :] → 预测 "喜欢" (target=56)
 # logits[:, 1, :] → 预测 "吃"   (target=89)
 # logits[:, 2, :] → 预测 "苹果" (target=100)
 # 三个位置并行计算, 不需要等上一步的结果
+
 ```
 
 这利用了 Transformer 的并行计算优势——一次 forward 同时训练所有位置。但代价是：训练时模型看到的是完美的"正确答案"作为上下文，推理时看到的却是自己生成的、可能**有错误**的上下文。
@@ -5128,7 +5325,7 @@ logits, loss = model(input_ids, targets=target_ids)
 
 ---
 
-## 4. 错误累积：为什么长文本越写越崩？
+## 4. 错误累积：为什么长文本越写越崩
 
 用代码模拟一下错误累积的过程：
 
@@ -5146,7 +5343,9 @@ def simulate_error_accumulation(true_prob=0.9, length=50):
     going_ok = True
 
     for step in range(length):
+
         # 如果之前有错, 后续正确率大幅下降 (上下文已经被错误污染)
+
         if not going_ok:
             true_prob_effective = true_prob * 0.3  # 错上加错
         else:
@@ -5162,8 +5361,10 @@ def simulate_error_accumulation(true_prob=0.9, length=50):
 
 acc, errs = simulate_error_accumulation(true_prob=0.95, length=100)
 print(f"最终正确率: {acc:.1%}, 首次错误位置: {errs[0] if errs else '无'}")
+
 # 典型输出: 最终正确率: ~30%, 首次错误位置: ~60
 # 即使单个 token 正确率高达 95%, 100 步后整体质量也大幅下降
+
 ```
 
 这就是长文本生成容易"跑偏"的数学本质：**每一步的条件概率都在累乘**。即使单个 token 的准确率 95%，100 步后 `0.95^100 ≈ 0.6%`——几乎不可能不出错。而一旦出错，错误会污染后续所有 token 的上下文。
@@ -5172,7 +5373,7 @@ print(f"最终正确率: {acc:.1%}, 首次错误位置: {errs[0] if errs else '�
 
 ---
 
-## 5. LLM 怎么缓解错误累积？
+## 5. LLM 怎么缓解错误累积
 
 不同模型有不同的"抗漂移"策略：
 
@@ -5205,7 +5406,7 @@ print(f"最终正确率: {acc:.1%}, 首次错误位置: {errs[0] if errs else '�
 
 ---
 
-# 第 26 课：文本生成策略 —— GPT 为什么每次回答不一样？
+# 第 26 课：文本生成策略 —— GPT 为什么每次回答不一样
 
 ---
 
@@ -5224,7 +5425,9 @@ GPT 的输出层给出的是**概率分布**——不是"下一个词一定是 X
 最直观的方法：**永远选概率最高的那个 token。**
 
 ```python
+
 # Greedy: argmax
+
 next_token = torch.argmax(probs)  # 永远选概率第一
 ```
 
@@ -5271,11 +5474,13 @@ logits = torch.tensor([2.0, 1.0, 0.5, 0.1, -0.5])
 for T in [0.3, 0.7, 1.0, 2.0, 10.0]:
     probs = F.softmax(logits / T, dim=-1)
     print(f"T={T:.1f}: {probs.tolist()}")
+
 # T=0.3: [0.894, 0.094, 0.011, 0.001, 0.000]  ← 极端集中在 token 0
 # T=0.7: [0.629, 0.219, 0.103, 0.040, 0.009]  ← 有区分度但不太极端
 # T=1.0: [0.457, 0.252, 0.148, 0.093, 0.050]  ← 原始分布
 # T=2.0: [0.302, 0.252, 0.193, 0.153, 0.100]  ← 开始扁平化
 # T=10.0:[0.209,0.196,0.183,0.169,0.155,0.088] ← 几乎均匀
+
 ```
 
 Temperature 的本质是把 logits 之间的距离"压缩"或"拉大"。低 T 让差异放大（强者恒强），高 T 让差异缩小（众生平等）。实践中：
@@ -5317,6 +5522,7 @@ def sample_top_p(logits, p=0.9):
     cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
 
     # 找到第一个使累积概率 > p 的位置, 从它之后全部淘汰
+
     sorted_mask = cumulative_probs > p
     sorted_mask[1:] = sorted_mask[:-1].clone()  # 至少保留一个
     sorted_mask[0] = False
@@ -5340,10 +5546,12 @@ import torch.nn.functional as F
 logits = torch.tensor([2.0, 1.0, 0.5, 0.1, -0.5])
 
 # --- Greedy ---
+
 token_greedy = torch.argmax(logits).item()
 print(f"Greedy:          token {token_greedy} (每次完全相同)")
 
 # --- Temperature ---
+
 def sample_temperature(logits, T=0.8):
     return torch.multinomial(F.softmax(logits / T, dim=-1), 1).item()
 
@@ -5356,6 +5564,7 @@ for _ in range(5): print(sample_temperature(logits.clone(), 2.0), end=" ")
 print("← 变化很大")
 
 # --- Top-k ---
+
 def sample_top_k(logits, k=3):
     v, _ = torch.topk(logits, k)
     logits[logits < v[-1]] = float('-inf')
@@ -5364,6 +5573,7 @@ def sample_top_k(logits, k=3):
 print(f"Top-k=3:         token {sample_top_k(logits.clone(), 3)} (只从 top3 选)")
 
 # --- Top-p ---
+
 def sample_top_p(logits, p=0.9):
     sorted_l, sorted_i = torch.sort(logits, descending=True)
     cum = torch.cumsum(F.softmax(sorted_l, dim=-1), dim=-1)
@@ -5378,7 +5588,7 @@ print(f"Top-p=0.9:       token {sample_top_p(logits.clone(), 0.9)} (动态门槛
 
 ---
 
-## 7. 现实中 GPT 怎么组合这些策略？
+## 7. 现实中 GPT 怎么组合这些策略
 
 没有一个模型只用其中一种。标准组合是：
 
@@ -5424,7 +5634,7 @@ $$
 
 ---
 
-## 1. 你现在手里有什么？
+## 1. 你现在手里有什么
 
 回想一下前面 26 课我们造了哪些零件：
 
@@ -5560,9 +5770,10 @@ import torch.nn.functional as F
 
 # ============ 模拟一个已经训练好的 MiniGPT ============
 # 实际使用时这就是你训练的 FreesLLM 模型
+
 class InferenceGPT:
     """GPT 推理引擎: 把前面所有课的零件组装起来"""
-    def __init__(self, model, tokenizer):
+    def **init**(self, model, tokenizer):
         self.model = model              # 训练好的 GPT 模型(第46课的MiniGPT)
         self.tokenizer = tokenizer      # Tokenizer(第19课)
         self.kv_cache = None            # KV Cache(第37课)
@@ -5573,6 +5784,7 @@ class InferenceGPT:
         print("=" * 60)
 
         # --- 步骤0: Tokenizer ---
+
         token_ids = self.tokenizer.encode(prompt)    # "我喜欢吃" → [12, 56, 89]
         print(f"[Tokenizer]  文字 → token IDs: {token_ids}")
 
@@ -5581,30 +5793,38 @@ class InferenceGPT:
         # 但逻辑是: token_ids → Embedding查表 → 4096维向量 → +位置编码
 
         # --- 步骤3-5: Transformer → 输出 → 采样(循环) ---
+
         generated = list(token_ids)
         for step in range(max_tokens):
+
             # Transformer 前向传播(内部包含 Embedding→Position→96层Block→lm_head)
+
             current = torch.tensor([generated])
             logits, _ = self.model(current)     # (1, T, vocab_size)
 
             # 只看最后一个位置的预测
+
             next_logits = logits[:, -1, :] / temperature  # 温度调节(第26课)
 
             # Top-p 过滤(第26课)
+
             sorted_l, sorted_i = torch.sort(next_logits, descending=True)
             cum = torch.cumsum(F.softmax(sorted_l, dim=-1), dim=-1)
             next_logits[:, sorted_i[0, cum[0] > top_p]] = float('-inf')
 
             # 采样
+
             probs = F.softmax(next_logits, dim=-1)
             next_token = torch.multinomial(probs, 1).item()
             generated.append(next_token)
 
             # 解码并打印
+
             word = self.tokenizer.decode([next_token])
             print(f"[Step {step+1:2d}]  预测: '{word}' (token {next_token})")
 
             # 终止条件
+
             if next_token == self.tokenizer.eos_token_id:
                 break
 
@@ -5612,18 +5832,21 @@ class InferenceGPT:
 
 # ============ 模拟运行(实际替换你的训练好的模型) ============
 # 这只是一个示意 —— 真实推理时 model 是你花几天训练的 MiniGPT
+
 print("GPT 推理流水线:")
 print("输入'我喜欢吃' → 期望输出'苹果'")
 print()
+
 # 输出大概像:
 # [Tokenizer]  我喜欢吃 → [12, 56, 89]
 # [Step  1]  预测: '苹果' (token 100)
 # [Step  2]  预测: '。' (token 5)
+
 ```
 
 ---
 
-## 4. 回头看：为什么这个管道能工作？
+## 4. 回头看：为什么这个管道能工作
 
 追踪一个 token 的旅程，你就能看到每一课的知识点都在哪里落地：
 
@@ -5676,11 +5899,11 @@ print()
 
 ---
 
-# 第 28 课：从 Transformer 到 ChatGPT —— 预测文字和回答问题之间隔了多远？
+# 第 28 课：从 Transformer 到 ChatGPT —— 预测文字和回答问题之间隔了多远
 
 ---
 
-## 1. 一个"预测下一个词"的模型，为什么不会聊天？
+## 1. 一个"预测下一个词"的模型，为什么不会聊天
 
 回顾第 27 课，我们装好了一台完整的 GPT 推理引擎。它可以做一件事：**输入一串 token，输出下一个 token 的概率分布。**
 
@@ -5779,7 +6002,7 @@ DPO 现在更流行，因为它更简单、更稳定，而且不需要维护一�
 
 ---
 
-## 5. 三个阶段分别改了模型的什么？
+## 5. 三个阶段分别改了模型的什么
 
 这个问题很重要——很多人以为每个阶段都"重新训练了全部参数"。实际上：
 
@@ -5802,8 +6025,10 @@ DPO 现在更流行，因为它更简单、更稳定，而且不需要维护一�
 ## 6. 用代码感受三个阶段的数据差异
 
 ```python
+
 # ====== Pretraining 数据 ======
 # 互联网上的任意文本，没有格式要求
+
 pretrain_data = [
     "今天天气真好，我决定去公园散步。公园里有很多人，大家都在享受阳光。",
     "Transformer 是一种基于自注意力机制的神经网络架构，由 Vaswani 等人提出。",
@@ -5812,6 +6037,7 @@ pretrain_data = [
 
 # ====== SFT 数据 ======
 # 人工标注的问答对，严格的对话格式
+
 sft_data = [
     {
         "messages": [
@@ -5829,6 +6055,7 @@ sft_data = [
 
 # ====== DPO 数据 ======
 # 同一个问题，"好回答"和"差回答"的对比
+
 dpo_data = [
     {
         "prompt": "如何学习编程？",
@@ -5871,11 +6098,11 @@ dpo_data = [
 
 ---
 
-# 第 29 课：LLM 训练数据 —— 模型吃什么？
+# 第 29 课：LLM 训练数据 —— 模型吃什么
 
 ---
 
-## 1. 从第 28 课说起：预训练到底需要多少数据？
+## 1. 从第 28 课说起：预训练到底需要多少数据
 
 第 28 课讲了 ChatGPT 的三个训练阶段。其中第一阶段——预训练——占了 99% 以上的算力和数据。一个 7B 参数的模型，预训练需要**几万亿个 token**。
 
@@ -5912,7 +6139,7 @@ GPT-3 论文公开了它的数据配比（其他大模型大多不公开），�
 <html><body>
 <div class="ad">减肥就吃XXX！不运动不节食！<a href="spam.html">点击购买</a></div>
 <p>今天天气真好。</p>
-<div class="comment">沙发！！顶博主！！<br>楼上+1</div>
+<div class="comment">沙发！！顶博主！！  楼上+1</div>
 <script>var x=1;</script>
 </body></html>
 ```
@@ -5938,21 +6165,27 @@ GPT-3 论文公开了它的数据配比（其他大模型大多不公开），�
 ```
 
 ```python
+
 # 一个玩具级别的数据处理脚本——真实的是大规模分布式程序
+
 import re
 import hashlib
 
 def clean_web_text(raw_html):
     """从原始网页提取可用的训练文本"""
+
     # Step 1: 去掉HTML标签和脚本
+
     text = re.sub(r'<script[^>]*>.*?</script>', '', raw_html, flags=re.DOTALL)
     text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
     text = re.sub(r'<[^>]+>', '', text)  # 去掉所有HTML标签
 
     # Step 2: 去掉多余空白
+
     text = re.sub(r'\s+', ' ', text).strip()
 
     # Step 3: 质量过滤
+
     if len(text) < 100:          # 太短，不要
         return None
     if len(text) > 100000:       # 太长(可能是机器生成的)，截断
@@ -5967,7 +6200,7 @@ def clean_web_text(raw_html):
 
 ---
 
-## 4. 为什么"垃圾进垃圾出"在大模型里特别严重？
+## 4. 为什么"垃圾进垃圾出"在大模型里特别严重
 
 第 20 课我们讲过，Embedding 空间中的向量方向编码了语义关系。第 21 课又讲了高维空间可以展开复杂的特征结构。
 
@@ -6108,7 +6341,7 @@ $$
 
 ---
 
-## 4. Loss 曲线：模型在"想"什么？
+## 4. Loss 曲线：模型在"想"什么
 
 训练时最重要的监控指标是 Loss。第 16 课讲过 Cross Entropy Loss 的数学原理，这里看它的实际行为：
 
@@ -6172,7 +6405,7 @@ Loss 下降的过程 = Embedding 空间从"随机散布"到"有结构有规律"�
 
 ---
 
-# 第 31 课：Batch、Epoch 与训练规模 —— 模型怎么"吃饭"？
+# 第 31 课：Batch、Epoch 与训练规模 —— 模型怎么"吃饭"
 
 ---
 
@@ -6219,6 +6452,7 @@ Batch Size 越大，GPU 一次处理的数据越多，并行效率越高，每�
 实际训练用的技巧是**梯度累积（Gradient Accumulation）**：
 
 ```python
+
 # 目标: 模拟 Batch Size = 128
 # 实际: 每次只放 4 个样本, 累积 32 次后再更新参数
 
@@ -6238,7 +6472,7 @@ optimizer.step()                      # 32步一起更新
 
 ---
 
-## 4. Epoch 数：看几遍就够了？
+## 4. Epoch 数：看几遍就够了
 
 理想情况：Epoch 越多越好——数据看得越多，模型学得越充分。
 
@@ -6276,7 +6510,7 @@ optimizer.step()                      # 32步一起更新
 
 ---
 
-# 第 32 课：学习率（Learning Rate）—— 每一步迈多大？
+# 第 32 课：学习率（Learning Rate）—— 每一步迈多大
 
 ---
 
@@ -6320,6 +6554,7 @@ Loss 曲线 (凹向上的碗, 目标是最低点):
 import torch
 
 # 模拟一个简单的二次 Loss: L = (w - 3)^2 (最小值在 w=3)
+
 w = torch.tensor(0.0, requires_grad=True)
 target = 3.0
 
@@ -6327,7 +6562,7 @@ def test_lr(lr, steps=10):
     w.data = torch.tensor(0.0)
     history = []
     for _ in range(steps):
-        loss = (w - target) ** 2
+        loss = (w - target)** 2
         loss.backward()
         with torch.no_grad():
             w -= lr * w.grad
@@ -6338,14 +6573,16 @@ def test_lr(lr, steps=10):
 print(f"η=0.01: {test_lr(0.01)}")   # 缓慢接近3
 print(f"η=0.5:  {test_lr(0.5)}")    # 震荡后接近
 print(f"η=1.5:  {test_lr(1.5)}")    # 剧烈震荡, 可能发散
+
 # η=0.01: [0.06, 0.12, 0.18, ...]  → 缓慢爬向3
 # η=0.5:  [3.0, 3.0, 3.0, ...]     → 一步到位! (完美)
 # η=1.5:  [9.0, -9.0, 33.0, ...]   → 直接发散 💥
+
 ```
 
 ---
 
-## 3. Warmup：为什么不能一开始就全速跑？
+## 3. Warmup：为什么不能一开始就全速跑
 
 第 30 课讲过，模型初始参数是随机的——此时梯度方向是"准的"（指向 Loss 更低的方向），但梯度的**大小**极其不稳定。有些参数的梯度可能比另一些大 100 倍以上。
 
@@ -6358,7 +6595,9 @@ $$
 $$
 
 ```python
+
 # Warmup 实现
+
 def get_lr_warmup(step, max_lr=3e-4, warmup_steps=2000):
     if step < warmup_steps:
         return max_lr * step / warmup_steps  # 从0线性增长
@@ -6366,12 +6605,15 @@ def get_lr_warmup(step, max_lr=3e-4, warmup_steps=2000):
         return max_lr  # warmup结束后保持最大lr
 
 # 模拟前10步的学习率
+
 for step in [1, 10, 100, 1000, 2000]:
     print(f"Step {step:5d}: lr = {get_lr_warmup(step):.6f}")
+
 # Step     1: lr = 0.000000  ← 几乎不动
 # Step    10: lr = 0.000002
 # Step  1000: lr = 0.000150
 # Step  2000: lr = 0.000300  ← warmup结束
+
 ```
 
 ---
@@ -6389,16 +6631,19 @@ def get_lr_cosine(step, max_lr=3e-4, warmup_steps=2000, total_steps=100000):
     if step < warmup_steps:
         return max_lr * step / warmup_steps          # warmup
     progress = (step - warmup_steps) / (total_steps - warmup_steps)
-    return max_lr * 0.5 * (1 + math.cos(math.pi * progress))  # 余弦衰减
+    return max_lr * 0.5 *(1 + math.cos(math.pi * progress))  # 余弦衰减
 
 # 画出完整的学习率曲线
+
 for step in [0, 2000, 25000, 50000, 75000, 100000]:
     lr = get_lr_cosine(step)
     print(f"Step {step:6d}: lr = {lr:.2e}")
+
 # Step      0: lr = 0.00e+00   ← warmup开始
 # Step   2000: lr = 3.00e-04   ← warmup峰值
 # Step  50000: lr = 1.50e-04   ← 衰减到一半
 # Step 100000: lr = 0.00e+00   ← 训练结束, 几乎不动
+
 ```
 
 ---
@@ -6431,11 +6676,11 @@ for step in [0, 2000, 25000, 50000, 75000, 100000]:
 
 ---
 
-# 第 33 课：Adam 优化器 —— 为什么没人用纯 SGD 训 Transformer？
+# 第 33 课：Adam 优化器 —— 为什么没人用纯 SGD 训 Transformer
 
 ---
 
-## 1. SGD 的困境：每个参数该迈多大步？
+## 1. SGD 的困境：每个参数该迈多大步
 
 第 18 课讲了梯度下降：`W = W - η∇W`。第 32 课讲了学习率 η 怎么选。但这两课都隐含了一个假设：**所有参数共享同一个 η**。
 
@@ -6466,6 +6711,7 @@ Adam 维护两组统计量——称为一阶矩和二阶矩，但对 LLM 训练�
 import torch
 
 # 模拟 Adam 的核心逻辑 (简化版, 不是完整实现)
+
 w = torch.tensor(0.0, requires_grad=True)
 m = 0.0      # 一阶矩 (动量)
 v = 0.0      # 二阶矩 (梯度平方的滑动平均)
@@ -6475,17 +6721,22 @@ lr = 1e-3
 eps = 1e-8
 
 for step in range(1, 101):
-    loss = (w - 3.0) ** 2   # 模拟二次函数 Loss
+    loss = (w - 3.0)** 2   # 模拟二次函数 Loss
     loss.backward()
     grad = w.grad
 
     with torch.no_grad():
+
         # 更新一阶矩: 指数滑动平均 (EMA) — 越近的梯度权重越大
-        m = beta1 * m + (1 - beta1) * grad
+
+        m = beta1 * m + (1 - beta1)* grad
+
         # 更新二阶矩: 梯度平方的 EMA — 衡量"波动幅度"
-        v = beta2 * v + (1 - beta2) * (grad ** 2)
+
+        v = beta2 * v + (1 - beta2)*(grad ** 2)
 
         # Adam 的更新公式 (简化: 省略 bias correction)
+
         w -= lr * m / (torch.sqrt(v) + eps)
         w.grad.zero_()
 
@@ -6495,7 +6746,7 @@ for step in range(1, 101):
 
 ---
 
-## 3. 为什么 Adam 在 Transformer 上远优于 SGD？
+## 3. 为什么 Adam 在 Transformer 上远优于 SGD
 
 三个原因：
 
@@ -6543,7 +6794,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.9, 0.999))
 
 ---
 
-## 1. 为什么精度是个"卡脖子"问题？
+## 1. 为什么精度是个"卡脖子"问题
 
 第 30 课讲了预训练要数万亿步。第 31 课讲了 GPU 显存有限。这两个问题撞在一起，产生了一个直接矛盾：**参数太多，显存放不下。**
 
@@ -6564,10 +6815,12 @@ x = torch.tensor(0.123456789)
 
 for dtype, name in [(torch.float32, "FP32"), (torch.float16, "FP16"), (torch.bfloat16, "BF16")]:
     x_cast = x.to(dtype)
-    print(f"{name}: {x_cast.item():.10f} (显存: {x_cast.numel() * x_cast.element_size()} bytes)")
+    print(f"{name}: {x_cast.item():.10f} (显存: {x_cast.numel()* x_cast.element_size()} bytes)")
+
 # FP32: 0.1234567910 (4 bytes) ← 最精确
 # FP16: 0.1234567910 (2 bytes) ← 精度接近FP32, 但范围小
 # BF16: 0.1230468750 (2 bytes) ← 范围同FP32, 但精度差
+
 ```
 
 $$
@@ -6586,25 +6839,31 @@ $$
 
 ---
 
-## 3. 混合精度训练：怎么用 16 位干 32 位的活？
+## 3. 混合精度训练：怎么用 16 位干 32 位的活
 
 核心策略：**计算用低精度（快），存储用高精度（安全）。**
 
 ```python
+
 # 混合精度训练的伪代码
+
 model = model.to(torch.bfloat16)    # 模型参数用 BF16 (省显存)
 optimizer = AdamW(model.parameters())
 
 for batch in dataloader:
+
     # 前向传播: BF16 计算 (快)
+
     with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
         logits, loss = model(x, targets=y)
 
     # 反向传播: BF16 梯度
+
     loss.backward()
 
     # 关键! 优化器内部用 FP32 存储 m 和 v (第33课的二阶矩)
     # 防止累积误差把16位精度磨没了
+
     optimizer.step()
     optimizer.zero_grad()
 ```
@@ -6650,7 +6909,7 @@ for batch in dataloader:
 
 ---
 
-# 第 35 课：GPU 训练原理 —— 为什么没有 GPU 就没有 GPT？
+# 第 35 课：GPU 训练原理 —— 为什么没有 GPU 就没有 GPT
 
 ---
 
@@ -6687,12 +6946,14 @@ A = torch.randn(N, N)
 B = torch.randn(N, N)
 
 # CPU
+
 t0 = time.time()
 C_cpu = A @ B
 torch.cuda.synchronize() if torch.cuda.is_available() else None
 print(f"CPU: {time.time() - t0:.2f}s")
 
 # GPU (如果有)
+
 if torch.cuda.is_available():
     A_gpu = A.cuda()
     B_gpu = B.cuda()
@@ -6700,7 +6961,9 @@ if torch.cuda.is_available():
     C_gpu = A_gpu @ B_gpu
     torch.cuda.synchronize()
     print(f"GPU: {time.time() - t0:.2f}s")
+
 # 典型结果: CPU ~2s, GPU ~0.02s → 100倍差距
+
 ```
 
 ---
@@ -6757,11 +7020,11 @@ SRAM (片上缓存): 20MB, 极快 (≈19TB/s 带宽)
 
 **题 2：** 把 4096×4096 矩阵切成 1024×1024 个 4×4 小块。Tensor Core 同时处理所有独立的小块——"分块"是矩阵乘法的标准并行策略（tiling）。FlashAttention（第 37 课）用的也是同样的分块思想，只是针对 Attention 的特定模式做了优化。
 
-**题 3：** (a) 梯度累积（第 31 课）—减小 micro batch size，减少激活值显存。(b) 混合精度（第 34 课）—用 BF16 替代 FP32，权重显存减半。(c) 模型并行/ZeRO（第 36 课）—把模型拆分到多张 GPU 上。三种方案分别针对：前向激活值、权重存储、单卡容量上限。
+**题 3：**(a) 梯度累积（第 31 课）—减小 micro batch size，减少激活值显存。(b) 混合精度（第 34 课）—用 BF16 替代 FP32，权重显存减半。(c) 模型并行/ZeRO（第 36 课）—把模型拆分到多张 GPU 上。三种方案分别针对：前向激活值、权重存储、单卡容量上限。
 
 ---
 
-# 第 36 课：分布式训练 —— 一个 GPU 装不下 GPT 怎么办？
+# 第 36 课：分布式训练 —— 一个 GPU 装不下 GPT 怎么办
 
 ---
 
@@ -6819,10 +7082,12 @@ ZeRO 有三个级别：ZeRO-1（只分片优化器状态）→ ZeRO-2（分片�
 GPT-3 175B 的训练配置（大约是 10,000 张 V100 GPU 训练数月的规模）：
 
 ```text
+
 - 数据并行: 复制多份模型，处理不同数据
 - 模型并行: 每层内部切分 Attention Head 到不同 GPU
 - 流水线并行: 不同层分到不同 GPU
 - ZeRO: 优化器状态分片存储
+
 → 四者组合使用，没有人只用一种
 ```
 
@@ -6856,7 +7121,7 @@ GPT-3 175B 的训练配置（大约是 10,000 张 V100 GPU 训练数月的规模
 
 ---
 
-# 第 37 课：推理优化 —— 训练完了，怎么让它跑得快？
+# 第 37 课：推理优化 —— 训练完了，怎么让它跑得快
 
 ---
 
@@ -6870,15 +7135,17 @@ GPT-3 175B 的训练配置（大约是 10,000 张 V100 GPU 训练数月的规模
 
 ---
 
-## 2. KV Cache：为什么不能每步重新算一次 Attention？
+## 2. KV Cache：为什么不能每步重新算一次 Attention
 
 生成一个 token 时，GPT 需要看之前所有的 token。如果没有 KV Cache：
 
 ```python
+
 # ❌ 没有 KV Cache: 每步重新计算所有 token 的 K,V
 # 第1步: 计算 [tok1] 的 KV
 # 第2步: 计算 [tok1, tok2] 的 KV ← tok1 又算了一遍
 # 第N步: 计算 [tok1, ..., tokN] 的 KV ← tok1 算了 N 遍!
+
 ```
 
 有 KV Cache 后，过去 token 的 K,V 被保存，新 token 只需算自己的：
@@ -6888,7 +7155,7 @@ import torch
 
 class KVCacheAttention:
     """带 KV Cache 的 Self-Attention —— 推理时的性能关键"""
-    def __init__(self):
+    def **init**(self):
         self.k_cache = None   # 缓存的 Key
         self.v_cache = None   # 缓存的 Value
 
@@ -6897,7 +7164,9 @@ class KVCacheAttention:
         q_new: (batch, 1, d_head) —— 当前新 token 的 Query
         k_new, v_new: 同上 —— 当前新 token 的 Key 和 Value
         """
+
         # 拼接缓存: 过去所有的 K,V + 当前新的 K,V
+
         if self.k_cache is not None:
             k = torch.cat([self.k_cache, k_new], dim=1)  # (B, past+T, D)
             v = torch.cat([self.v_cache, v_new], dim=1)
@@ -6905,10 +7174,12 @@ class KVCacheAttention:
             k, v = k_new, v_new
 
         # 更新缓存
+
         self.k_cache = k
         self.v_cache = v
 
         # 正常的 Scaled Dot-Product Attention
+
         d_k = k.size(-1)
         scores = q_new @ k.transpose(-2, -1) / (d_k ** 0.5)
         attn = torch.softmax(scores, dim=-1)
@@ -6920,7 +7191,7 @@ class KVCacheAttention:
         self.v_cache = None
 ```
 
-### KV Cache 节省了多少计算？
+## KV Cache 节省了多少计算
 
 生成 N 个 token，没有 KV Cache 需要 O(N²) 次 K,V 计算（每个新 token 都要重算所有历史）。有 KV Cache 只需 O(N) 次（每个 token 只算一次）。
 
@@ -6970,7 +7241,7 @@ $$
 
 **题 2：** 可以复用。第 1 轮的所有 token（用户问题+助手回答）都是"历史"，第 2 轮的 token 不应该改变第 1 轮任何位置的 K 和 V——Causal Mask 保证了这个不变性。`reset()` 只在新对话开始时调用。
 
-**题 3：** (a) Sliding Window Attention——只保留最近 N 个 token 的 KV Cache（如 Mistral 的 4096 滑动窗口）。(b) KV Cache 量化——把 K 和 V 从 FP16 压缩到 INT8 甚至 INT4。(c) GQA（第 42 课）——多个 Q 共享一组 K/V，大幅减少缓存量。
+**题 3：**(a) Sliding Window Attention——只保留最近 N 个 token 的 KV Cache（如 Mistral 的 4096 滑动窗口）。(b) KV Cache 量化——把 K 和 V 从 FP16 压缩到 INT8 甚至 INT4。(c) GQA（第 42 课）——多个 Q 共享一组 K/V，大幅减少缓存量。
 
 ---
 
@@ -7032,11 +7303,12 @@ class LLaMABlock(nn.Module):
     LLaMA 的一个 Transformer Block:
     RMSNorm → Attention(RoPE) → Residual → RMSNorm → SwiGLU FFN → Residual
     """
-    def __init__(self, d_model=4096, n_heads=32, d_ff=11008, max_seq_len=2048):
-        super().__init__()
+    def **init**(self, d_model=4096, n_heads=32, d_ff=11008, max_seq_len=2048):
+        super().**init**()
         self.head_dim = d_model // n_heads
 
         # --- Attention 部分 ---
+
         self.attention_norm = RMSNorm(d_model)     # Pre-Norm (第40课)
         self.wq = nn.Linear(d_model, d_model, bias=False)
         self.wk = nn.Linear(d_model, d_model, bias=False)
@@ -7044,9 +7316,11 @@ class LLaMABlock(nn.Module):
         self.wo = nn.Linear(d_model, d_model, bias=False)
 
         # RoPE 角度预计算 (第39课)
+
         self.rotary_emb = RotaryEmbedding(self.head_dim, max_seq_len)
 
         # --- FFN 部分 ---
+
         self.ffn_norm = RMSNorm(d_model)           # Pre-Norm
         self.gate_proj = nn.Linear(d_model, d_ff, bias=False)  # SwiGLU 的门
         self.up_proj   = nn.Linear(d_model, d_ff, bias=False)  # SwiGLU 的值
@@ -7056,6 +7330,7 @@ class LLaMABlock(nn.Module):
         B, T, C = x.shape
 
         # --- 子层 1: Attention ---
+
         residual = x
         x_norm = self.attention_norm(x)             # Pre-Norm (第15/40课)
 
@@ -7064,12 +7339,14 @@ class LLaMABlock(nn.Module):
         v = self.wv(x_norm).view(B, T, self.n_heads, self.head_dim)
 
         # RoPE: 旋转 Q 和 K (第11课升级版/第39课)
+
         q, k = self.rotary_emb(q, k, start_pos)
 
         # 标准 Scaled Dot-Product Attention + Causal Mask (第10/24课)
+
         scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
         if T > 1:  # 训练时需要 causal mask
-            mask = torch.triu(torch.ones(T, T) * float('-inf'), diagonal=1)
+            mask = torch.triu(torch.ones(T, T)* float('-inf'), diagonal=1)
             scores = scores + mask
         attn = F.softmax(scores, dim=-1)
         attn_out = torch.matmul(attn, v)
@@ -7079,6 +7356,7 @@ class LLaMABlock(nn.Module):
         x = residual + attn_out   # Residual (第15课)
 
         # --- 子层 2: SwiGLU FFN ---
+
         residual = x
         x_norm = self.ffn_norm(x)
 
@@ -7094,7 +7372,7 @@ class LLaMABlock(nn.Module):
 
 ---
 
-## 4. 为什么 LLaMA 成为开源标准？
+## 4. 为什么 LLaMA 成为开源标准
 
 2023 年 LLaMA 发布后，几乎所有开源模型（Mistral、Qwen、Yi、DeepSeek 等）都采用了这套模板。原因：
 
@@ -7119,7 +7397,7 @@ class LLaMABlock(nn.Module):
 
 ### 答案
 
-**题 1：** (a) Norm 位置：从"子层后"变为"子层前"（Pre-Norm）。(b) Norm 类型：LayerNorm→RMSNorm。(c) FFN 激活：ReLU→SiLU+gating(SwiGLU)，矩阵从 2 个变 3 个。(d) 位置编码：正弦绝对值→RoPE 相对旋转。
+**题 1：**(a) Norm 位置：从"子层后"变为"子层前"（Pre-Norm）。(b) Norm 类型：LayerNorm→RMSNorm。(c) FFN 激活：ReLU→SiLU+gating(SwiGLU)，矩阵从 2 个变 3 个。(d) 位置编码：正弦绝对值→RoPE 相对旋转。
 
 **题 2：** Pre-Norm 的残差路径：`x + F(Norm(x))`，梯度传播时 `dx/dL` 中有 `+1` 项（残差直通），Norm 不在直通路径上。Post-Norm：`Norm(x + F(x))`，残差之后经过 Norm，梯度被 Norm 的 `1/σ` 因子压制。96 层累积下来，Post-Norm 的梯度信号几乎消失。
 
@@ -7181,28 +7459,37 @@ def apply_rotary_pos_emb(q, k, cos, sin):
     q, k: (batch, n_heads, seq_len, d_head)
     cos, sin: (seq_len, d_head) 旋转角度的 cos 和 sin
     """
-    # 核心公式: x_rotated = x * cos(θ) + rotate_half(x) * sin(θ)
+
+    # 核心公式: x_rotated = x * cos(θ) + rotate_half(x)* sin(θ)
     # 相当于把每对相邻维度看作 (x, y), 旋转 θ 度:
     # (x', y') = (x*cosθ - y*sinθ,  x*sinθ + y*cosθ)
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
+
+    q_embed = (q * cos) + (rotate_half(q)* sin)
+    k_embed = (k * cos) + (rotate_half(k)* sin)
     return q_embed, k_embed
 
 # --- 生成旋转角度 ---
+
 def get_rotary_angles(seq_len, d_head, base=10000.0):
     """生成每个位置每个维度的旋转角度"""
+
     # 频率: 不同维度旋转快慢不同
-    freqs = 1.0 / (base ** (torch.arange(0, d_head, 2).float() / d_head))
+
+    freqs = 1.0 / (base **(torch.arange(0, d_head, 2).float() / d_head))
     positions = torch.arange(seq_len).float()
 
     # 每个位置 × 每个频率 = 旋转角度
+
     angles = torch.outer(positions, freqs)  # (seq_len, d_head/2)
+
     # 每个角度重复两次(给每对相邻维度)
+
     angles = torch.cat([angles, angles], dim=-1)  # (seq_len, d_head)
 
     return angles.cos(), angles.sin()
 
 # --- 测试 ---
+
 seq_len, d_head = 4, 8
 cos, sin = get_rotary_angles(seq_len, d_head)
 
@@ -7213,6 +7500,7 @@ print(f"旋转后 Q 形状: {q_rot.shape}")  # (1, 1, 4, 8)
 
 # RoPE 的关键性质:
 # Attention(Q_i, K_j) 自动包含 (pos_i - pos_j) 的 cos 项 = 相对位置信息
+
 ```
 
 RoPE 相比正弦编码的最大优势：它编码的是**相对位置**而不是绝对位置。这意味着模型更容易推广到训练时没见过的序列长度——这是 LLaMA 能做到长上下文的关键之一。
@@ -7241,7 +7529,7 @@ RoPE 相比正弦编码的最大优势：它编码的是**相对位置**而不�
 
 ---
 
-# 第 40 课：RMSNorm —— 为什么不用 LayerNorm？
+# 第 40 课：RMSNorm —— 为什么不用 LayerNorm
 
 ---
 
@@ -7270,35 +7558,42 @@ import torch
 import torch.nn as nn
 
 # --- LayerNorm (原始 Transformer 用的) ---
-# y = (x - mean) / sqrt(var + eps) * gamma + beta
+# y = (x - mean) / sqrt(var + eps)* gamma + beta
+
 class LayerNorm(nn.Module):
-    def __init__(self, d_model, eps=1e-5):
-        super().__init__()
+    def **init**(self, d_model, eps=1e-5):
+        super().**init**()
         self.gamma = nn.Parameter(torch.ones(d_model))   # 可学习的缩放
         self.beta  = nn.Parameter(torch.zeros(d_model))  # 可学习的偏移
         self.eps = eps
 
     def forward(self, x):
+
         # x: (batch, seq_len, d_model)
+
         mean = x.mean(dim=-1, keepdim=True)        # 均值(沿最后一维)
         var  = x.var(dim=-1, keepdim=True, unbiased=False)  # 方差
         x_norm = (x - mean) / torch.sqrt(var + self.eps)
         return self.gamma * x_norm + self.beta
 
 # --- RMSNorm (LLaMA / Qwen 用的) ---
-# y = x / RMS(x) * gamma   (去掉了 mean 和 beta)
+# y = x / RMS(x)* gamma   (去掉了 mean 和 beta)
+
 class RMSNorm(nn.Module):
-    def __init__(self, d_model, eps=1e-6):
-        super().__init__()
+    def **init**(self, d_model, eps=1e-6):
+        super().**init**()
         self.gamma = nn.Parameter(torch.ones(d_model))  # 只有 gamma, 没有 beta
         self.eps = eps
 
     def forward(self, x):
+
         # RMS = sqrt(mean(x^2))
+
         rms = torch.sqrt(torch.mean(x ** 2, dim=-1, keepdim=True) + self.eps)
         return x / rms * self.gamma
 
 # --- 对比测试 ---
+
 x = torch.randn(2, 10, 512)
 ln = LayerNorm(512)
 rms = RMSNorm(512)
@@ -7379,8 +7674,8 @@ import torch.nn as nn
 
 class GQAAttention(nn.Module):
     """GQA: 8组KV, 32个Q"""
-    def __init__(self, d_model=4096, n_heads=32, n_kv_heads=8):
-        super().__init__()
+    def **init**(self, d_model=4096, n_heads=32, n_kv_heads=8):
+        super().**init**()
         self.n_heads = n_heads
         self.n_kv_heads = n_kv_heads
         self.head_dim = d_model // n_heads
@@ -7398,18 +7693,21 @@ class GQAAttention(nn.Module):
         v = self.wv(x).view(B, T, self.n_kv_heads, self.head_dim)
 
         # 关键步骤: 把KV复制到每个组内的每个Q
+
         k = k.unsqueeze(2).expand(-1, -1, self.n_rep, -1, -1)
         k = k.reshape(B, T, self.n_heads, self.head_dim)
         v = v.unsqueeze(2).expand(-1, -1, self.n_rep, -1, -1)
         v = v.reshape(B, T, self.n_heads, self.head_dim)
 
         # 后面的Attention和MHA一样
+
         scores = (q @ k.transpose(-2, -1)) / (self.head_dim ** 0.5)
         attn = torch.softmax(scores, dim=-1)
         out = attn @ v
         return self.wo(out.view(B, T, C))
 
 # 验证参数量: wk和wv的形状是 (4096, 8×128) 而不是 (4096, 32×128)
+
 attn = GQAAttention()
 print(f"wk 参数: {sum(p.numel() for p in [attn.wk])/1e6:.1f}M")
 ```
@@ -7471,9 +7769,11 @@ import torch.nn.functional as F
 
 class MoELayer(nn.Module):
     """一个 MoE 层: Router + 多个 Expert FFN + Top-k 选择"""
-    def __init__(self, d_model, d_ff, num_experts=8, top_k=2):
-        super().__init__()
+    def **init**(self, d_model, d_ff, num_experts=8, top_k=2):
+        super().**init**()
+
         # 多个专家(每个专家是一个独立的 FFN)
+
         self.experts = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(d_model, d_ff),
@@ -7481,32 +7781,45 @@ class MoELayer(nn.Module):
                 nn.Linear(d_ff, d_model),
             ) for _ in range(num_experts)
         ])
+
         # Router: 输入 → 选择哪个专家
+
         self.router = nn.Linear(d_model, num_experts, bias=False)
         self.num_experts = num_experts
         self.top_k = top_k
 
     def forward(self, x):
+
         # x: (batch, seq_len, d_model)
+
         B, T, D = x.shape
 
         # 1. Router 打分: 每个 token 对每个专家的"适合度"
+
         router_logits = self.router(x)  # (B, T, num_experts)
 
         # 2. Top-k 选择: 只保留得分最高的 k 个专家
+
         top_k_logits, top_k_indices = router_logits.topk(self.top_k, dim=-1)
+
         # top_k_indices: (B, T, top_k)
 
         # 3. Softmax 归一化 → 每个选中的专家分到多少"权重"
+
         router_weights = F.softmax(top_k_logits, dim=-1)  # (B, T, top_k)
 
         # 4. 把 token 分发给选中的专家, 加权求和
+
         output = torch.zeros_like(x)
         for i, expert in enumerate(self.experts):
+
             # 找到所有选中专家 i 的 token
+
             mask = (top_k_indices == i).any(dim=-1)  # (B, T)
             if mask.any():
+
                 # 取出这些 token, 经过专家处理
+
                 expert_input = x[mask]                  # (num_tokens, D)
                 expert_output = expert(expert_input)    # (num_tokens, D)
                 output[mask] += expert_output           # 累加
@@ -7514,12 +7827,14 @@ class MoELayer(nn.Module):
         return output
 
 # --- 测试 ---
+
 moe_layer = MoELayer(d_model=512, d_ff=2048, num_experts=8, top_k=2)
 x = torch.randn(2, 10, 512)
 y = moe_layer(x)
 print(f"MoE 输出形状: {y.shape}")  # (2, 10, 512)
 
 # 计算参数: 8个专家, 每个 ≈ d_model*d_ff*2
+
 expert_params = 8 * 512 * 2048 * 2
 router_params = 512 * 8
 total = expert_params + router_params
@@ -7527,7 +7842,7 @@ print(f"MoE 总参数: {total/1e6:.0f}M")
 print(f"但每次只激活 top_k={2} 个专家 ≈ {total*2/8/1e6:.0f}M 的计算量")
 ```
 
-### MoE 为什么有效？
+## MoE 为什么有效
 
 传统 Dense 模型：所有参数对所有 token 都参与计算。MoE：每个 token 只激活少数专家。结果：参数量可以巨大（知识容量大），但计算量可控（推理不慢）。DeepSeek-V3 用 MoE 做到 671B 总参数，但每次推理仅激活约 37B。
 
@@ -7557,7 +7872,7 @@ print(f"但每次只激活 top_k={2} 个专家 ≈ {total*2/8/1e6:.0f}M 的计�
 
 ---
 
-# 第 44 课：长上下文技术 —— 怎么让 GPT 读完整本书？
+# 第 44 课：长上下文技术 —— 怎么让 GPT 读完整本书
 
 ---
 
@@ -7598,7 +7913,7 @@ LLaMA 3 的做法（三层组合）：
 
 ---
 
-# 第 45 课：现代 LLM 架构总结 —— 你手里现在有什么？
+# 第 45 课：现代 LLM 架构总结 —— 你手里现在有什么
 
 现代主流 LLM 的结构模板：
 
@@ -7676,6 +7991,7 @@ import math
 # ============================================================
 # 1. 配置类：所有超参数都在这里
 # ============================================================
+
 class MiniGPTConfig:
     vocab_size = 50257     # GPT-2 词表大小
     block_size = 256       # 最大上下文长度
@@ -7687,18 +8003,21 @@ class MiniGPTConfig:
 # ============================================================
 # 2. CausalSelfAttention：带因果遮罩的多头注意力
 # ============================================================
+
 class CausalSelfAttention(nn.Module):
-    def __init__(self, config):
-        super().__init__()
+    def **init**(self, config):
+        super().**init**()
         assert config.n_embd % config.n_head == 0
         self.n_head = config.n_head
         self.head_dim = config.n_embd // config.n_head
 
         # Q, K, V 合并到一个 Linear 里 (效率更高)
+
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
         self.c_proj = nn.Linear(config.n_embd, config.n_embd)
 
         # causal mask 缓存 (下三角矩阵)
+
         self.register_buffer(
             "bias",
             torch.tril(torch.ones(config.block_size, config.block_size))
@@ -7709,15 +8028,18 @@ class CausalSelfAttention(nn.Module):
         B, T, C = x.shape  # batch, seq_len, embed_dim
 
         # 计算 Q, K, V
+
         qkv = self.c_attn(x)  # (B, T, 3*C)
         q, k, v = qkv.split(C, dim=2)
 
         # reshape 成多头: (B, T, C) -> (B, n_head, T, head_dim)
+
         q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
         k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
 
         # Scaled Dot-Product Attention + Causal Mask
+
         att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
@@ -7730,9 +8052,10 @@ class CausalSelfAttention(nn.Module):
 # ============================================================
 # 3. MLP (Feed Forward)
 # ============================================================
+
 class MLP(nn.Module):
-    def __init__(self, config):
-        super().__init__()
+    def **init**(self, config):
+        super().**init**()
         self.c_fc   = nn.Linear(config.n_embd, 4 * config.n_embd)
         self.gelu   = nn.GELU()
         self.c_proj = nn.Linear(4 * config.n_embd, config.n_embd)
@@ -7743,9 +8066,10 @@ class MLP(nn.Module):
 # ============================================================
 # 4. Transformer Block
 # ============================================================
+
 class Block(nn.Module):
-    def __init__(self, config):
-        super().__init__()
+    def **init**(self, config):
+        super().**init**()
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.attn = CausalSelfAttention(config)
         self.ln_2 = nn.LayerNorm(config.n_embd)
@@ -7759,9 +8083,10 @@ class Block(nn.Module):
 # ============================================================
 # 5. 完整 GPT 模型
 # ============================================================
+
 class MiniGPT(nn.Module):
-    def __init__(self, config):
-        super().__init__()
+    def **init**(self, config):
+        super().**init**()
         self.config = config
         self.transformer = nn.ModuleDict(dict(
             wte = nn.Embedding(config.vocab_size, config.n_embd),  # token embedding
@@ -7773,6 +8098,7 @@ class MiniGPT(nn.Module):
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
         # Weight tying: Embedding 和 LM Head 共享权重
+
         self.transformer.wte.weight = self.lm_head.weight
 
     def forward(self, idx, targets=None):
@@ -7814,17 +8140,20 @@ class MiniGPT(nn.Module):
 # ============================================================
 # 6. 测试：创建模型 + 前向传播
 # ============================================================
+
 config = MiniGPTConfig()
 model = MiniGPT(config)
 n_params = sum(p.numel() for p in model.parameters())
 print(f"MiniGPT 参数量: {n_params/1e6:.1f}M")  # ≈ 10M
 
 # 模拟输入
+
 x = torch.randint(0, config.vocab_size, (2, 64))  # 2句, 每句64个token
 logits, loss = model(x, targets=x)
 print(f"输入形状: {x.shape}, Loss: {loss.item():.4f}")
 
 # 生成文本
+
 start = torch.randint(0, config.vocab_size, (1, 1))
 generated = model.generate(start, max_new_tokens=20)
 print(f"生成的 token 序列: {generated.tolist()}")
@@ -7887,13 +8216,16 @@ Tokenizer 流程：文本 → 统计字符/词频 → BPE 合并 → 生成词�
 import sentencepiece as spm
 
 # 第1步: 准备训练文本 (你的中文语料)
+
 with open("chinese_corpus.txt", "w") as f:
     f.write("人工智能正在改变世界。\n")
     f.write("深度学习是机器学习的一个分支。\n")
     f.write("Transformer 架构被广泛用于自然语言处理。\n")
+
     # ... 实际训练需要至少几十MB的中文文本
 
 # 第2步: 训练 SentencePiece BPE 模型
+
 spm.SentencePieceTrainer.train(
     input="chinese_corpus.txt",
     model_prefix="freesllm_tokenizer",
@@ -7904,10 +8236,12 @@ spm.SentencePieceTrainer.train(
 )
 
 # 第3步: 加载并使用
+
 sp = spm.SentencePieceProcessor()
 sp.load("freesllm_tokenizer.model")
 
 # 测试
+
 text = "我喜欢学习人工智能"
 tokens = sp.encode_as_pieces(text)
 ids = sp.encode_as_ids(text)
@@ -7916,6 +8250,7 @@ print(f"Token 切分: {tokens}")   # ['▁我', '喜欢', '学习', '人工智�
 print(f"Token IDs: {ids}")
 
 # 解码回去
+
 decoded = sp.decode(ids)
 print(f"解码: {decoded}")        # 我喜欢学习人工智能
 ```
@@ -7976,18 +8311,22 @@ import numpy as np
 
 class TextDataset(Dataset):
     """把 token 化后的文本切成 context_length 长的训练样本"""
-    def __init__(self, file_path, tokenizer, context_length=256):
+    def **init**(self, file_path, tokenizer, context_length=256):
+
         # 读取并 tokenize
+
         with open(file_path, "r") as f:
             text = f.read()
         self.tokens = tokenizer.encode(text)     # list of ints
         self.context_length = context_length
 
-    def __len__(self):
+    def **len**(self):
+
         # 每 context_length 个 token 产生一个样本
+
         return len(self.tokens) // self.context_length
 
-    def __getitem__(self, idx):
+    def **getitem**(self, idx):
         start = idx * self.context_length
         chunk = self.tokens[start : start + self.context_length + 1]
         x = torch.tensor(chunk[:-1], dtype=torch.long)  # 输入: 前n个
@@ -7997,6 +8336,7 @@ class TextDataset(Dataset):
 # --- 使用 ---
 # dataset = TextDataset("my_data.txt", tokenizer, context_length=256)
 # dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
 ```
 
 ## 4. 训练/验证 分割
@@ -8010,7 +8350,7 @@ def train_val_split(data_dir, val_ratio=0.05):
     """5% 的数据做验证集"""
     files = glob.glob(f"{data_dir}/*.txt")
     random.shuffle(files)
-    split_idx = int(len(files) * (1 - val_ratio))
+    split_idx = int(len(files)*(1 - val_ratio))
     train_files = files[:split_idx]
     val_files = files[split_idx:]
     return train_files, val_files
@@ -8049,6 +8389,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import time
 
 # --- 超参数 (Hyperparameters) ---
+
 batch_size = 32
 learning_rate = 1e-3
 num_epochs = 10
@@ -8056,6 +8397,7 @@ eval_every = 100   # 每100步评估一次
 
 # --- 模拟数据 ---
 # 假装有1000个样本，每个样本是长度20的token序列
+
 vocab_size = 1000
 num_samples = 1000
 seq_len = 20
@@ -8066,10 +8408,12 @@ dataset = TensorDataset(X, Y)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 # --- 模型(用前面定义的简化版) ---
+
 model = GPTWithOutput(vocab_size=vocab_size, d_model=128, n_heads=4, n_layers=4)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # --- 训练循环 ---
+
 model.train()
 global_step = 0
 total_loss = 0.0
@@ -8077,19 +8421,24 @@ start_time = time.time()
 
 for epoch in range(num_epochs):
     for batch_idx, (x_batch, y_batch) in enumerate(dataloader):
+
         # 1. 前向传播
+
         logits, loss = model(x_batch, targets=y_batch)
 
         # 2. 反向传播
+
         optimizer.zero_grad()  # 清零上一步的梯度
         loss.backward()        # 计算所有参数的梯度
         optimizer.step()       # 用梯度更新参数
 
         # 3. 记录
+
         total_loss += loss.item()
         global_step += 1
 
         # 4. 定期打印
+
         if global_step % eval_every == 0:
             avg_loss = total_loss / eval_every
             elapsed = time.time() - start_time
@@ -8102,11 +8451,12 @@ for epoch in range(num_epochs):
 print(f"\n训练完成! 总步数: {global_step}")
 
 # --- 保存模型 ---
+
 torch.save(model.state_dict(), "freesllm_v0.1.pt")
 print("模型已保存到 freesllm_v0.1.pt")
 ```
 
-### 训练循环的五个步骤详解
+## 训练循环的五个步骤详解
 
 $$
 \begin{aligned}
@@ -8118,7 +8468,7 @@ $$
 \end{aligned}
 $$
 
-### 为什么需要 `optimizer.zero_grad()`？
+### 为什么需要 `optimizer.zero_grad()`
 
 PyTorch 的梯度默认是**累加**的（不自动清零）。如果你不清零，第 2 步的梯度会和第 1 步的梯度叠加在一起——这在分布式训练中有用（累积多个 micro-batch 的梯度），但在普通训练中会导致参数更新方向错误。
 
@@ -8140,7 +8490,7 @@ PyTorch 的梯度默认是**累加**的（不自动清零）。如果你不清�
 
 ---
 
-# 第 50 课：模型评估 —— 你的模型到底行不行？
+# 第 50 课：模型评估 —— 你的模型到底行不行
 
 ---
 
@@ -8171,7 +8521,7 @@ def evaluate_ppl(model, dataloader):
 
     for x, y in dataloader:
         logits, loss = model(x, targets=y)
-        total_loss += loss.item() * y.numel()  # 累加总loss
+        total_loss += loss.item()* y.numel()  # 累加总loss
         total_tokens += y.numel()
 
     avg_loss = total_loss / total_tokens
@@ -8185,6 +8535,7 @@ def evaluate_ppl(model, dataloader):
 # PPL=10-20 → 不错的语言模型
 # PPL=5-10  → 很强的模型 (GPT-2级别)
 # PPL=2-5   → 顶级模型 (GPT-4级别估计)
+
 ```
 
 ## 3. Benchmark：LLM 的"期末考试"
@@ -8231,10 +8582,13 @@ SFT 要解决的问题：**教会模型"当人类问问题时，你应该给出�
 ## 2. SFT 数据格式
 
 ```python
+
 # 预训练数据: 互联网文本流
+
 "今天天气真好，我决定去公园散步。公园里有很多人..."
 
 # SFT 数据: 对话格式
+
 sft_data = [
     {
         "messages": [
@@ -8253,6 +8607,7 @@ sft_data = [
 # 训练时会格式化成:
 # "<|user|>\n什么是人工智能？\n<|assistant|>\n人工智能是..."
 # 模型看到 <|assistant|> 后开始预测, 和预训练的 Next Token Prediction 完全一样
+
 ```
 
 ## 3. SFT 和预训练的训练差异
@@ -8312,8 +8667,10 @@ from sentence_transformers import SentenceTransformer
 
 class SimpleRAG:
     """极简 RAG: Embedding + 向量检索 + LLM 生成"""
-    def __init__(self, embed_model_name="all-MiniLM-L6-v2"):
+    def **init**(self, embed_model_name="all-MiniLM-L6-v2"):
+
         # 嵌入模型(把文字变成向量)
+
         self.embed_model = SentenceTransformer(embed_model_name)
         self.documents = []      # 原始文档
         self.embeddings = []     # 对应的向量
@@ -8328,7 +8685,9 @@ class SimpleRAG:
     def search(self, query, top_k=3):
         """根据问题搜索最相关的文档"""
         query_emb = self.embed_model.encode([query], normalize_embeddings=True)[0]
+
         # 余弦相似度(embedding已归一化, 点积=余弦)
+
         scores = self.embeddings @ query_emb
         top_indices = np.argsort(scores)[-top_k:][::-1]
         return [(self.documents[i], scores[i]) for i in top_indices]
@@ -8336,7 +8695,9 @@ class SimpleRAG:
     def ask(self, query, llm_generate_fn, top_k=3):
         """RAG 完整流程: 检索 + 增强 + 生成"""
         retrieved = self.search(query, top_k)
+
         # 构建 prompt: 把检索到的文档拼进去
+
         context = "\n".join([f"- {doc}" for doc, _ in retrieved])
         prompt = f"""参考以下资料回答问题:
 {context}
@@ -8346,9 +8707,11 @@ class SimpleRAG:
         return llm_generate_fn(prompt)
 
 # --- 使用示例 ---
+
 rag = SimpleRAG()
 
 # 添加知识库
+
 rag.add_documents([
     "Python 是一种解释型编程语言, 由 Guido van Rossum 于 1991 年创建。",
     "Transformer 架构由 Vaswani 等人在 2017 年提出, 是 GPT 的基础。",
@@ -8357,13 +8720,16 @@ rag.add_documents([
 ])
 
 # 搜索测试
+
 results = rag.search("谁发明了 Python?")
 print("检索结果:")
 for doc, score in results:
     print(f"  [{score:.3f}] {doc}")
+
 # [0.xxx] Python 是一种解释型编程语言...
 
 # 完整问答(这里用模拟的生成函数)
+
 def fake_llm(prompt):
     return f"[基于检索结果生成的回答]"
 
@@ -8371,7 +8737,7 @@ answer = rag.ask("谁发明了 Python?", fake_llm)
 print(f"\nRAG 回答:\n{answer}")
 ```
 
-### RAG 的实际价值
+## RAG 的实际价值
 
 模型的知识截止于训练数据的时间点。有了 RAG，你不重新训练模型就能让它知道"今天发生了什么"、"你的个人笔记里写了什么"、"最新的 API 文档改了哪里"。
 
@@ -8392,13 +8758,16 @@ FreesLLM 的未来架构里 RAG 是一个必备模块——让 LLM 能够查询�
 ## 2. 最小部署：FastAPI + MiniGPT
 
 ```python
+
 # server.py —— FreesLLM 的最简部署
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 import torch
 import uvicorn
 
 # 加载你训练好的模型 (第46课的MiniGPT)
+
 app = FastAPI(title="FreesLLM API")
 model = MiniGPT(config)
 model.load_state_dict(torch.load("freesllm_v0.1.pt"))
@@ -8414,11 +8783,14 @@ class ChatResponse(BaseModel):
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
+
     # Tokenize (第47课训练的tokenizer)
+
     input_ids = tokenizer.encode(req.prompt)
     input_tensor = torch.tensor([input_ids])
 
     # 生成 (第46课的generate, 第25课的自回归)
+
     output_ids = model.generate(
         input_tensor,
         max_new_tokens=req.max_tokens,
@@ -8428,7 +8800,8 @@ def chat(req: ChatRequest):
     return ChatResponse(response=response_text)
 
 # 启动: python server.py → http://localhost:8000/chat
-if __name__ == "__main__":
+
+if **name** == "**main**":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
@@ -8480,7 +8853,7 @@ import re
 
 class SimpleAgent:
     """极简 ReAct Agent: Think → Act → Observe → 循环"""
-    def __init__(self, tools, llm_call):
+    def **init**(self, tools, llm_call):
         """
         tools: dict, 如 {"calculator": lambda expr: eval(expr)}
         llm_call: function, 输入prompt返回文本
@@ -8492,12 +8865,15 @@ class SimpleAgent:
         history = [f"任务: {task}"]
 
         for step in range(max_steps):
+
             # 1. 让 LLM 决定下一步
+
             prompt = self._build_prompt(history)
             response = self.llm(prompt)
             history.append(response)
 
             # 2. 解析 Action
+
             action_match = re.search(r"Action:\s*(\w+)\((.*?)\)", response)
             if action_match:
                 tool_name = action_match.group(1)
@@ -8505,6 +8881,7 @@ class SimpleAgent:
                 print(f"  [Step {step+1}] 调用工具: {tool_name}({tool_input})")
 
                 # 3. 执行工具
+
                 if tool_name in self.tools:
                     result = self.tools[tool_name](tool_input)
                     history.append(f"Observation: {result}")
@@ -8512,6 +8889,7 @@ class SimpleAgent:
                     history.append(f"Observation: 工具 {tool_name} 不存在")
 
             # 4. 检查是否完成
+
             if "Final Answer:" in response:
                 return response.split("Final Answer:")[-1].strip()
 
@@ -8532,6 +8910,7 @@ Final Answer: 最终答案
         return prompt
 
 # --- 使用示例 ---
+
 def fake_llm(prompt):
     """模拟 LLM 响应 (实际使用时替换为真正的模型调用)"""
     if "Final Answer" not in prompt:
@@ -8692,7 +9071,7 @@ Output Linear → Softmax → 预测下一个 token
 
 ---
 
-## 1. 这篇论文改变了什么？
+## 1. 这篇论文改变了什么
 
 2017 年之前，NLP 的主流是 RNN（LSTM/GRU）。你有一个 100 词的句子，RNN 必须从第 1 个词读到第 100 个——串行，不能并行。而且第 1 个词的信息经过 100 步传递后基本消失（梯度消失）。
 
@@ -8706,7 +9085,7 @@ Transformer 的做法：`Attention(Q,K,V)`——所有 token 同时扔进去，�
 
 回想第 10 课讲的 Attention 公式和第 8-9 课的 Q/K/V 分解。论文本身只有 15 页——核心就是那个公式。但公式背后的工程直觉——"把 RNN 扔掉，只保留 Attention，同时加上位置编码补偿顺序信息"——需要胆量和勇气。
 
-## 3. 论文的结构：怎么读？
+## 3. 论文的结构：怎么读
 
 论文分 6 个部分。建议的阅读顺序：
 
@@ -8718,7 +9097,7 @@ Transformer 的做法：`Attention(Q,K,V)`——所有 token 同时扔进去，�
 | Section 4: Why Self-Attention | 和 RNN/CNN 的复杂度和路径长度对比 | 本课第 4 章 |
 | Section 5: Training | 优化器和正则化细节 | 第 32/33 课 |
 
-## 4. 论文中最被低估的一段：为什么选 Self-Attention？
+## 4. 论文中最被低估的一段：为什么选 Self-Attention
 
 论文 Table 1 给出了三种机制的比较——每层的计算复杂度、串行操作数、最大路径长度。Self-Attention 在三个指标上全面碾压 RNN：
 
@@ -8746,7 +9125,7 @@ Transformer 的做法：`Attention(Q,K,V)`——所有 token 同时扔进去，�
 
 ---
 
-# 第 57 课：Attention 公式深度理解 —— Q/K/V 为什么这样设计？
+# 第 57 课：Attention 公式深度理解 —— Q/K/V 为什么这样设计
 
 ---
 
@@ -8795,25 +9174,31 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     d_k = Q.shape[-1]
 
     # Step 1: QK^T
+
     scores = Q @ K.transpose(0, 1, 3, 2)  # (B, H, T, T)
 
     # Step 2: 除以 √d_k
+
     scores = scores / np.sqrt(d_k)
 
     # Step 3: Mask (可选)
+
     if mask is not None:
         scores = scores + mask  # mask 中 -inf 位置会在 softmax 后变为 0
 
     # Step 4: Softmax (沿最后一维)
+
     scores_max = scores.max(axis=-1, keepdims=True)
     scores_exp = np.exp(scores - scores_max)  # 减去 max 防溢出
     attn_weights = scores_exp / scores_exp.sum(axis=-1, keepdims=True)
 
     # Step 5: × V
+
     output = attn_weights @ V
     return output, attn_weights
 
 # 测试
+
 Q = np.random.randn(1, 2, 4, 8)   # batch=1, 2头, 4token, d_k=8
 K = np.random.randn(1, 2, 4, 8)
 V = np.random.randn(1, 2, 4, 8)
@@ -8844,7 +9229,7 @@ print(f"权重行之和: {weights.sum(axis=-1)}")  # [1. 1. 1. 1.] ✅
 
 ---
 
-# 第 58 课：Multi-Head Attention 深入 —— 为什么一个头不够？
+# 第 58 课：Multi-Head Attention 深入 —— 为什么一个头不够
 
 ---
 
@@ -8866,7 +9251,7 @@ $$
 
 论文设定 d_model=512, h=8 → `d_k = 512/8 = 64`。注意到**总计算量和单头 512 维 Attention 相同**（8×64² = 512²）——Multi-Head 的妙处是：不增加计算量，但增加了"观察角度"。
 
-## 3. 不同 Head 实际学到了什么？
+## 3. 不同 Head 实际学到了什么
 
 研究发现（不是设计出来的，是训练后分析出来的），不同 Head 自然分化出不同功能：
 
@@ -8879,7 +9264,7 @@ $$
 
 这不是人为分配的——所有 Head 的初始化完全相同（随机），训练过程中自然分化。这是 Multi-Head 最令人惊讶的性质：**给模型多个并行观察通道，它自己学会分工。**
 
-## 4. 为什么 Concat 之后还要 `W^O`？
+## 4. 为什么 Concat 之后还要 `W^O`
 
 8 个 Head 输出 8 个 `(seq_len, 64)` 的矩阵，Concat 成一个 `(seq_len, 512)`。如果不加 `W^O`，这些 Head 的信息是"拼接"在一起的而非"融合"——Head 1 的 64 维和 Head 2 的 64 维永远不会交互。
 
@@ -8924,33 +9309,46 @@ nanoGPT（Andrej Karpathy，约 300 行）是最干净的 GPT-2 复现。文件�
 ## 3. 核心代码与论文的精确对应
 
 ```python
+
 # ===== nanoGPT model.py 核心片段解读 =====
 
 # --- 论文 Section 3.2.2: Multi-Head Attention ---
+
 class CausalSelfAttention(nn.Module):
-    def __init__(self, config):
+    def **init**(self, config):
+
         # 论文公式: head_i = Attention(Q W_i^Q, K W_i^K, V W_i^V)
         # 代码实现: Q,K,V 合并到一个 Linear, 一次矩阵乘法
+
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
+
         # 论文公式: MultiHead(Q,K,V) = Concat(head_1,...,head_h) W^O
+
         self.c_proj = nn.Linear(config.n_embd, config.n_embd)
 
         # 论文 Section 3.2.3: 原因是 Causal Attention
         # "masked out (set to -inf) all values in the input of softmax"
+
         self.register_buffer("bias",
             torch.tril(torch.ones(config.block_size, config.block_size))
                  .view(1, 1, config.block_size, config.block_size))
 
     def forward(self, x):
         B, T, C = x.shape
+
         # 一次矩阵乘法算 Q,K,V, 再 split —— 第46课题1问过为什么合并
+
         q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+
         # 论文: d_k = d_model / h = 768 / 12 = 64
+
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+
         # 论文公式 (1): Attention(Q,K,V) = softmax(QK^T/√d_k)V
-        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+
+        att = (q @ k.transpose(-2, -1))*(1.0 / math.sqrt(k.size(-1)))
         att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
         y = att @ v
@@ -8960,6 +9358,7 @@ class CausalSelfAttention(nn.Module):
 # --- 论文 Section 3.3: Position-wise FFN ---
 # 公式: FFN(x) = max(0, x W_1 + b_1) W_2 + b_2
 # GPT-2 用 GELU 替代 ReLU, 原理见第46课题2
+
 class MLP(nn.Module):
     def forward(self, x):
         return self.c_proj(self.gelu(self.c_fc(x)))
@@ -8990,11 +9389,11 @@ nanoGPT 是所有 LLM 源码的最小公约数。理解了它，再去看 LLaMA�
 
 **题 1：** 3 倍 = Q + K + V（各 n_embd 维）。如果是 2 倍→缺一个。如果是 4 倍→多出来的维度没用。这是一个工程优化——合并成一次矩阵乘法而非三次（原理见第 46 课题 1 的答案）。
 
-**题 2：** `self.transformer.wte.weight = self.lm_head.weight`（在 `model.py` 的 GPT 类 `__init__` 中）。论文 Section 3.4 提到 "share the same weight matrix between the two embedding layers and the pre-softmax linear transformation"。nanoGPT 实现了这一点——Embedding 和 LM Head 共享权重。
+**题 2：** `self.transformer.wte.weight = self.lm_head.weight`（在 `model.py` 的 GPT 类 `**init**` 中）。论文 Section 3.4 提到 "share the same weight matrix between the two embedding layers and the pre-softmax linear transformation"。nanoGPT 实现了这一点——Embedding 和 LM Head 共享权重。
 
 ---
 
-# 第 60 课：Scaling Law —— 为什么模型越大越强？
+# 第 60 课：Scaling Law —— 为什么模型越大越强
 
 ---
 
@@ -9059,7 +9458,7 @@ $$
 
 ---
 
-# 第 61 课：参数到底存储了什么？—— 模型的知识在哪？
+# 第 61 课：参数到底存储了什么？—— 模型的知识在哪
 
 ---
 
@@ -9075,7 +9474,7 @@ $$
 
 这和第 20 课的 `国王 - 男人 + 女人 ≈ 女王` 是同一个道理——那个公式没有存在任何一个具体的参数里，它是所有参数共同作用的**涌现属性**。
 
-## 3. 怎么"看到"参数里的知识？
+## 3. 怎么"看到"参数里的知识
 
 工具 1：**Linear Probe**——在模型的隐藏层上训练一个简单的线性分类器。如果分类器能从第 5 层的隐藏状态判断出"这个 token 是否指代一个国家"，说明"国家"这个概念已经在那层的表示中出现了。
 
@@ -9160,7 +9559,7 @@ SFT（第 51 课）让模型学会了"回答问题"的格式。但 SFT 数据覆
 
 ---
 
-# 第 63 课：RLHF 与 DPO —— 如何让模型"说人话"？
+# 第 63 课：RLHF 与 DPO —— 如何让模型"说人话"
 
 ---
 
@@ -9258,31 +9657,36 @@ FP16 → INT8 → INT4，核心是减少数字精度。
 import torch
 
 # 模拟一个权重矩阵
+
 W_fp32 = torch.randn(1024, 1024, dtype=torch.float32)
-print(f"FP32 显存: {W_fp32.numel() * 4 / 1024:.1f} KB")  # 4096 KB
+print(f"FP32 显存: {W_fp32.numel()* 4 / 1024:.1f} KB")  # 4096 KB
 
 # --- FP16 (半精度) ---
+
 W_fp16 = W_fp32.half()  # float32 → float16
-print(f"FP16 显存: {W_fp16.numel() * 2 / 1024:.1f} KB")  # 2048 KB (减半)
+print(f"FP16 显存: {W_fp16.numel()* 2 / 1024:.1f} KB")  # 2048 KB (减半)
 
 # --- INT8 量化 (简单对称量化) ---
 # 原理: x_quant = round(x / scale)  →  存成 8bit 整数
+
 scale = W_fp32.abs().max() / 127.0   # 映射到 [-127, 127]
 W_int8 = torch.round(W_fp32 / scale).to(torch.int8)
-print(f"INT8 显存: {W_int8.numel() * 1 / 1024:.1f} KB")  # 1024 KB (1/4)
+print(f"INT8 显存: {W_int8.numel()* 1 / 1024:.1f} KB")  # 1024 KB (1/4)
 
 # 反量化: x_dequant = x_quant * scale
-W_dequant = W_int8.float() * scale
+
+W_dequant = W_int8.float()* scale
 error = (W_fp32 - W_dequant).abs().mean()
 print(f"INT8 量化误差(平均): {error:.6f}")
 
 # --- INT4 量化 ---
 # 两个 4bit 数值打包到一个 8bit 字节
 # 原理相同, 但每个值只占 4 bit
-print(f"INT4 理论显存: {W_fp32.numel() * 0.5 / 1024:.1f} KB")  # 512 KB (1/8)
+
+print(f"INT4 理论显存: {W_fp32.numel()* 0.5 / 1024:.1f} KB")  # 512 KB (1/8)
 ```
 
-### 量化对模型质量的影响
+## 量化对模型质量的影响
 
 LLM 的权重通常分布在 `[-1, 1]` 附近，量化误差是均匀噪声。大规模模型中，参数冗余足够吸收低精度误差。实践中 FP16 推理几乎无损，INT8 约有 0.5-1% 的 perplexity 增加，INT4 可能损失 1-3%。对于本地部署和个人使用，INT4 的精度损失完全可以接受——换来的是可以在 8GB 显存上跑 7B 模型。
 
@@ -9309,6 +9713,7 @@ LLM 的权重通常分布在 `[-1, 1]` 附近，量化误差是均匀噪声。�
 FlashAttention 的解法：把计算**分块（tiling）**——每次只从 HBM 取一小块 Q、K、V 放进 SRAM，在 SRAM 内完成全部计算，只把最终结果写回 HBM。核心公式（online softmax）：
 
 ```python
+
 # FlashAttention 的伪代码核心逻辑 —— online softmax
 # 不一次加载整个 QK^T 矩阵，而是逐块处理
 
@@ -9321,7 +9726,9 @@ def flash_attention_chunk(Q_chunk, K_chunk, V_chunk, d_k):
     P = torch.softmax(S, dim=-1)                              # 权重
     O = P @ V_chunk                                           # 输出
     return O
+
 # 多块的结果最后拼接起来
+
 ```
 
 **效果：** 比传统 Attention 快 2-4 倍，显存占用降低到 `O(N)`（传统是 `O(N²)`）。现在几乎所有大模型推理框架（vLLM、llama.cpp）都内置了 FlashAttention。
@@ -9382,7 +9789,7 @@ def flash_attention_chunk(Q_chunk, K_chunk, V_chunk, d_k):
 
 第 55 课画了 FreesLLM 的完整架构蓝图。第 60 课讲了 Scaling Law——同等计算量下，参数和数据应等比例增长。现在你要把这两者变成具体的设计决策：**FreesLLM 到底应该多大？用什么架构？服务谁？**
 
-## 2. 第一步：明确目标——你要解决什么问题？
+## 2. 第一步：明确目标——你要解决什么问题
 
 不是所有 LLM 都应该追求更大。通用 LLM（GPT、Claude）追求"什么都能做"，但你的 FreesLLM 可以更聚焦：
 
@@ -9442,7 +9849,7 @@ $$
 
 ---
 
-# 第 66 课：数据闭环与模型评测 —— 怎么判断 FreesLLM 在进步？
+# 第 66 课：数据闭环与模型评测 —— 怎么判断 FreesLLM 在进步
 
 ---
 
@@ -9496,7 +9903,7 @@ from collections import defaultdict
 
 class FreesLLM_Evaluator:
     """给 FreesLLM 做自动化评测 + 收集反馈数据"""
-    def __init__(self, model, tokenizer):
+    def **init**(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
         self.error_log = defaultdict(list)  # 记录所有答错的题目
@@ -9505,26 +9912,32 @@ class FreesLLM_Evaluator:
         """test_cases: [{"prompt": "...", "expected": "..."}]"""
         correct = 0
         for i, case in enumerate(test_cases):
+
             # 生成回答
+
             input_ids = self.tokenizer.encode(case["prompt"])
             output = self.model.generate(torch.tensor([input_ids]), max_new_tokens=50)
             response = self.tokenizer.decode(output[0].tolist())
 
             # 比对(简单版: 检查标准答案是否出现在回答中)
+
             if case["expected"].lower() in response.lower():
                 correct += 1
             else:
+
                 # 记录错误——这就是下一轮数据收集的起点!
+
                 self.error_log[case.get("category", "unknown")].append({
                     "prompt": case["prompt"],
                     "expected": case["expected"],
                     "actual": response,
                 })
 
-        accuracy = correct / len(test_cases) * 100
+        accuracy = correct / len(test_cases)* 100
         print(f"准确率: {accuracy:.1f}% ({correct}/{len(test_cases)})")
 
         # 打印每个类别的错误统计——告诉你在哪些方面需要补数据
+
         for category, errors in sorted(self.error_log.items()):
             print(f"  [{category}] 错误数: {len(errors)}")
 
@@ -9539,6 +9952,7 @@ class FreesLLM_Evaluator:
 # ]
 # accuracy, errors = evaluator.evaluate_benchmark(test_cases)
 # # 根据 errors 中的类别分布, 决定下一轮数据收集的重点
+
 ```
 
 这个脚本是 FreesLLM 持续改进的引擎——每次跑完评测，`error_log` 告诉你"模型的短板在哪"，然后你针对性地补充数据。
@@ -9559,11 +9973,11 @@ class FreesLLM_Evaluator:
 
 ---
 
-# 第 67 课：灾难性遗忘与持续学习 —— 模型怎么"活到老学到老"？
+# 第 67 课：灾难性遗忘与持续学习 —— 模型怎么"活到老学到老"
 
 ---
 
-## 1. 问题：微调后的模型为什么"变傻了"？
+## 1. 问题：微调后的模型为什么"变傻了"
 
 第 51 课 SFT 和第 63 课 DPO 讲了微调让模型学会新行为。但很多人遇到过一个令人崩溃的现象：**微调后的模型在目标任务上变好了，但在其他所有任务上都变差了。** 这就是灾难性遗忘（Catastrophic Forgetting）。
 
@@ -9634,17 +10048,22 @@ import torch.nn as nn
 
 class LoRALinear(nn.Module):
     """手写 LoRA: 在冻结的 Linear 层上叠加可训练的低秩矩阵"""
-    def __init__(self, in_features, out_features, r=8, alpha=16, dropout=0.0):
-        super().__init__()
+    def **init**(self, in_features, out_features, r=8, alpha=16, dropout=0.0):
+        super().**init**()
+
         # --- 原始权重：冻结，不训练 ---
+
         self.linear = nn.Linear(in_features, out_features, bias=False)
         self.linear.weight.requires_grad = False  # 冻结
 
         # --- LoRA 矩阵：可训练 ---
         # A: (in_features, r), 用 Kaiming 初始化
+
         self.lora_A = nn.Parameter(torch.zeros(in_features, r))
         nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
+
         # B: (r, out_features), 初始化为 0 (一开始 ΔW=0, 等价于原始模型)
+
         self.lora_B = nn.Parameter(torch.zeros(r, out_features))
 
         self.r = r
@@ -9653,24 +10072,30 @@ class LoRALinear(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+
         # 原始输出 (冻结)
+
         frozen_out = self.linear(x)                      # x @ W^T
 
         # LoRA 输出 (可训练)
+
         lora_out = (x @ self.lora_A) @ self.lora_B       # x @ A @ B
         lora_out = self.dropout(lora_out)
 
         return frozen_out + self.scaling * lora_out
 
 # --- 测试: 模拟微调场景 ---
+
 in_dim, out_dim, r = 128, 256, 8
 lora_layer = LoRALinear(in_dim, out_dim, r=r, alpha=16)
 
 # 检查哪些参数会被训练
+
 trainable = sum(p.numel() for p in lora_layer.parameters() if p.requires_grad)
 frozen = sum(p.numel() for p in lora_layer.parameters() if not p.requires_grad)
 print(f"可训练参数: {trainable:,}  ({(trainable/(trainable+frozen))*100:.1f}%)")
 print(f"冻结参数:   {frozen:,}")
+
 # 可训练: 128*8 + 8*256 = 3072
 # 冻结:   128*256 = 32768
 # 可训练仅占 8.6%！
@@ -9683,14 +10108,18 @@ print(f"输出形状: {y.shape}")  # (4, 256)
 ## 使用 HuggingFace PEFT 库（实战推荐）
 
 ```python
+
 # pip install peft transformers
+
 from peft import LoraConfig, get_peft_model, TaskType
 from transformers import AutoModelForCausalLM
 
 # 加载基础模型
+
 model = AutoModelForCausalLM.from_pretrained("gpt2")
 
 # 配置 LoRA
+
 lora_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
     r=8,                      # rank
@@ -9700,10 +10129,13 @@ lora_config = LoraConfig(
 )
 
 # 应用 LoRA
+
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
+
 # 输出: trainable params: 294,912 || all params: 124,439,808 || trainable%: 0.2370
 # 只训练 0.24% 的参数！
+
 ```
 
 ## 练习题
@@ -9764,9 +10196,11 @@ model.print_trainable_parameters()
 - 长期记忆：Vector DB 存历史对话摘要 → `对话内容 → Embedding → FAISS → 检索 → 注入新对话`
 
 ```python
+
 # 最简单的 Agent Memory
+
 class AgentMemory:
-    def __init__(self):
+    def **init**(self):
         self.short_term = []         # 当前对话历史
         self.long_term = {}          # key → 向量 (简化版用 dict)
         self.embeddings = {}         # key → embedding
@@ -9854,7 +10288,7 @@ RAG = 外挂**外部**知识（文档、网页）。Agent Memory = 存储**自�
 
 ---
 
-## 1. 为什么需要工程化？
+## 1. 为什么需要工程化
 
 前面 69 课你学会了训练和部署。但当你真正维护一个在线的 FreesLLM 时，三个问题会出现：(1) "上周训的模型和这周训的，哪个更好？" → 版本管理。(2) "新数据来了怎么自动触发训练？" → AutoML Pipeline。(3) "100 个用户同时调用怎么不崩？" → 产品工程。
 
@@ -9962,14 +10396,18 @@ RAG = 外挂**外部**知识（文档、网页）。Agent Memory = 存储**自�
 - **Tree Search：** 不只生成一条推理链，而是同时探索多条路径，选最可能到达正确答案的。
 
 ```python
+
 # Self-Consistency 的简化实现
+
 def self_consistency(model, prompt, n_samples=5):
     answers = []
     for _ in range(n_samples):
         response = model.generate(prompt, temperature=0.7)
         answer = extract_final_answer(response)  # 提取"最终答案"部分
         answers.append(answer)
+
     # 投票——选出现最多的答案
+
     from collections import Counter
     return Counter(answers).most_common(1)[0][0]
 ```
@@ -9998,7 +10436,7 @@ def self_consistency(model, prompt, n_samples=5):
 
 ---
 
-# 第 73 课：世界模型与神经符号 AI —— LLM 之后是什么？
+# 第 73 课：世界模型与神经符号 AI —— LLM 之后是什么
 
 ---
 
@@ -10121,7 +10559,7 @@ $$
 
 Student 学习的不只是"正确答案"，而是"Teacher 眼中的世界"。这就是为什么蒸馏后的小模型能部分保留大模型的推理能力。
 
-## 3. 模型合并：不用数据也能改进模型？
+## 3. 模型合并：不用数据也能改进模型
 
 一个有趣的现象：把两个在不同任务上微调的 LoRA 权重**线性插值合并**，新模型能同时做两个任务——不需要额外训练。
 
@@ -10166,7 +10604,7 @@ NAS（神经架构搜索）更进一步——自动搜索"这个任务最适合�
 
 小模型的优势对 FreesLLM 极其重要：(1) 本地运行——MacBook 甚至手机都能跑；(2) 数据私密——不需要把数据发给 OpenAI；(3) 成本可控——自己训 1B 模型只需几百美元算力。
 
-## 2. AGI 讨论：我们离"通用智能"还有多远？
+## 2. AGI 讨论：我们离"通用智能"还有多远
 
 现在 LLM 强在语言和模式识别，但缺少：真正长期目标、现实物理经验、自主学习新任务的能力（不需要人类标注数据）。AGI 的定义没有共识——不同研究者（Hinton、LeCun、Sutskever）有完全不同的路线图。
 

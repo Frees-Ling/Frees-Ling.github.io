@@ -5,9 +5,10 @@ description: ''
 image: ''
 tags: ['Note']
 category: ''
-draft: false 
+draft: false
 lang: ''
 ---
+
 # Thinking in the Age of AI
 
 Artificial Intelligence is evolving faster than ever.

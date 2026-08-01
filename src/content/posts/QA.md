@@ -5,10 +5,12 @@ description: '本文档主要介绍了在YOLO训练过程中可能遇到的问�
 image: ''
 tags: [YOLO, 训练问题, 解决方案, 计算机视觉]
 category: 'Note'
-draft: false 
+draft: false
 lang: ''
 ---
+
 # 前言
+
 本文配置环境如下
 ```bash
 GPU：RTX5060 Laptop
@@ -16,7 +18,9 @@ CPU：AMD Ryzen9 8945HX
 System：Windows 11
 ```
 由于系统环境配置极其复杂和相关文档很少很少，而且对于新显卡（RTX 50系列），市面上常规方案并不能很好的适配，所以笔者研究出本文通用，百分百解决问题的方案**以供参考**
+
 # 错误原因和错误重现
+
 在YOLO训练中，我们通过使用`Ultralytics`的YOLO模型来进行训练，以下是测试训练项目架构
 ```plaintext
 yolo/
@@ -42,6 +46,7 @@ yolo/
 ```
 训练脚本
 ```python
+
 # ==============================================================
 # File: train
 # Author: Frees Ling
@@ -51,16 +56,22 @@ yolo/
 # ==============================================================
 # from ultralytics import YOLO
 # import torch
+
 #
+
 # def main():
 #     # 检查 GPU
 #     print("CUDA available:", torch.cuda.is_available())
 #     if torch.cuda.is_available():
 #         print("GPU:", torch.cuda.get_device_name(0))
+
 #
+
 #     # 加载预训练模型（推荐从小模型开始）
 #     model = YOLO("yolov8n.pt")
+
 #
+
 #     # 开始训练
 #     results = model.train(
 #         data="data.yaml",      # 数据集配置文件
@@ -74,9 +85,12 @@ yolo/
 #         cache=True,            # 缓存数据集
 #         amp=True               # 混合精度训练（GPU会更快）3
 #     )
+
 #
-# if __name__ == "__main__":
+
+# if **name** == "**main**":
 #     main()
+
 from ultralytics import  YOLO
 
 model = YOLO("yolov8n.pt")
@@ -92,11 +106,13 @@ results = model.train(
     name = "test",
     cache = True,
     amp = True
+
     # batch = 24
     # workers = 12
     # imgsz = 640
     # cache = True
     # amp = True
+
 )
 ```
 按照一般教程的环境安装方法，是下面这样的
@@ -107,7 +123,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 ```python
 import torch
 
-print(torch.__version__)
+print(torch.**version**)
 print(torch.cuda.is_available())
 print(torch.cuda.get_device_name(0))
 ```
@@ -193,42 +209,54 @@ Compile with TORCH_USE_CUDA_DSA to enable device-side assertions.</module>
 
 在苦苦折磨了两天之后，我开始思考，这个问题为什么会无法解决，以至于不论什么AI都无法给到我完美的GPU训练方案，基本上都是让我使用CPU训练
 > CPU训练，训练一轮在十万大体量数据集里需要至少五个小时，甚至更久，仅仅五十轮迭代就需要十天，所以寻找GPU训练的方案刻不容缓
-
 > 题外话：明明问题已经很明确了，但是迟迟给不到有效的解决方案，这也说明了当代大众AI的一个弊端，并不具有独立思考能力，但是一想，也蛮恐怖的，如果真的会自己思考了，未来，会变得怎么样呢？
 
 # 解决方案
+
 > **严格注意：本解决方案目前完美适用RTX50系列的显卡，并且一定要严格按照教程执行，否则容易引发烧显卡等非常严重的问题**
 
 首先根据错误报告理解为什么会报错，在YOLO的训练中，我们不难发现，我们所用的显卡对应安装的CUDA版本和Python安装的PyTorch版本是一一对应的，所以这既是解决办法也是问题的根源所在，我们下载的PyTorch版本和CUDA版本必须一一对应
 **以下是相关网站链接**
+
 - [PyTorch官网](https://pytorch.org/get-started/locally/)
-> PyTorch<br>
+
+> PyTorch
 > 根据自身电脑安装对应的PyTorch版本
 
 如果找不到对应版本，还可以试一试安装旧版本↓
+
 - [PyTorch旧版本](https://pytorch.org/get-started/previous-versions/)
-> 例如：<br>
+
+> 例如：
 > 因为我下载的CUDA版本是3.0，所以我安装的PyTorch是13.0，这个不懂可以问AI
 
 - [CUDA官网](https://developer.nvidia.com/cuda-toolkit-archive)
-> CUDA Toolkit Archive<br>
-> 根据你自身的电脑安装对应的CUDA版本
 
-> 例如：<br>
+> CUDA Toolkit Archive
+> 根据你自身的电脑安装对应的CUDA版本
+> 例如：
 > 我的电脑版本是Windows 11，RTX5060 Laptop，那么我需要下载的CUDA版本是CUDA 3.0
 
 对于50系列的显卡，可能还需要安装一些驱动（更新），比如2026新的爆款游戏《生化危机：安魂曲》就需要更新驱动来支持
+
 - [NVIDIA驱动下载](https://www.nvidia.com/en-us/geforce/drivers/)
+
   如果英语不好，当然也有中文网站
+
 - [NVIDIA驱动下载（中文）](https://www.nvidia.cn/geforce/drivers/)
-> GeGForce 驱动程序<br>
+
+> GeGForce 驱动程序
 > 根据自身电脑填表选择需要安装的驱动
 
 这里值得注意的是，在2026年初，出现了**新版本驱动更新后烧显卡**的情况，这里驱动选择需要非常注意，以下视频含有各个驱动更新的内容以及BUG，可以参考一二再下载所需要的驱动更新
+
 - [NVIDIA驱动更新视频](https://space.bilibili.com/280017744/lists/285271?type=season)
+
 # 后续训练
+
 可以通过以下代码来参考是否完成训练（直接贴上去了，懒得改了，但是已经改成测试版本了）
 ```python
+
 # ==============================================================
 # File: train
 # Author: Frees Ling
@@ -237,15 +265,17 @@ Compile with TORCH_USE_CUDA_DSA to enable device-side assertions.</module>
 #              kernels are incompatible with the installed PyTorch.
 # Version: 1.1
 # ==============================================================
+
 from ultralytics import YOLO
 import torch
 import traceback
 import sys
 
-
 def train():
+
     # Report CUDA availability and device details
-    print("torch.__version__:", torch.__version__)
+
+    print("torch.**version**:", torch.**version**)
     cuda_available = torch.cuda.is_available()
     print("CUDA available:", cuda_available)
     if cuda_available:
@@ -262,6 +292,7 @@ def train():
     model = YOLO("yolov8n.pt")
 
     # Default training args (attempt GPU first if available)
+
     train_args = dict(
         data="data.yaml",
         epochs=1,#测试
@@ -283,11 +314,14 @@ def train():
         print("Training finished successfully.")
         return results
     except Exception as e:
+
         # Inspect exception to decide whether to retry on CPU
+
         err_str = str(e)
         print("Training failed with exception:", err_str)
 
         # Heuristics to detect CUDA / kernel compatibility errors
+
         cuda_error_indicators = [
             'no kernel image',
             'not compatible',
@@ -301,7 +335,9 @@ def train():
             print("Detected a CUDA compatibility/kernel error. Retrying on CPU with amp disabled...")
             train_args['device'] = 'cpu'
             train_args['amp'] = False
+
             # Lower workers on CPU to avoid too many threads (optional)
+
             if train_args.get('workers', 0) > 4:
                 train_args['workers'] = 4
             print("Retry Training args:", train_args)
@@ -314,18 +350,19 @@ def train():
                 traceback.print_exc()
                 sys.exit(1)
         else:
+
             # Not a recognized CUDA issue - re-raise with traceback
+
             traceback.print_exc()
             sys.exit(1)
 
-
-if __name__ == "__main__":
+if **name** == "**main**":
     train()
 ```
 如果成功，应该会显示类似输出↓
 ```bash
 C:\Users\Lenovo\Desktop\Code\YOLO\.venv\Scripts\python.exe C:\Users\Lenovo\Desktop\Code\YOLO\train.py 
-torch.__version__: 2.10.0+cu130
+torch.**version**: 2.10.0+cu130
 CUDA available: True
 GPU: NVIDIA GeForce RTX 5070 Ti compute_capability=(12, 0)
 Training args: {'data': 'data.yaml', 'epochs': 50, 'imgsz': 640, 'batch': 16, 'device': 0, 'workers': 12, 'project': 'runs/train', 'name': 'test', 'cache': 'disk', 'amp': True}

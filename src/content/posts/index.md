@@ -7,6 +7,6 @@ category: Test
 draft: false
 ---
 
-# First Blog!    
+# First Blog
 
-# 第一个正式博客！
+# 第一个正式博客

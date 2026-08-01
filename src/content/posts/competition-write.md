@@ -5,19 +5,23 @@ description: '项目开发随笔 v1.0'
 image: ''
 tags: [项目开发, 随笔]
 category: 'Note'
-draft: false 
+draft: false
 lang: ''
 ---
 ```angular2html
 Github仓库
 https://github.com/Frees-Ling/Pipeline-inspection
 ```
+
 # 一键安装Vscode Ubuntu
+
 ```bash
 sudo snap install code --classic
 ```
 安装完Vscode之后一定一定要检查是否有自动保存，特别是针对项目级别工程文件，要不然你只能是对空文件编译
+
 # 配置Git及密钥
+
 ```bash
 #配置Git用户信息
 git config --global user.name "xxx"
@@ -31,7 +35,9 @@ cat ~/.ssh/id_rsa.pub #这里会输出密钥内容，把这个复制粘贴到代
 #全部搞完之后，进行检查
 ssh -T git@github.com  #后缀不唯一，这里以GitHub为例
 ```
+
 # Ubuntu20.04.x LTS 配置C/C++环境
+
 本教程仅供配置C/C++所用，主要用到的工具均为目前常用工具，需要完整的Ubuntu系统（不可以是试用版本）
 ```bash
 #主要安装
@@ -75,8 +81,10 @@ cmake --version
 #备用方案（可选）
 sudo apt install build-essential clang gdb cmake ninja-build
 ```
+
 # ROS系统安装
-> 注意：<br>
+
+> 注意：
 > 本次管道巡检所使用的ROS只能装在Ubuntu20.x上，Ubuntu22.x以上只能安装ROS2
 ```bash
 #更新系统
@@ -118,8 +126,10 @@ rosrun turtlesim turtlesim_node
 ```
 > 如下图即为成功
 
-![](https://vip.123pan.cn/1816365004/ymjew503t0l000dc7v4jiyio36k5esh7DIYPAqDzAIaOAcxvDdawDO==.png)
+![image](https://vip.123pan.cn/1816365004/ymjew503t0l000dc7v4jiyio36k5esh7DIYPAqDzAIaOAcxvDdawDO==.png)
+
 # 管道巡检代码复刻(足球无人机)
+
 如果只是简单的进行`catkin make`是不行的，会报如下错误
 ```bash
 fl@fl-virtual-machine:~/桌面/Pipe/Pipeline-inspection$ catkin_make
@@ -129,7 +139,9 @@ Build space: /home/fl/桌面/Pipe/Pipeline-inspection/build
 Devel space: /home/fl/桌面/Pipe/Pipeline-inspection/devel
 Install space: /home/fl/桌面/Pipe/Pipeline-inspection/install
 ####
-#### Running command: "cmake /home/fl/桌面/Pipe/Pipeline-inspection/src -DCATKIN_DEVEL_PREFIX=/home/fl/桌面/Pipe/Pipeline-inspection/devel -DCMAKE_INSTALL_PREFIX=/home/fl/桌面/Pipe/Pipeline-inspection/install -G Unix Makefiles" in "/home/fl/桌面/Pipe/Pipeline-inspection/build"
+
+## Running command: "cmake /home/fl/桌面/Pipe/Pipeline-inspection/src -DCATKIN_DEVEL_PREFIX=/home/fl/桌面/Pipe/Pipeline-inspection/devel -DCMAKE_INSTALL_PREFIX=/home/fl/桌面/Pipe/Pipeline-inspection/install -G Unix Makefiles" in "/home/fl/桌面/Pipe/Pipeline-inspection/build"
+
 ####
 -- The C compiler identification is GNU 9.4.0
 -- The CXX compiler identification is GNU 9.4.0
@@ -187,7 +199,6 @@ CMake Error at /opt/ros/noetic/share/catkin/cmake/catkinConfig.cmake:83 (find_pa
 Call Stack (most recent call first):
   rectangle/CMakeLists.txt:10 (find_package)
 
-
 -- Configuring incomplete, errors occurred!
 See also "/home/fl/桌面/Pipe/Pipeline-inspection/build/CMakeFiles/CMakeOutput.log".
 See also "/home/fl/桌面/Pipe/Pipeline-inspection/build/CMakeFiles/CMakeError.log".
@@ -196,21 +207,27 @@ Invoking "cmake" failed
 那么错误报告很明显，缺失`mavros`这个包，我们需要进行安装
 如下是解决方案
 ```bash
+
 # 更新软件源列表
+
 sudo apt update
 
 # 修复可能的依赖损坏
+
 sudo apt --fix-missing install
 
 # 安装 mavros 核心包
+
 sudo apt install ros-noetic-mavros ros-noetic-mavros-extras
 
 # 安装 mavros 的地理数据（用于 GPS 等功能，必须装）
+
 wget https://raw.githubusercontent.com/mavlink/mavros/master/mavros/scripts/install_geographiclib_datasets.sh
 chmod +x install_geographiclib_datasets.sh
 sudo ./install_geographiclib_datasets.sh
 
 # 删除临时脚本（可选）
+
 rm install_geographiclib_datasets.sh
 
 #如果报如下错误
@@ -236,11 +253,14 @@ sudo apt install geographiclib-tools
 sudo geographiclib-get-geoids egm96-15
 
 #验证
+
 # 查找 mavros 包的位置
+
 rospack find mavros
 
 # 预期输出（类似）：
 # /opt/ros/noetic/share/mavros
+
 ```
 那么解决了包缺失，我们可以很顺利地进行构建，如下为成功构建
 ```bash
@@ -251,10 +271,14 @@ Build space: /home/fl/桌面/Pipe/Pipeline-inspection/build
 Devel space: /home/fl/桌面/Pipe/Pipeline-inspection/devel
 Install space: /home/fl/桌面/Pipe/Pipeline-inspection/install
 ####
-#### Running command: "make cmake_check_build_system" in "/home/fl/桌面/Pipe/Pipeline-inspection/build"
+
+## Running command: "make cmake_check_build_system" in "/home/fl/桌面/Pipe/Pipeline-inspection/build"
+
 ####
 ####
-#### Running command: "make -j8 -l8" in "/home/fl/桌面/Pipe/Pipeline-inspection/build"
+
+### Running command: "make -j8 -l8" in "/home/fl/桌面/Pipe/Pipeline-inspection/build"
+
 ####
 Scanning dependencies of target mytest
 Scanning dependencies of target detection
@@ -274,20 +298,26 @@ Scanning dependencies of target cross_rectangle
 [100%] Built target detection
 [100%] Built target cross_rectangle
 ```
+
 # 第三方库安装
+
 ## Eigen（线性代数库）
+
 ```bash
 sudo apt update
 sudo apt install libeigen3-dev
 ```
 安装完成后，头文件在 `/usr/include/eigen3`
+
 ## OpenCV2
+
 ```bash
 sudo apt install libopencv-dev=2.4.9+dfsg-1
 ```
 > 注意：Ubuntu 20.04 默认可能没有旧版 OpenCV2，需要自己编译，或者干脆用 OpenCV4，API 兼容性大部分没问题
 
 ### OpenCV2 编译版
+
 ```bash
 sudo apt install build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 git clone https://github.com/opencv/opencv.git
@@ -299,7 +329,7 @@ make -j$(nproc)
 sudo make install
 ```
 安装完成后，头文件在 `/usr/include/opencv` 和 `/usr/include/opencv2`
-> 国内<br>
+> 国内
 > ```bash
 > git clone https://gitee.com/OpenCVChina/opencv.git
 > cd opencv

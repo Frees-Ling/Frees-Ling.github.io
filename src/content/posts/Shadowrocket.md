@@ -8,6 +8,7 @@ category: 'Note'
 draft: false
 lang: ''
 ---
+
 # 前言
 
 笔者用 Shadowrocket 在 macOS 上翻墙，一直挺稳定的——直到某天发现 VPN 莫名其妙就断了，一看进程，没了。
@@ -16,9 +17,9 @@ lang: ''
 
 是的，macOS 会自作主张把你的 app 杀掉，理由是"我觉得你不需要了"。
 
-__那不行，我得让它活着。__
+**那不行，我得让它活着。**
 
-# macOS 为什么要杀 Shadowrocket？
+# macOS 为什么要杀 Shadowrocket
 
 翻了一下 Shadowrocket 的 `Info.plist`，发现它自己开了两个"求杀"开关：
 
@@ -84,19 +85,25 @@ watchdog 自己也需要有人看着——万一 watchdog 崩了呢？
 # 常用命令速查
 
 ```bash
+
 # watchdog 有没有在跑？
+
 tail -f /tmp/shadowrocket-watchdog.log
 
 # Shadowrocket 还活着吗？
+
 ps aux | grep -i shadowrocket | grep -v grep
 
 # launchd 认不认识这个 watchdog？
+
 launchctl list | grep shadowrocket
 
 # 卸载 watchdog
+
 launchctl unload ~/Library/LaunchAgents/com.shadowrocket.watchdog.plist
 
 # 加载 watchdog
+
 launchctl load ~/Library/LaunchAgents/com.shadowrocket.watchdog.plist
 ```
 
@@ -106,4 +113,4 @@ launchctl load ~/Library/LaunchAgents/com.shadowrocket.watchdog.plist
 - 重装 Shadowrocket 之后，`defaults write` 那两条要重新执行
 - watchdog 脚本和 LaunchAgent 是独立的，重装不会覆盖，不用担心
 
-__至此，Shadowrocket 应该不会再莫名其妙消失了。__
+**至此，Shadowrocket 应该不会再莫名其妙消失了。**

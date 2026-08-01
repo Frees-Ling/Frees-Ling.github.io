@@ -5,12 +5,16 @@ description: '本文在VScode上使用Remote SSH插件在Ubuntu上进行代码�
 image: ''
 tags: [Ubuntu，VScode，Remote SSH]
 category: 'Note'
-draft: false 
+draft: false
 lang: ''
 ---
+
 # 前言
+
 笔者常常苦于虚拟机的延迟，每次在终端输入输出都特别的慢，导致开发效率极低，甚至有时候会崩溃，所以就想到了一个办法，就是在本地使用VScode的Remote SSH插件，在Ubuntu上进行代码编写，这样就可以避免虚拟机的延迟问题了。
+
 # 方法
+
 在Ubuntu上安装SSH服务
 ```bash
 sudo apt update
@@ -25,7 +29,7 @@ sudo systemctl enable ssh
 ```bash
 sudo systemctl status ssh
 ```
-在本地VScode上安装Remote SSH插件<br>
+在本地VScode上安装Remote SSH插件
 打开VScode，点击左侧的扩展图标，搜索Remote SSH，安装完成后，点击左下角的绿色图标，选择Remote-SSH: Connect to Host
 
 找到虚拟机 IP，在ubuntu终端输入以下命令获取IP地址
