@@ -3,7 +3,7 @@ export const site = {
   owner: 'Frees Ling',
   alias: '凛风',
   description: '在代码、智能与生活之间，记录仍在生长的想法。',
-  url: 'https://frees-ling.github.io',
+  url: 'https://frees-ling.dev',
   email: 'freesling496@gmail.com',
   qq: '3805999686',
   repo: 'Frees-Ling/Frees-Ling.github.io',

@@ -6,7 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
 
 export default defineConfig({
-  site: 'https://frees-ling.github.io',
+  site: 'https://frees-ling.dev',
   trailingSlash: 'always',
   integrations: [sitemap()],
   markdown: {

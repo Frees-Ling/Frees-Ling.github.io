@@ -10,7 +10,7 @@ export async function GET(context: APIContext) {
   return rss({
     title: 'Frees Blog',
     description: '在代码、智能与生活之间，记录仍在生长的想法。',
-    site: context.site ?? 'https://frees-ling.github.io',
+    site: context.site ?? 'https://frees-ling.dev',
     items: posts.map((post) => ({
       title: post.data.title,
       description: post.data.description,
