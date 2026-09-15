@@ -23,8 +23,14 @@ const SRC = join(ROOT, 'src');
 const TOKENS_FILE = 'src/styles/tokens.css';
 const STRICT = process.argv.includes('--strict');
 
-// 迁移期允许多份样式文件；tokens.css 落地后所有字面量都应集中到这里
-const LITERAL_ALLOWLIST = [TOKENS_FILE, 'src/styles/global.css'];
+// 颜色字面量只允许出现在 tokens.css。
+// 注意 base.css 里的纸纹 SVG data-URI 与 ::selection 的硬编码色、
+// 以及 primitives.css 里的按钮态色仍需迁入 token，见 P5a。
+const LITERAL_ALLOWLIST = [
+  TOKENS_FILE,
+  'src/styles/base.css',
+  'src/styles/primitives.css',
+];
 
 // CSS 变量不能用在 @media 里，只能在 tokens.css 顶部以注释记录
 const ALLOWED_BREAKPOINTS = new Set([640, 900, 1200, 1440]);

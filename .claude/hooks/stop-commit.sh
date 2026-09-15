@@ -18,7 +18,7 @@ set -uo pipefail
 
 # 提交前必须全部通过的校验。若其中某个脚本不存在，提交同样会被跳过
 # （宁可漏提交，也不把未校验的改动写进历史）。
-CHECKS="format:check lint lint:md check"
+CHECKS="format:check lint lint:md check check:tokens"
 
 # 残留锁超过这个秒数即认为持有者已死
 LOCK_STALE_SECS=300

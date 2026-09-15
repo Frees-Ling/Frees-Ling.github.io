@@ -1,0 +1,176 @@
+/* 跨页面复用的结构块。
+ *
+ * 判断规则：跨 ≥3 个页面出现**且**是结构而非外观的，放这里；
+ * 只服务单个组件的外观留在该组件的 scoped <style> 里 ——
+ * Astro 的 per-page CSS 分包是首屏优势，不要把组件样式全搬进全局。
+ */
+
+.container {
+  width: min(calc(100% - 48px), var(--content));
+  margin-inline: auto;
+}
+.reading-container {
+  width: min(calc(100% - 48px), var(--reading));
+  margin-inline: auto;
+}
+
+.section {
+  padding-block: clamp(72px, 10vw, 132px);
+}
+.section + .section {
+  border-top: 1px solid var(--line);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  color: var(--cyan);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.eyebrow::before {
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  content: '';
+}
+
+.display-title,
+.page-title,
+.section-title {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', 'Songti SC', serif;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+.display-title {
+  font-size: clamp(60px, 11vw, 144px);
+}
+.page-title {
+  max-width: 900px;
+  font-size: clamp(48px, 8vw, 96px);
+}
+.section-title {
+  font-size: clamp(38px, 5vw, 64px);
+}
+
+.section-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 48px;
+}
+.section-header > p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+}
+.text-link::after {
+  content: '↗';
+  color: var(--coral);
+  transition: transform 180ms ease;
+}
+.text-link:hover::after {
+  transform: translate(3px, -3px);
+}
+
+.button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+  transition: 180ms ease;
+}
+.button:hover {
+  border-color: var(--cyan);
+  background: rgba(100, 216, 202, 0.08);
+  transform: translateY(-2px);
+}
+.button.primary {
+  border-color: var(--coral);
+  background: var(--coral);
+  color: var(--on-coral);
+}
+.button.primary:hover {
+  background: var(--coral-hover);
+}
+
+.page-hero {
+  padding: clamp(72px, 10vw, 132px) 0 clamp(52px, 7vw, 88px);
+}
+.page-hero .lede {
+  max-width: 680px;
+  margin: 30px 0 0;
+  color: var(--ink-soft);
+  font-size: clamp(18px, 2vw, 22px);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tag {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-decoration: none;
+}
+.tag:hover {
+  border-color: var(--cyan);
+  color: var(--ink);
+}
+
+.empty-state {
+  padding: 48px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .container,
+  .reading-container {
+    width: min(calc(100% - 32px), var(--content));
+  }
+  .section-header {
+    align-items: start;
+    flex-direction: column;
+    margin-bottom: 36px;
+  }
+  .display-title {
+    font-size: clamp(58px, 20vw, 92px);
+  }
+  .page-hero {
+    padding-top: 64px;
+  }
+}

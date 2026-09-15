@@ -3,9 +3,16 @@
 // 不用 `astro preview`：它在本机是守护进程化的（有 stop/status/logs），
 // spawn 之后 kill 父进程杀不掉，会留下残留服务占用端口。
 
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, realpathSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  normalize,
+  resolve,
+} from 'node:path';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -32,6 +39,13 @@ const TYPES = {
  */
 export function startStaticServer(distDir, port) {
   const root = resolve(distDir);
+  // 用解析过符号链接的根做比较基准，避免 dist/ 内的符号链接绕过前缀检查
+  let realRoot = root;
+  try {
+    realRoot = realpathSync(root);
+  } catch {
+    /* 目录不存在时保持原值，下面的 404 分支会兜住 */
+  }
 
   const server = createServer((req, res) => {
     let urlPath;
@@ -45,8 +59,20 @@ export function startStaticServer(distDir, port) {
 
     let filePath = resolve(root, `.${normalize(urlPath)}`);
 
-    // 防目录穿越：解析结果必须仍在 dist/ 内
-    if (!filePath.startsWith(root)) {
+    // 防目录穿越：解析符号链接后仍必须落在 dist/ 内。
+    // 纯字符串前缀比较挡不住 dist/ 内指向外部的符号链接。
+    let realPath = filePath;
+    try {
+      realPath = realpathSync(filePath);
+    } catch {
+      // 文件不存在时解析其父目录并拼回文件名，避免因 ENOENT 跳过检查
+      try {
+        realPath = join(realpathSync(dirname(filePath)), basename(filePath));
+      } catch {
+        /* 保持原值，交由下面的 404 分支处理 */
+      }
+    }
+    if (!realPath.startsWith(realRoot)) {
       res.writeHead(403);
       res.end();
       return;

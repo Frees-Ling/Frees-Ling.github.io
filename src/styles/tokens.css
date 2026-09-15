@@ -1,0 +1,92 @@
+/* 设计 token —— 全站唯一的颜色字面量所在地。
+ *
+ * 规则（由 scripts/check-tokens.mjs 强制）：
+ *   1. 颜色字面量只允许出现在本文件
+ *   2. var() 引用的 token 必须在这里定义过
+ *   3. 断点只能是下面记录的四个值之一
+ *   4. 间距应使用 4px 基数的刻度
+ *
+ * ─────────────────────────────────────────────
+ * BREAKPOINTS（CSS 变量不能用在 @media 里，故在此记录为唯一真相）
+ *   640px   小屏手机
+ *   900px   唯一切换点：导航折叠 / 容器收窄 / 网格转单列 / TOC 收起
+ *   1200px  桌面
+ *   1440px  宽屏
+ * ─────────────────────────────────────────────
+ */
+
+:root {
+  /* 中性色 */
+  --ink: #eef4ec;
+  --ink-soft: #a9bbb5;
+  --ink-faint: #78918a;
+  --canvas: #06171d;
+  --canvas-deep: #041116;
+  --surface: #0a2229;
+  --surface-2: #0d2a32;
+  --line: rgba(214, 237, 226, 0.14);
+  --line-strong: rgba(214, 237, 226, 0.28);
+
+  /* 反色容器（暗色页面里的浅色"纸"） */
+  --paper: #f3eddf;
+  --paper-ink: #122327;
+
+  /* 强调色 */
+  --coral: #ff8066;
+  --cyan: #64d8ca;
+  --lime: #c3e36a;
+  --violet: #b8a5ff;
+
+  /* 压在 --coral 背景上的文字，以及 coral 的 hover 态。
+     必须成对定义 —— light 下 coral 被加深后，原来那批深棕色文字
+     （#1c1712 / #201713 / #1d1713）对比度会掉到 2.98，必须换成浅色。 */
+  --on-coral: #1c1712;
+  --coral-hover: #ff927c;
+
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.26);
+
+  /* 尺度 */
+  --radius: 24px;
+  --content: 1180px;
+  --reading: 760px;
+
+  color-scheme: dark;
+}
+
+/* light 主题必须定义**全部**语义色。
+ *
+ * 这里曾有一个结构性缺陷：只覆盖了中性色，四个强调色沿用为深色底调的值 ——
+ * 结果 --lime #c3e36a 在浅底 #ebe6d9 上对比度只有 1.16（几乎不可见），
+ * --cyan 1.38、--violet 1.71、--coral 1.98，全部远低于 WCAG AA 的 4.5。
+ * axe-core 实测报出 37 处对比度失败。
+ *
+ * 下列取值经脚本计算，在 light 的四个背景（canvas / surface / surface-2 / paper）
+ * 上对比度均 ≥ 4.5：
+ */
+:root[data-theme='light'] {
+  --ink: #15272a;
+  --ink-soft: #4f6664;
+  --ink-faint: #70827f;
+  --canvas: #ebe6d9;
+  --canvas-deep: #e2dccd;
+  --surface: #f6f1e6;
+  --surface-2: #e7eee8;
+  --line: rgba(18, 43, 45, 0.14);
+  --line-strong: rgba(18, 43, 45, 0.26);
+
+  --paper: #fffaf0;
+  --paper-ink: #172729;
+
+  /* 强调色：最差背景下的对比度 4.79 / 4.82 / 4.98 / 5.64 */
+  --coral: #ad3f28;
+  --cyan: #0f6f68;
+  --lime: #4d6a0a;
+  --violet: #5b45b8;
+
+  --on-coral: #fffaf0; /* 5.74 on #ad3f28 */
+  --coral-hover: #c04a30; /* 4.73 with #fffaf0 */
+
+  --shadow: 0 24px 80px rgba(43, 52, 44, 0.12);
+
+  color-scheme: light;
+}

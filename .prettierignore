@@ -1,8 +1,7 @@
-# `.astro` 文件与 global.css 采用刻意紧凑的手写风格：内联 <style> 块是压缩过的
+# `.astro` 文件采用刻意紧凑的手写风格：内联 <style> 块是压缩过的
 # 单行 CSS，模板标记也按可读性手工折行。Prettier 会把它们展开成数百行，
 # 既破坏原有排版意图，也会增大每个页面内联的 CSS 体积。详见 AGENTS.md。
 **/*.astro
-src/styles/global.css
 
 # Markdown 由 markdownlint 负责（npm run lint:md）
 **/*.md

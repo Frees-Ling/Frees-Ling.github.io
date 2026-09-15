@@ -38,6 +38,10 @@ jobs:
       - name: Lint Markdown
         run: npm run lint:md
 
+      # var() 引用完整性 / 断点白名单 / 颜色字面量
+      - name: Check design tokens
+        run: npm run check:tokens
+
       - name: Type and Astro check
         run: npm run check
 
