@@ -28,7 +28,19 @@ const socialImage = new URL(image, site.url);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#071c24" />
+    <!-- theme-color 用 media 作用域成对声明：零 JS，且随系统主题自动切换。
+         原先是硬编码的单个 #071c24，既不符合任何 token，也不会随主题更新，
+         导致浅色模式下移动端浏览器 UI 仍是深色。 -->
+    <meta
+      name="theme-color"
+      content="#06171d"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta
+      name="theme-color"
+      content="#ebe6d9"
+      media="(prefers-color-scheme: light)"
+    />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
     <link rel="canonical" href={canonical} />
@@ -50,6 +62,10 @@ const socialImage = new URL(image, site.url);
         document.documentElement.dataset.theme = theme;
       })();
     </script>
+    <!-- 页面级 head 注入点。没有它时，页面只能把 <link>/<script> 写在 </Layout>
+         之后，Astro 会把它们渲染到 </html> 之外，产生无效 HTML
+         （/search/ 页实测有 858 字符内容落在 </html> 之后）。 -->
+    <slot name="head" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">跳到正文</a>
@@ -59,5 +75,7 @@ const socialImage = new URL(image, site.url);
       <Footer />
     </div>
     <script is:inline async src="https://cdn.busuanzi.cc/busuanzi/3.6.9/busuanzi.min.js"></script>
+    <!-- 页面级 body 末尾脚本注入点 -->
+    <slot name="scripts" />
   </body>
 </html>

@@ -1,30 +1,34 @@
 ---
 import Layout from '../layouts/Layout.astro';
 ---
-<Layout title="搜索"><header class="page-hero container"><p class="eyebrow">SEARCH THE GARDEN</p><h1 class="page-title">寻找一条<br />曾经留下的线索。</h1><p class="lede">搜索文章标题、正文、标签或项目关键词。</p></header><section class="container search-section"><div id="search"></div><p class="dev-note">如果你正在本地开发模式中，搜索索引会在完成一次正式构建后出现。</p></section></Layout>
-<link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
-<script is:inline src="/pagefind/pagefind-ui.js"></script>
-<script is:inline>
-  window.addEventListener('DOMContentLoaded', () => {
-    const target = document.querySelector('#search');
-    if (typeof PagefindUI !== 'undefined') {
-      new PagefindUI({
-        element: '#search',
-        showSubResults: true,
-        showImages: false,
-        translations: {
-          placeholder: '输入关键词…',
-          zero_results: '没有找到 [SEARCH_TERM] 相关内容',
-          many_results: '找到 [COUNT] 条结果',
-          one_result: '找到 1 条结果',
-          search_label: '搜索本站',
-          clear_search: '清空',
-        },
+<Layout title="搜索"
+  ><Fragment slot="head">
+    <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+  </Fragment><header class="page-hero container"><p class="eyebrow">SEARCH THE GARDEN</p><h1 class="page-title">寻找一条<br />曾经留下的线索。</h1><p class="lede">搜索文章标题、正文、标签或项目关键词。</p></header><section class="container search-section"><div id="search"></div><p class="dev-note">如果你正在本地开发模式中，搜索索引会在完成一次正式构建后出现。</p></section><Fragment slot="scripts">
+    <script is:inline src="/pagefind/pagefind-ui.js"></script>
+    <script is:inline>
+      window.addEventListener('DOMContentLoaded', () => {
+        const target = document.querySelector('#search');
+        if (typeof PagefindUI !== 'undefined') {
+          new PagefindUI({
+            element: '#search',
+            showSubResults: true,
+            showImages: false,
+            translations: {
+              placeholder: '输入关键词…',
+              zero_results: '没有找到 [SEARCH_TERM] 相关内容',
+              many_results: '找到 [COUNT] 条结果',
+              one_result: '找到 1 条结果',
+              search_label: '搜索本站',
+              clear_search: '清空',
+            },
+          });
+          document.querySelector('.dev-note')?.remove();
+        } else if (target) {
+          target.innerHTML =
+            '<div class="search-fallback">搜索索引将在网站构建完成后启用。你仍然可以先浏览 <a href="/archive/">文章归档</a>。</div>';
+        }
       });
-      document.querySelector('.dev-note')?.remove();
-    } else if (target) {
-      target.innerHTML = '<div class="search-fallback">搜索索引将在网站构建完成后启用。你仍然可以先浏览 <a href="/archive/">文章归档</a>。</div>';
-    }
-  });
-</script>
+    </script>
+  </Fragment></Layout>
 <style is:global>.search-section{min-height:420px;padding-bottom:120px}.dev-note,.search-fallback{color:var(--ink-soft)}.search-fallback{padding:30px;border:1px solid var(--line);border-radius:16px}.pagefind-ui{--pagefind-ui-primary:var(--cyan);--pagefind-ui-text:var(--ink);--pagefind-ui-background:var(--surface);--pagefind-ui-border:var(--line-strong);--pagefind-ui-tag:var(--surface-2);font-family:inherit}.pagefind-ui__search-input{border-radius:16px!important}.pagefind-ui__result-link{font-family:Georgia,"Songti SC",serif!important}</style>

@@ -43,3 +43,7 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # 必须在 build 之后：检查的是构建产物里 </html> 是否为最后一个非空白内容
+      - name: Check HTML structure
+        run: npm run check:html
