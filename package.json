@@ -15,7 +15,8 @@
     "lint:fix": "biome lint --write .",
     "lint:md": "markdownlint-cli2 --config .markdownlint.json 'src/content/posts/*.md'",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "shot": "node scripts/visual/screenshot.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.3.0",
@@ -29,9 +30,11 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@biomejs/biome": "^2.5.13",
+    "axe-core": "^4.13.0",
     "markdownlint-cli2": "^0.23.2",
     "pagefind": "^1.4.0",
     "prettier": "^3.9.6",
+    "puppeteer-core": "^25.11.0",
     "typescript": "^5.9.2"
   },
   "allowScripts": {
