@@ -50,5 +50,27 @@ a { color: inherit; } img { display: block; max-width: 100%; } button, input { f
 .prose table { width: 100%; margin: 2em 0; border-collapse: collapse; font-size: .9em; } .prose th, .prose td { padding: 11px 14px; border: 1px solid var(--line); text-align: left; }
 .prose hr { margin: 3em 0; border: 0; border-top: 1px solid var(--line); } .prose .katex-display { margin: 2em 0; padding: 8px 0; overflow-x: auto; overflow-y: hidden; }
 .empty-state { padding: 48px; border: 1px dashed var(--line-strong); border-radius: var(--radius); color: var(--ink-soft); text-align: center; }
-@media (max-width: 760px) { .container,.reading-container { width: min(calc(100% - 32px),var(--content)); } .section-header { align-items: start; flex-direction: column; margin-bottom: 36px; } .display-title { font-size: clamp(58px,20vw,92px); } .page-hero { padding-top: 64px; } }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+@media (max-width: 900px) { .container,.reading-container { width: min(calc(100% - 32px),var(--content)); } .section-header { align-items: start; flex-direction: column; margin-bottom: 36px; } .display-title { font-size: clamp(58px,20vw,92px); } .page-hero { padding-top: 64px; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,*::before,*::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  /* transform 型 hover 是「状态变化」而不是「动画」，上面的时长归零管不到它。
+     不显式清零的话，平滑位移会变成瞬间跳变 —— 比完全不处理还刺眼。 */
+  .text-link:hover::after,
+  .button:hover,
+  .post-card:hover,
+  .practice-grid a:hover b,
+  .gallery figure:hover img,
+  .timeline a:hover .timeline-arrow { transform: none !important; }
+
+  /* SoundLab 的两组 infinite 动画（.01ms + iteration-count:1 已能停住，
+     这里显式关掉以免留下单帧闪烁） */
+  .playing .pulse,
+  .playing .wave i { animation: none !important; }
+}

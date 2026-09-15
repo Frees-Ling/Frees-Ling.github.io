@@ -7,4 +7,4 @@ export async function getStaticPaths(){const posts=await getCollection('posts',(
 const {tag,posts}=Astro.props;
 ---
 <Layout title={`标签：${tag}`}><header class="page-hero container"><p class="eyebrow">TAG · {posts.length} ENTRIES</p><h1 class="page-title">#{tag}</h1><p class="lede">同一个关键词连接起来的文章。</p></header><section class="container tag-posts">{posts.map((post)=><PostCard post={post}/>)}</section></Layout>
-<style>.tag-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding-bottom:120px}@media(max-width:760px){.tag-posts{grid-template-columns:1fr}}</style>
+<style>.tag-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding-bottom:120px}@media(max-width:900px){.tag-posts{grid-template-columns:1fr}}</style>

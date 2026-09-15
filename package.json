@@ -18,7 +18,8 @@
     "lint:md": "markdownlint-cli2 --config .markdownlint.json 'src/content/posts/*.md'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "shot": "node scripts/visual/screenshot.mjs"
+    "shot": "node scripts/visual/screenshot.mjs",
+    "a11y": "node scripts/visual/a11y.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.3.0",

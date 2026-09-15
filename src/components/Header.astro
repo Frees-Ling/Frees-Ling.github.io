@@ -16,8 +16,8 @@ const path = Astro.url.pathname;
         const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
         return <a href={item.href} aria-current={active ? 'page' : undefined}>{item.label}</a>;
       })}
-      <a class="search-link" href="/search/" aria-label="搜索">⌕</a>
-      <button class="theme-toggle" type="button" aria-label="切换明暗主题" title="切换明暗主题">
+      <a class="search-link" href="/search/" aria-label="搜索" title="搜索">⌕</a>
+      <button class="theme-toggle" type="button" aria-label="切换明暗主题" title="切换明暗主题" aria-pressed="false">
         <span class="theme-sun" aria-hidden="true">☀</span><span class="theme-moon" aria-hidden="true">◐</span>
       </button>
     </nav>
@@ -32,12 +32,25 @@ const path = Astro.url.pathname;
     menuButton.setAttribute('aria-expanded', String(!open));
     navElement?.classList.toggle('is-open', !open);
   });
-  document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+
+  const themeToggle = document.querySelector<HTMLButtonElement>('.theme-toggle');
+  // aria-pressed 表达「浅色模式是否为当前状态」。
+  // 初始值必须在这里同步 —— Layout 的防闪烁脚本运行在 <head>，
+  // 此时按钮还不存在，无法在那里设置。
+  const syncPressed = () => {
+    themeToggle?.setAttribute(
+      'aria-pressed',
+      String(document.documentElement.dataset.theme === 'light'),
+    );
+  };
+  themeToggle?.addEventListener('click', () => {
     const root = document.documentElement;
     const next = root.dataset.theme === 'light' ? 'dark' : 'light';
     root.dataset.theme = next;
     localStorage.setItem('frees-theme', next);
+    syncPressed();
   });
+  syncPressed();
 </script>
 
 <style>
@@ -58,11 +71,15 @@ const path = Astro.url.pathname;
   .menu-toggle { display: none; align-items: center; gap: 10px; padding: 10px 0; font-size: 14px; font-weight: 700; }
   .menu-icon, .menu-icon::after { display: block; width: 18px; height: 1px; background: currentColor; content: ''; }
   .menu-icon::after { transform: translateY(6px); }
-  @media (max-width: 850px) {
+  @media (max-width: 900px) {
     .header-inner { width: calc(100% - 32px); min-height: 70px; flex-wrap: wrap; }
     .menu-toggle { display: flex; }
-    .site-nav { width: 100%; max-height: 0; align-items: flex-start; flex-direction: column; gap: 0; overflow: hidden; opacity: 0; transition: max-height 220ms ease, opacity 180ms ease; }
-    .site-nav.is-open { max-height: 520px; padding: 8px 0 24px; opacity: 1; }
+    /* visibility:hidden 会让收起的导航移出 Tab 序列与无障碍树。
+       仅靠 max-height:0 + opacity:0 时，键盘仍能聚焦到 7 个不可见链接。
+       transition 上给 visibility 加 220ms 延迟，保证收起动画播完再隐藏；
+       展开时不延迟，立即可见。 */
+    .site-nav { width: 100%; max-height: 0; align-items: flex-start; flex-direction: column; gap: 0; overflow: hidden; opacity: 0; visibility: hidden; transition: max-height 220ms ease, opacity 180ms ease, visibility 0s linear 220ms; }
+    .site-nav.is-open { max-height: 520px; padding: 8px 0 24px; opacity: 1; visibility: visible; transition: max-height 220ms ease, opacity 180ms ease, visibility 0s; }
     .site-nav a { width: 100%; padding: 10px 0; font-size: 16px; }
     .site-nav a[aria-current='page']::after { display: none; }
     .theme-toggle { margin-top: 8px; }
