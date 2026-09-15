@@ -2,6 +2,10 @@ version: 2
 updates:
   - package-ecosystem: 'npm'
     directory: '/'
+    # archives/ 是只读历史归档，其中的旧 lockfile 不参与当前站点构建，
+    # 不应为其创建依赖更新 PR
+    exclude-paths:
+      - 'archives/**'
     schedule:
       interval: 'daily'
     groups:
@@ -23,6 +27,9 @@ updates:
 
   - package-ecosystem: 'github-actions'
     directory: '/'
+    # 同上：归档目录内的旧工作流不参与当前 CI
+    exclude-paths:
+      - 'archives/**'
     schedule:
       interval: 'weekly'
     groups:
