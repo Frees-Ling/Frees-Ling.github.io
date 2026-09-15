@@ -1,0 +1,6 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Comments from '../components/Comments.astro';
+---
+<Layout title="留言板"><header class="page-hero container"><p class="eyebrow">GUESTBOOK</p><h1 class="page-title">来都来了，<br />留下一句话吧。</h1><p class="lede">可以聊技术、分享音乐，也可以只是说声你好。登录 GitHub 后即可留言。</p></header><section class="reading-container guestbook"><Comments title="Frees Blog 留言板" term="Frees Blog Guestbook" /></section></Layout>
+<style>.guestbook{padding-bottom:120px}.guestbook :global(.comments){margin-top:0;padding-top:0;border-top:0}</style>

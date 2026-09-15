@@ -1,25 +1,9 @@
 ---
-
-import { getEntry, render } from "astro:content";
-import Markdown from "@components/misc/Markdown.astro";
-import I18nKey from "../i18n/i18nKey";
-import { i18n } from "../i18n/translation";
-import MainGridLayout from "../layouts/MainGridLayout.astro";
-
-const aboutPost = await getEntry("spec", "about");
-
-if (!aboutPost) {
-	throw new Error("About page content not found");
-}
-
-const { Content } = await render(aboutPost);
+import Layout from '../layouts/Layout.astro';
+import { site, socials } from '../data/site';
 ---
-<MainGridLayout title={i18n(I18nKey.about)} description={i18n(I18nKey.about)}>
-    <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32">
-        <div class="card-base z-10 px-9 py-6 relative w-full ">
-            <Markdown class="mt-2">
-                <Content />
-            </Markdown>
-        </div>
-    </div>
-</MainGridLayout>
+<Layout title="关于我" description="认识凛风（Frees Ling）：学生、开发者、AI 与音乐探索者。">
+  <header class="page-hero container about-hero"><div><p class="eyebrow">ABOUT FREES LING</p><h1 class="page-title">像风一样，<br />在数字与现实之间。</h1><p class="lede">哈喽！这里是凛风，当然你也可以叫我 Frees Ling。一介小狼，在数字与现实之间穿梭的旅人。</p></div><img src="/images/avatar.jpg" alt="Frees Ling 的头像" width="512" height="512" /></header>
+  <section class="section container about-grid"><aside><p class="eyebrow">IDENTITY</p><dl><div><dt>身份</dt><dd>学生 / Student</dd></div><div><dt>兴趣</dt><dd>摄影 · 编程 · AI · 音乐</dd></div><div><dt>常用语言</dt><dd>Python · C / C++</dd></div><div><dt>坐标</dt><dd>持续学习中</dd></div></dl></aside><div class="prose"><h2>关于这只小狼</h2><p>我喜欢用相机捕捉光影的灵魂，也热衷在代码的世界中创造属于自己的小宇宙。从 Python 到 C/C++，从数据库到小项目开发，学习和挑战永远在路上。</p><p>在虚拟世界里，我可能是 LOL 中的劫，也可能化身为疾驰的索尼克；在 Furry 圈里，我是那只红白蓝配色、尾巴创意十足、花纹独特的小狼。</p><p>性格像风一样多变——有时安静、社恐地潜水；有时社牛到能和陌生人聊到凌晨。我享受结识新朋友的过程，因为每一次交流，都是一段全新的故事开端。</p><blockquote>这里是我的小天地——分享日常、作品与灵感的地方。如果你也喜欢科技、摄影、游戏或 Furry，那我们一定会有很多话题。</blockquote><h2>找到我</h2><p>QQ：{site.qq}<br />Email：<a href={`mailto:${site.email}`}>{site.email}</a></p><div class="social-row">{socials.map((item)=><a class="button" href={item.href} target="_blank" rel="noreferrer">{item.label}</a>)}</div></div></section>
+</Layout>
+<style>.about-hero{display:grid;grid-template-columns:1fr 280px;align-items:end;gap:80px}.about-hero img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:50% 50% 12px 50%;filter:saturate(.78);box-shadow:var(--shadow)}.about-grid{display:grid;grid-template-columns:260px minmax(0,var(--reading));justify-content:center;gap:clamp(50px,9vw,120px)}dl{margin:0}dl>div{padding:14px 0;border-bottom:1px solid var(--line)}dt{color:var(--ink-faint);font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase}dd{margin:4px 0 0}.social-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}@media(max-width:760px){.about-hero{grid-template-columns:1fr}.about-hero img{width:180px}.about-grid{grid-template-columns:1fr}}</style>

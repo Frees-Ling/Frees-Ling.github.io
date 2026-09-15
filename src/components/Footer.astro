@@ -1,21 +1,20 @@
 ---
-
-import { profileConfig } from "../config";
-import { url } from "../utils/url-utils";
-
-const currentYear = new Date().getFullYear();
+import { site, socials } from '../data/site';
 ---
-
-<!--<div class="border-t border-[var(&#45;&#45;primary)] mx-16 border-dashed py-8 max-w-[var(&#45;&#45;page-width)] flex flex-col items-center justify-center px-6">-->
-<div class="transition border-t border-black/10 dark:border-white/15 my-10 border-dashed mx-32"></div>
-<!--<div class="transition bg-[oklch(92%_0.01_var(&#45;&#45;hue))] dark:bg-black rounded-2xl py-8 mt-4 mb-8 flex flex-col items-center justify-center px-6">-->
-<div class="transition border-dashed border-[oklch(85%_0.01_var(--hue))] dark:border-white/15 rounded-2xl mb-12 flex flex-col items-center justify-center px-6">
-    <div class="transition text-50 text-sm text-center">
-        &copy; <span id="copyright-year">{currentYear}</span> {profileConfig.name}. All Rights Reserved. /
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('rss.xml')}>RSS</a> /
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('sitemap-index.xml')}>Sitemap</a><br>
-        Powered by
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://astro.build">Astro</a> &
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/saicaca/fuwari">Fuwari</a>
-    </div>
-</div>
+<footer class="footer">
+  <div class="container footer-grid">
+    <div><p class="footer-name">{site.name}</p><p class="footer-note">在代码、智能与生活之间，<br />留下一些真实的痕迹。</p></div>
+    <div><p class="footer-label">漫游</p><nav class="footer-links" aria-label="页脚导航"><a href="/archive/">文章归档</a><a href="/history/">历史个人博客</a><a href="/now/">此刻</a><a href="/gallery/">照片墙</a><a href="/friends/">朋友们</a><a href="/guestbook/">留言板</a></nav></div>
+    <div><p class="footer-label">连接</p><div class="footer-links">{socials.map((item) => <a href={item.href} target="_blank" rel="noreferrer">{item.label}</a>)}<a href="/rss.xml">RSS Feed</a></div></div>
+  </div>
+  <div class="container footer-bottom"><p>© {new Date().getFullYear()} {site.owner}. 用好奇心持续构建。</p><p id="busuanzi_container_site_pv" class="visits">累计访问 <span id="busuanzi_value_site_pv">—</span> 次</p></div>
+</footer>
+<style>
+  .footer { padding: 76px 0 24px; border-top: 1px solid var(--line); background: rgba(2,12,16,.18); }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 48px; padding-bottom: 64px; }
+  .footer-name { margin: 0 0 14px; font-family: Georgia,serif; font-size: 32px; } .footer-note { margin: 0; color: var(--ink-soft); }
+  .footer-label { margin: 0 0 16px; color: var(--ink-faint); font-family: ui-monospace,monospace; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  .footer-links { display: flex; align-items: flex-start; flex-direction: column; gap: 9px; } .footer-links a { color: var(--ink-soft); font-size: 14px; text-decoration: none; } .footer-links a:hover { color: var(--cyan); }
+  .footer-bottom { display: flex; justify-content: space-between; gap: 24px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 12px; } .footer-bottom p { margin: 0; }
+  @media (max-width:700px) { .footer-grid { grid-template-columns: 1fr 1fr; } .footer-grid>div:first-child { grid-column: 1/-1; } .footer-bottom { align-items:flex-start; flex-direction:column; } }
+</style>

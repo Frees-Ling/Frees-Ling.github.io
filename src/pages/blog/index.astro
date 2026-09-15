@@ -1,0 +1,27 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import PostCard from '../../components/PostCard.astro';
+import { byNewest, normalizeCategory } from '../../utils/posts';
+
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(byNewest);
+const categories = ['全部', ...new Set(posts.map((post) => normalizeCategory(post.data.category)))];
+---
+<Layout title="文章" description="Frees Ling 的技术文章、研究笔记与生活记录。">
+  <header class="page-hero container"><p class="eyebrow">ALL WRITING · {posts.length} ENTRIES</p><h1 class="page-title">文章不是答案，<br />是思考留下的轨迹。</h1><p class="lede">从 AI、计算机视觉和机器人，到生活里无法归类的片段。按时间阅读，也可以沿着标签漫游。</p></header>
+  <section class="container blog-section">
+    <div class="filter-bar" aria-label="分类筛选">{categories.map((category,index) => <button type="button" class:list={{active:index===0}} data-category={category}>{category}</button>)}</div>
+    <div class="post-grid">{posts.map((post,index) => <div class="post-wrap" data-category={normalizeCategory(post.data.category)}><PostCard post={post} featured={index===0}/></div>)}</div>
+    <p class="no-results" hidden>这个分类里暂时还没有文章。</p>
+  </section>
+  <div class="container archive-link"><a class="text-link" href="/archive/">切换到年份归档</a></div>
+</Layout>
+<script>
+  const buttons=[...document.querySelectorAll<HTMLButtonElement>('[data-category]')].filter((item)=>item.tagName==='BUTTON');
+  const cards=[...document.querySelectorAll<HTMLElement>('.post-wrap')];
+  const empty=document.querySelector<HTMLElement>('.no-results');
+  buttons.forEach((button)=>button.addEventListener('click',()=>{buttons.forEach((item)=>item.classList.remove('active'));button.classList.add('active');const selected=button.dataset.category;let visible=0;cards.forEach((card)=>{const show=selected==='全部'||card.dataset.category===selected;card.hidden=!show;if(show)visible+=1});if(empty)empty.hidden=visible>0;}));
+</script>
+<style>
+  .blog-section{padding-bottom:40px}.filter-bar{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:42px;padding-bottom:20px;border-bottom:1px solid var(--line)}.filter-bar button{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink-soft);cursor:pointer}.filter-bar button:hover,.filter-bar button.active{border-color:var(--coral);background:var(--coral);color:#1d1713}.post-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.post-wrap:first-child{grid-column:span 2}.post-wrap[hidden]{display:none}.post-wrap>article{height:100%}.archive-link{padding:20px 0 100px;text-align:right}.no-results{padding:60px;color:var(--ink-soft);text-align:center}@media(max-width:760px){.post-grid{grid-template-columns:1fr}.post-wrap:first-child{grid-column:auto}}
+</style>

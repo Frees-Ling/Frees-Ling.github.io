@@ -1,0 +1,70 @@
+---
+import { nav, site } from '../data/site';
+const path = Astro.url.pathname;
+---
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="/" aria-label={`${site.name} 首页`}>
+      <span class="brand-mark" aria-hidden="true">F</span><span>{site.name}</span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span>菜单</span><span class="menu-icon" aria-hidden="true"></span>
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="主导航">
+      {nav.map((item) => {
+        const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
+        return <a href={item.href} aria-current={active ? 'page' : undefined}>{item.label}</a>;
+      })}
+      <a class="search-link" href="/search/" aria-label="搜索">⌕</a>
+      <button class="theme-toggle" type="button" aria-label="切换明暗主题" title="切换明暗主题">
+        <span class="theme-sun" aria-hidden="true">☀</span><span class="theme-moon" aria-hidden="true">◐</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const menuButton = document.querySelector<HTMLButtonElement>('.menu-toggle');
+  const navElement = document.querySelector<HTMLElement>('.site-nav');
+  menuButton?.addEventListener('click', () => {
+    const open = menuButton.getAttribute('aria-expanded') === 'true';
+    menuButton.setAttribute('aria-expanded', String(!open));
+    navElement?.classList.toggle('is-open', !open);
+  });
+  document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+    root.dataset.theme = next;
+    localStorage.setItem('frees-theme', next);
+  });
+</script>
+
+<style>
+  .site-header { position: relative; z-index: 20; border-bottom: 1px solid var(--line); }
+  .header-inner { width: min(calc(100% - 48px), var(--content)); min-height: 78px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+  .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); font-weight: 750; letter-spacing: -0.02em; text-decoration: none; }
+  .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--coral); font-family: Georgia, serif; font-size: 20px; }
+  .site-nav { display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); }
+  .site-nav a { position: relative; color: var(--ink-soft); font-size: 14px; font-weight: 650; text-decoration: none; }
+  .site-nav a:hover, .site-nav a[aria-current='page'] { color: var(--ink); }
+  .site-nav a[aria-current='page']::after { position: absolute; right: 0; bottom: -13px; left: 0; height: 2px; border-radius: 2px; background: var(--coral); content: ''; }
+  .search-link { font-size: 23px !important; font-weight: 400 !important; line-height: 1; }
+  .theme-toggle, .menu-toggle { border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+  .theme-toggle { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 50%; }
+  .theme-toggle:hover { border-color: var(--cyan); }
+  .theme-sun, :root[data-theme='light'] .theme-moon { display: none; }
+  :root[data-theme='light'] .theme-sun { display: inline; }
+  .menu-toggle { display: none; align-items: center; gap: 10px; padding: 10px 0; font-size: 14px; font-weight: 700; }
+  .menu-icon, .menu-icon::after { display: block; width: 18px; height: 1px; background: currentColor; content: ''; }
+  .menu-icon::after { transform: translateY(6px); }
+  @media (max-width: 850px) {
+    .header-inner { width: calc(100% - 32px); min-height: 70px; flex-wrap: wrap; }
+    .menu-toggle { display: flex; }
+    .site-nav { width: 100%; max-height: 0; align-items: flex-start; flex-direction: column; gap: 0; overflow: hidden; opacity: 0; transition: max-height 220ms ease, opacity 180ms ease; }
+    .site-nav.is-open { max-height: 520px; padding: 8px 0 24px; opacity: 1; }
+    .site-nav a { width: 100%; padding: 10px 0; font-size: 16px; }
+    .site-nav a[aria-current='page']::after { display: none; }
+    .theme-toggle { margin-top: 8px; }
+  }
+</style>

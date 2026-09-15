@@ -1,13 +1,20 @@
-## ⚡ Commands
+# Frees Blog
 
-All commands are run from the root of the project, from a terminal:
+Frees Ling 的个人数字花园，使用 Astro 构建并部署到 GitHub Pages。
 
-| Command                    | Action                                              |
-|:---------------------------|:----------------------------------------------------|
-| `pnpm install`             | Installs dependencies                               |
-| `pnpm dev`                 | Starts local dev server at `localhost:4321`         |
-| `pnpm build`               | Build your production site to `./dist/`             |
-| `pnpm preview`             | Preview your build locally, before deploying        |
-| `pnpm check`               | Run checks for errors in your code                  |
-| `pnpm format`              | Format your code using Biome                        |
-| `pnpm new-post <filename>` | Create a new post                                   |
+## 本地运行
+
+```bash
+npm install
+npm run dev
+```
+
+## 验证
+
+```bash
+npm run check
+npm run lint:md
+npm run build
+```
+
+文章位于 `src/content/posts/`。构建会同时生成全文搜索索引、RSS、站点地图和静态页面。
