@@ -31,6 +31,18 @@ astro dev --background
 改动完成后请确认 `format:check`、`lint`、`lint:md`、`check`、`build` 全部通过。
 CI（`.github/workflows/quality.yml`）会逐项执行这些命令。
 
+## 提交约定
+
+改动完成后**主动提交**，不要让改动滞留在工作区：
+
+1. 先跑校验，全部通过再提交：`npm run format:check`、`lint`、`lint:md`、`check`
+2. 提交信息用中文，讲清**为什么改**，而不是罗列改了哪些文件
+3. **不要 push** —— 上线由维护者审核后手动推送（`git push` 已配置为需确认）
+
+`.claude/hooks/stop-commit.sh` 会在每轮回复结束时兜底：若发现未提交的改动，
+它同样会先跑上述校验，通过才提交（信息形如 `chore: 自动提交 N 个文件`）。
+正常情况下轮不到它出手，它只是防止改动长期滞留。
+
 ## 关键约定
 
 以下几条是**反直觉**的，改动前请先读完原因。

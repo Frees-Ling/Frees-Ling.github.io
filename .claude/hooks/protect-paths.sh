@@ -52,13 +52,24 @@ abs = path.join(realOrSelf(dir), ...rest);
 //    同时保留词法比较：即使 archives 本身被换成符号链接，写入该路径也应被拦截。
 const project = realOrSelf(projectDir);
 
+// macOS 与 Windows 的默认文件系统大小写不敏感，而 realpath 不会归一化大小写
+// （realpathSync("…/ARCHIVES") 会原样返回大写形式）。若不折叠大小写，
+// ARCHIVES/x.md 就能命中真实的 archives/ 并绕过本检查 —— 已实测确认。
+const caseFold =
+  process.platform === "darwin" || process.platform === "win32"
+    ? (s) => s.toLowerCase()
+    : (s) => s;
+
+const within = (candidate, target) => {
+  const c = caseFold(candidate);
+  const t = caseFold(target);
+  return c === t || c.startsWith(t + path.sep);
+};
+
 for (const rel of ["archives", "public/history"]) {
   const lexicalTarget = path.resolve(projectDir, rel);
   const realTarget = realOrSelf(path.join(project, rel));
-  const inLexical =
-    lexical === lexicalTarget || lexical.startsWith(lexicalTarget + path.sep);
-  const inReal = abs === realTarget || abs.startsWith(realTarget + path.sep);
-  if (inLexical || inReal) {
+  if (within(lexical, lexicalTarget) || within(abs, realTarget)) {
     process.stdout.write(rel);
     process.exit(0);
   }
@@ -71,6 +82,8 @@ CANON_STATUS=$?
 # 层一：含 ".." 一律拒绝（绕过必须借助 ".." 或符号链接）。
 # 层二：对未解析的路径做词法前缀匹配 —— 挡不住符号链接，但优于全部放行。
 if [ $CANON_STATUS -ne 0 ]; then
+  # macOS/Windows 文件系统大小写不敏感，词法匹配也要忽略大小写
+  shopt -s nocasematch 2>/dev/null
   case "$FILE_PATH" in
     *..*)
       printf 'Blocked: 无法规范化路径 %s（node 执行失败），保守拒绝。\n' "$FILE_PATH" >&2
