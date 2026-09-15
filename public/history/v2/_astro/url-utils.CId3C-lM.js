@@ -1,0 +1,1 @@
+import"./zh_TW.CBGE2MiY.js";function i(o,t){const n=o.replace(/^\/|\/$/g,"").toLowerCase(),r=t.replace(/^\/|\/$/g,"").toLowerCase();return n===r}function e(...o){return o.join("/").replace(/\/+/g,"/")}function u(o){return a(`/posts/${o}/`)}function a(o){return e("","/history/v2/",o)}export{u as g,i as p,a as u};
