@@ -25,3 +25,6 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# claude code local overrides（个人本地设置，不共享）
+.claude/settings.local.json

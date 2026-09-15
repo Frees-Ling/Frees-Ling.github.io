@@ -11,11 +11,15 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
-    "lint:md": "markdownlint-cli2 --config .markdownlint.json 'src/content/posts/*.md'"
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "lint:md": "markdownlint-cli2 --config .markdownlint.json 'src/content/posts/*.md'",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@astrojs/rss": "^4.0.17",
     "@astrojs/markdown-remark": "^7.3.0",
+    "@astrojs/rss": "^4.0.17",
     "@astrojs/sitemap": "^3.6.1",
     "astro": "^7.3.1",
     "katex": "^0.16.22",
@@ -24,8 +28,10 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
+    "@biomejs/biome": "^2.5.13",
     "markdownlint-cli2": "^0.23.2",
     "pagefind": "^1.4.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.2"
   },
   "allowScripts": {

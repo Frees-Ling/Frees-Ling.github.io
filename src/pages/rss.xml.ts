@@ -4,7 +4,9 @@ import { getCollection } from 'astro:content';
 import { byNewest, postHref } from '../utils/posts';
 
 export async function GET(context: APIContext) {
-  const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(byNewest);
+  const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+    byNewest,
+  );
   return rss({
     title: 'Frees Blog',
     description: '在代码、智能与生活之间，记录仍在生长的想法。',
