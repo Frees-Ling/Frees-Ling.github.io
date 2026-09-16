@@ -234,12 +234,39 @@ Commit：本文件所在提交。
 
 ### RENDER-001 — 文章渲染器审计与契约
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: W2
 - Priority: P0
 - Depends-On: WEB-006
 
 Acceptance：确定语义节点、样式责任、Studio 复用边界、fixture 集与兼容策略；不改文章正文事实。
+
+Evidence：
+
+契约写入 **`docs/article-renderer.md`**。核心结论基于对 17 篇产出 HTML 的实际清点：
+
+- **元素种类 61，而 `transformer` 一篇独占 59 种**（其余 16 篇只有 28–30 种），
+  含 543 个 `h2`、546 个 `hr` 与全套 KaTeX 节点。
+  结论：**transformer 才是这套渲染器真正的验收对象**，
+  只按普通文章调样式等于没测过最难的输入。
+- 样式责任已划清：`.prose` 内部归 `prose.css`（唯一责任方），
+  外部归页面内联样式，颜色/字体/圆角/间距归 tokens 并由闸门强制。
+  KaTeX 与 Shiki 的第三方样式**不覆盖**，只调外层容器。
+- Studio 复用边界：必须复用 `prose.css` + `tokens.css` + 同一套 Markdown 管线；
+  不得复用页面级布局；不得分叉复制样式（预览漂移是编辑器最昂贵的缺陷）。
+  Markdown 管线目前内嵌在 `astro.config.mjs`，接 Studio 前需抽为共享模块（列入 EDITOR-001）。
+- fixture 集定为五类，覆盖两个极端（transformer 与 index.md）与中间档。
+
+审计中发现并修复 4 处缺陷（见契约第三节），其中一条是用户可见的：
+
+| 缺陷 | 影响 |
+| --- | --- |
+| `.prose` 标题 `scroll-margin-top: 100px` | 页头已是 `--header-h: 60px`，**锚点跳转后标题被页头盖住约 40px** |
+| `.prose img/pre/code` 三处硬编码圆角 | 绕过 token 体系 |
+
+验证：`check:tokens`、`format:check`、`build` 通过；未改动任何 `.md` 内容。
+
+Commit：本文件所在提交。
 
 ### RENDER-002 — Transformer 枢纽/分章迁移设计
 
