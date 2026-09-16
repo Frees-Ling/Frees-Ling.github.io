@@ -2,7 +2,7 @@
 
 > 每完成一个阶段更新本文件。完整方案见 `docs/redesign-plan.md`。
 
-**当前阶段：WEB-007 — 首页编辑化重构**
+**当前阶段：WEB-008 — 列表与栏目数据化**
 
 **P0–P3、P5a、P5c 已完成并全部通过回归；平台级状态以 `docs/execution/STATE.md` 为准**
 
@@ -42,9 +42,24 @@
 | **P6** | 资产与图片管线 | ⬜ 待排期 |
 | **P7** | 五区导航与栏目落地 | 🟡 Chrome 已落地，数据化栏目待完成 |
 | **P8** | 放宽 `.prettierignore` | ⬜ 最后执行，前置条件未满足 |
-| 下一步 | WEB-007 首页编辑化重构 | READY |
+| **WEB-007** | 首页编辑化重构 | ✅ 完成 |
+| 下一步 | WEB-008 列表与栏目数据化 | READY |
 
 ---
+
+### WEB-007 首页编辑化重构（完成）
+
+首屏从站点名 `Frees Blog.` 改为真正的 Identity 区，五秒内回答 Who / What / Why。
+移除与导航重复的 `.practice-section`，顺序调整为
+Identity → Selected Work → Featured Writing → Recent Notes → Current Signal → Quote。
+
+Selected Work 用发丝线表格行；Recent Notes 用索引列表（与卡片形成密度对比），
+两者都直接来自真实数据，未引入硬编码白名单。
+
+三轮 QA：结构 → baseline 错位与中文引言断行 → 网格半格空白与圆形箭头按钮。
+门禁：7 视口 × 16 路由全绿，axe-core 0 违规。
+
+遗留：`about.astro` 头像与文章页 CC 徽章仍为圆形，属 WEB-008 范畴。
 
 ## P5c — Site Chrome（已实施）
 

@@ -6,87 +6,474 @@ import { nowItems, projects, site } from '../data/site';
 import { byNewest, formatDate } from '../utils/posts';
 
 const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(byNewest);
-const latest = posts.slice(0, 3);
+
+// 首页分两层呈现文章，靠**信息密度**而非虚构分类区分：
+//   Selected Writing —— 编辑式，带摘要，回答「这里有什么值得读的」
+//   Recent Notes     —— 索引式，只有日期、编号与标题，像一本日志的目录
+// 两者都直接来自内容集合，没有硬编码白名单（栏目数据化是 WEB-008 的范围）。
+// 取 3 篇：第 1 篇在网格里 span 2 占满整行，后两篇各占一列 —— 正好填满。
+// 取 2 篇会在右侧留下半格空白（第 1 篇整行 + 第 2 篇半列）。
+const featured = posts.slice(0, 3);
+const recent = posts.slice(3, 12);
+
+const oldest = posts.at(-1);
+const newest = posts.at(0);
+const yearSpan =
+  oldest && newest
+    ? oldest.data.published.getFullYear() === newest.data.published.getFullYear()
+      ? `${newest.data.published.getFullYear()}`
+      : `${oldest.data.published.getFullYear()}–${newest.data.published.getFullYear()}`
+    : '';
 ---
 
 <Layout>
-  <section class="hero">
-    <div class="container hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow">PERSONAL DIGITAL GARDEN · SINCE 2025</p>
-        <h1 class="display-title">Frees<br /><em>Blog.</em></h1>
-        <p class="hero-intro">{site.description}<br />这里是凛风的个人空间，也是一个不会停止更新的实验场。</p>
-        <div class="hero-actions"><a class="button primary" href="/blog/">开始阅读</a><a class="button" href="/about/">认识我</a></div>
+  <!-- ── IDENTITY ────────────────────────────────────────────────
+       首屏必须在五秒内回答 Who / What / Why。
+       旧的 hero 是站点名「Frees Blog.」加一个装饰圆环 —— 回答了「这个站叫什么」，
+       但没有回答「这个人做什么、为什么值得继续看」。 -->
+  <section class="identity">
+    <div class="container identity-grid">
+      <div class="identity-copy">
+        <p class="identity-coord">
+          <span>31.23° N · 121.47° E</span>
+          <span>EST. 2025</span>
+        </p>
+        <h1 class="identity-name">{site.owner}<em>{site.alias}</em></h1>
+        <p class="identity-what">
+          记录 <strong>AI 决策</strong>、<strong>计算机视觉</strong>与<strong>机器人实验</strong>的工程观察笔记 ——
+          麻将策略的评估方法、YOLO 训练与数据标注、Unitree Go2 的真实设备交互，
+          以及把 Transformer 从线性代数重新推导一遍的长文。
+        </p>
+        <p class="identity-why">
+          不是教程搬运，而是可复查的过程记录：{yearSpan} 年至今 {posts.length} 篇，
+          包含推理过程、失败的尝试和当时的困惑。
+        </p>
+        <div class="identity-actions">
+          <a class="button primary" href="/blog/">阅读记录</a>
+          <a class="button" href="/about/">关于我</a>
+        </div>
       </div>
-      <!-- 原先这里是 .hero-orbit：一个圆环 + 核心 + AI/CODE/MUSIC/LIFE 四卫星。
-           它是简报明令禁止的「发光球体 / 漂浮装饰」类元素 —— 信息量为零，
-           且占掉 hero 的整个右半。移除而非改造。 -->
-      <dl class="hero-facts">
+
+      <dl class="identity-facts">
         <div><dt>RECORDING SINCE</dt><dd>2025</dd></div>
         <div><dt>ENTRIES</dt><dd>{posts.length}</dd></div>
-        <div><dt>LAST LOGGED</dt><dd>{latest[0] ? formatDate(latest[0].data.published) : '—'}</dd></div>
+        <div><dt>LAST LOGGED</dt><dd>{posts[0] ? formatDate(posts[0].data.published) : '—'}</dd></div>
+        <div><dt>LONGEST</dt><dd>232K 字 · Transformer</dd></div>
       </dl>
     </div>
-    <div class="container hero-foot"><span>向下探索</span><span class="hero-line"></span><span>31.23° N · 121.47° E</span></div>
   </section>
 
-  <section class="section writing-section">
+  <!-- ── SELECTED WORK ───────────────────────────────────────────
+       发丝线表格行，不用卡片。四个项目全部来自 site.ts 的真实数据。 -->
+  <section class="section" aria-labelledby="work-title">
     <div class="container">
-      <div class="section-header"><div><p class="eyebrow">LATEST WRITING</p><h2 class="section-title">最近写下的</h2></div><p>技术不是孤岛。这里同时保存过程、困惑，以及某个时刻真正想说的话。</p></div>
-      <div class="post-grid">{latest.map((post, index) => <PostCard post={post} featured={index === 0} />)}</div>
-      <div class="section-action"><a class="text-link" href="/blog/">查看全部 {posts.length} 篇文章</a></div>
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">SELECTED WORK</p>
+          <h2 id="work-title" class="section-title">持续构建中</h2>
+        </div>
+        <a class="text-link" href="/projects/">完整项目时间线</a>
+      </div>
+      <ol class="work-list">
+        {
+          projects.map((project, index) => (
+            <li class="work-row">
+              <span class="work-no">{String(index + 1).padStart(2, '0')}</span>
+              <div class="work-head">
+                <p>
+                  {project.type} · {project.year}
+                </p>
+                <h3>{project.name}</h3>
+              </div>
+              <p class="work-desc">{project.description}</p>
+              <span class="work-state">{project.status}</span>
+            </li>
+          ))
+        }
+      </ol>
     </div>
   </section>
 
-  <section class="section practice-section">
+  <!-- ── FEATURED WRITING ──────────────────────────────────────── -->
+  <section class="section" aria-labelledby="writing-title">
     <div class="container">
-      <div class="section-header"><div><p class="eyebrow">CURIOSITY MAP</p><h2 class="section-title">好奇心的<br />四个方向</h2></div><p>我不太喜欢给自己设定僵硬的边界。研究、工程、音乐和生活，在这里彼此相连。</p></div>
-      <div class="practice-grid">
-        <a href="/research/"><span>01</span><h3>智能 / 研究</h3><p>模型、决策与可验证的证据</p><b>↗</b></a>
-        <a href="/projects/"><span>02</span><h3>代码 / 构建</h3><p>把想法变成真正运行的东西</p><b>↗</b></a>
-        <a href="/music/"><span>03</span><h3>声音 / 创作</h3><p>旋律、角色与情绪的另一种表达</p><b>↗</b></a>
-        <a href="/notes/"><span>04</span><h3>生活 / 随笔</h3><p>那些无法被归类，却值得记住的瞬间</p><b>↗</b></a>
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">FEATURED WRITING</p>
+          <h2 id="writing-title" class="section-title">最近写下的</h2>
+        </div>
+        <p>技术不是孤岛。这里同时保存过程、困惑，以及某个时刻真正想说的话。</p>
+      </div>
+      <div class="post-grid">
+        {featured.map((post, index) => <PostCard post={post} featured={index === 0} />)}
       </div>
     </div>
   </section>
 
-  <section class="section project-section">
+  <!-- ── RECENT NOTES ──────────────────────────────────────────────
+       索引式呈现：只有编号、日期、标题与分类。
+       与上面的编辑式卡片形成密度对比，像一本日志的目录页。 -->
+  <section class="section" aria-labelledby="notes-title">
     <div class="container">
-      <div class="section-header"><div><p class="eyebrow">SELECTED PROJECTS</p><h2 class="section-title">持续构建中</h2></div><a class="text-link" href="/projects/">完整项目时间线</a></div>
-      <div class="project-list">{projects.slice(0,3).map((project,index) => <article class={`project-row ${project.accent}`}><span class="project-no">0{index+1}</span><div><p>{project.type} · {project.year}</p><h3>{project.name}</h3></div><p class="project-description">{project.description}</p><span class="project-state">{project.status}</span></article>)}</div>
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">RECENT NOTES</p>
+          <h2 id="notes-title" class="section-title">更早的记录</h2>
+        </div>
+        <p>按时间倒序的全部条目，包含短文与实验片段。</p>
+      </div>
+      <ol class="index-list">
+        {
+          recent.map((post, index) => (
+            <li>
+              <a href={`/blog/${post.id.replace(/\.(md|mdx)$/i, '')}/`}>
+                <span class="index-no">
+                  {String(posts.length - index - 3).padStart(3, '0')}
+                </span>
+                <time datetime={post.data.published.toISOString()}>
+                  {formatDate(post.data.published)}
+                </time>
+                <span class="index-title">{post.data.title}</span>
+                <span class="index-arrow" aria-hidden="true">↗</span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="index-more">
+        <a class="text-link" href="/archive/">查看全部 {posts.length} 篇记录</a>
+      </p>
     </div>
   </section>
 
-  <section class="section now-section">
-    <div class="container now-grid">
-      <div><p class="eyebrow">RIGHT NOW</p><h2 class="section-title">此刻，<br />我正在……</h2><a class="text-link" href="/now/">打开 Now 页面</a></div>
-      <div class="now-list">{nowItems.map((item) => <div><span>{item.label}</span><p>{item.value}</p></div>)}</div>
+  <!-- ── CURRENT SIGNAL ────────────────────────────────────────── -->
+  <section class="section signal" aria-labelledby="signal-title">
+    <div class="container signal-grid">
+      <div>
+        <p class="eyebrow">CURRENT SIGNAL</p>
+        <h2 id="signal-title" class="section-title">此刻，<br />我正在……</h2>
+        <a class="text-link" href="/now/">打开 Now 页面</a>
+      </div>
+      <dl class="signal-list">
+        {
+          nowItems.map((item) => (
+            <div>
+              <dt>{item.label}</dt>
+              <dd>{item.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
     </div>
   </section>
 
-  <section class="quote-section"><div class="container"><p>“保持敏感，保持具体。<br />在这个世界里，留下属于自己的坐标。”</p><span>— Frees Ling</span></div></section>
+  <!-- 用户确认为真实的话，保留署名 -->
+  <section class="quote">
+    <div class="container">
+      <blockquote>
+        保持敏感，保持具体。<br />在这个世界里，留下属于自己的坐标。
+      </blockquote>
+      <cite>— Frees Ling</cite>
+    </div>
+  </section>
 </Layout>
 
 <style>
-  .hero { min-height: calc(100svh - 79px); display:flex; flex-direction:column; justify-content:space-between; padding:clamp(76px,10vw,130px) 0 28px; overflow:hidden; }
-  .hero-grid { display:grid; grid-template-columns:1.3fr .7fr; align-items:center; gap:40px; }
-  .display-title em { color:var(--signal-text); font-weight:500; }
-  .hero-intro { max-width:660px; margin:34px 0 0; color:var(--ink-soft); font-size:clamp(18px,2vw,22px); }
-  .hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:36px; }
-  /* 用真实数据取代装饰：记录起始年份、条目数、最后记录日期。
-     这些是真实的、可核对的元信息，而不是 AI/CODE/MUSIC/LIFE 这类标签云。 */
-  .hero-facts { display:grid; gap:0; align-self:end; margin:0; border-top:1px solid var(--line); }
-  .hero-facts > div { display:flex; align-items:baseline; justify-content:space-between; gap:20px; padding:16px 0; border-bottom:1px solid var(--line); }
-  .hero-facts dt { color:var(--ink-soft); font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; }
-  .hero-facts dd { margin:0; color:var(--ink); font-family:var(--font-mono); font-size:13px; letter-spacing:.04em; }
-  .hero-foot { display:flex; align-items:center; gap:16px; color: var(--ink-soft); font-family:ui-monospace,monospace; font-size:10px; letter-spacing:.1em; } .hero-line{height:1px;flex:1;background:var(--line)}
-  .post-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; } .section-action{margin-top:34px;text-align:right}
-  .practice-section { background:var(--paper); color:var(--paper-ink); } .practice-section .eyebrow{color:var(--paper-ink)}.practice-section .section-header>p{color:var(--paper-ink)}
-  .practice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:1px solid color-mix(in oklab, var(--paper-ink) 18%, transparent); }
-  .practice-grid a { position:relative; min-height:240px; padding:32px 60px 32px 0; border-bottom:1px solid color-mix(in oklab, var(--paper-ink) 18%, transparent); color:inherit; text-decoration:none; } .practice-grid a:nth-child(odd){border-right:1px solid color-mix(in oklab, var(--paper-ink) 18%, transparent)}.practice-grid a:nth-child(even){padding-left:34px}
-  .practice-grid span{font-family:ui-monospace,monospace;font-size:11px;color:var(--paper-ink)}.practice-grid h3{margin:40px 0 8px;font-family:Georgia,"Songti SC",serif;font-size:clamp(28px,4vw,44px);font-weight:500}.practice-grid p{margin:0;color:var(--paper-ink)}.practice-grid b{position:absolute;right:20px;bottom:32px;color:var(--paper-ink);font-size:24px;transition:180ms}.practice-grid a:hover b{transform:translate(4px,-4px)}
-  .project-list { border-top:1px solid var(--line); }.project-row { display:grid; grid-template-columns:54px 1fr 1.2fr 100px; align-items:center; gap:24px; padding:30px 0; border-bottom:1px solid var(--line); }.project-row p{margin:0;color:var(--ink-soft);font-size:14px}.project-row h3{margin:4px 0 0;font-family:Georgia,"Songti SC",serif;font-size:28px;font-weight:500}.project-no{font-family:ui-monospace,monospace;color: var(--ink-soft);font-size:11px}.project-state{justify-self:end;padding:5px 10px;border:1px solid var(--line);border-radius: var(--radius-sm);color:var(--ink-soft);font-size:11px}.project-row.cyan h3{color:var(--accent-text)}.project-row.coral h3{color:var(--signal-text)}.project-row.violet h3{color:var(--ink)}
-  .now-section { background:var(--surface); }.now-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(50px,10vw,140px)}.now-grid .text-link{margin-top:38px}.now-list{border-top:1px solid var(--line)}.now-list>div{display:grid;grid-template-columns:120px 1fr;gap:20px;padding:24px 0;border-bottom:1px solid var(--line)}.now-list span{color: var(--ink-soft);font-family:ui-monospace,monospace;font-size:11px}.now-list p{margin:0;color:var(--ink);font-size:18px}
-  .quote-section { padding:clamp(90px,14vw,180px) 0;text-align:center }.quote-section p{margin:0 auto 28px;font-family:Georgia,"Songti SC",serif;font-size:clamp(34px,6vw,72px);font-weight:500;letter-spacing:-.04em;line-height:1.25}.quote-section span{color: var(--ink-soft);font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em}
-  @media(max-width:900px){.post-grid{grid-template-columns:1fr}.practice-grid{grid-template-columns:1fr}.practice-grid a,.practice-grid a:nth-child(odd){border-right:0}.practice-grid a:nth-child(even){padding-left:0}.project-row{grid-template-columns:40px 1fr auto}.project-description{display:none}.now-grid{grid-template-columns:1fr}.now-list>div{grid-template-columns:100px 1fr}}
+  /* ── IDENTITY ── */
+  .identity {
+    padding: clamp(64px, 9vw, 120px) 0 clamp(40px, 5vw, 72px);
+  }
+  .identity-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.55fr);
+    gap: clamp(40px, 6vw, 96px);
+    align-items: start;
+  }
+  .identity-coord {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin: 0 0 28px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .identity-name {
+    margin: 0 0 26px;
+    font-family: var(--font-display);
+    font-size: clamp(52px, 8.5vw, 118px);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 0.94;
+  }
+  .identity-name em {
+    display: block;
+    color: var(--signal-text);
+    font-style: italic;
+  }
+  .identity-what {
+    max-width: 60ch;
+    margin: 0 0 18px;
+    color: var(--ink);
+    font-size: clamp(17px, 1.7vw, 20px);
+    line-height: 1.65;
+  }
+  .identity-what strong {
+    font-weight: 600;
+  }
+  .identity-why {
+    max-width: 60ch;
+    margin: 0 0 34px;
+    color: var(--ink-soft);
+  }
+  .identity-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .identity-facts {
+    margin: 0;
+    border-top: 1px solid var(--line);
+  }
+  .identity-facts > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .identity-facts dt {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .identity-facts dd {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  /* ── SELECTED WORK ── */
+  .work-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .work-row {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1.15fr) 96px;
+    /* 用 start 而非 baseline：标题是 32px 衬线、其余是 13px 无衬线，
+       baseline 对齐会把大字号标题整体压低，三列看起来错位。
+       改为统一顶对齐，再用 padding-top 做光学微调。 */
+    align-items: start;
+    gap: 24px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .work-no,
+  .work-state,
+  .work-head p,
+  .work-desc {
+    padding-top: 6px;
+  }
+  .work-no {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .work-head p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  .work-head h3 {
+    margin: 5px 0 0;
+    font-family: var(--font-display);
+    font-size: clamp(24px, 2.6vw, 32px);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .work-desc {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+  .work-state {
+    justify-self: end;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  /* ── FEATURED WRITING ── */
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  /* ── RECENT NOTES（索引式，与卡片形成密度对比）── */
+  .index-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .index-list li {
+    border-bottom: 1px solid var(--line);
+  }
+  .index-list a {
+    display: grid;
+    grid-template-columns: 48px 128px minmax(0, 1fr) 24px;
+    align-items: baseline;
+    gap: 20px;
+    padding: 15px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .index-no {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .index-list time {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .index-title {
+    color: var(--ink);
+    font-size: 16px;
+  }
+  .index-arrow {
+    justify-self: end;
+    color: var(--signal-text);
+    transition: transform 140ms ease;
+  }
+  .index-list a:hover .index-arrow {
+    transform: translate(3px, -3px);
+  }
+  .index-more {
+    margin: 26px 0 0;
+    text-align: right;
+  }
+
+  /* ── CURRENT SIGNAL ── */
+  .signal {
+    border-top: 1px solid var(--line);
+  }
+  .signal-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+    gap: clamp(40px, 8vw, 120px);
+  }
+  .signal-grid .text-link {
+    margin-top: 30px;
+  }
+  .signal-list {
+    margin: 0;
+    border-top: 1px solid var(--line);
+  }
+  .signal-list > div {
+    display: grid;
+    grid-template-columns: 108px minmax(0, 1fr);
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .signal-list dt {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .signal-list dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: 17px;
+  }
+
+  /* ── QUOTE ── */
+  .quote {
+    padding: clamp(72px, 11vw, 150px) 0;
+    border-top: 1px solid var(--line);
+  }
+  .quote blockquote {
+    /* 不设 ch 宽度上限：ch 基于拉丁字形宽度，对中文过窄，
+       会把「保持具体。」拆成两行。断行交给内容里的 <br /> 控制。 */
+    margin: 0 0 26px;
+    font-family: var(--font-display);
+    font-size: clamp(30px, 5.4vw, 66px);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1.2;
+  }
+  .quote cite {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-style: normal;
+    letter-spacing: 0.14em;
+  }
+
+  /* ── 移动端：独立构图，不是桌面压缩 ── */
+  @media (max-width: 900px) {
+    .identity-grid,
+    .signal-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 40px;
+    }
+    .identity-facts {
+      margin-top: 8px;
+    }
+    .work-row {
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 8px 16px;
+      padding: 22px 0;
+    }
+    .work-head {
+      grid-column: 2;
+    }
+    .work-desc,
+    .work-state {
+      grid-column: 2;
+      justify-self: start;
+    }
+    .work-desc {
+      margin-top: 4px;
+    }
+    .post-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .index-list a {
+      grid-template-columns: 42px minmax(0, 1fr) 20px;
+      gap: 8px 14px;
+      align-items: start;
+    }
+    .index-list time {
+      grid-row: 2;
+      grid-column: 2;
+    }
+    .index-title {
+      grid-column: 2;
+    }
+    .index-arrow {
+      grid-row: 1 / span 2;
+    }
+    .signal-list > div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+    .quote blockquote {
+      max-width: none;
+    }
+  }
 </style>

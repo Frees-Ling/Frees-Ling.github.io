@@ -84,7 +84,7 @@ Commit：本文件所在提交。
 
 ### WEB-007 — 首页编辑化重构
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: W1
 - Priority: P0
 - Depends-On: WEB-006
@@ -93,6 +93,41 @@ Objective：按 Identity → Selected Work → Featured Writing → Recent Notes
 
 Acceptance：首屏 5 秒测试可回答 Who/What/Why；无标签云/模板卡片墙；真实内容；三轮视觉 QA；
 移动端独立成立；所有质量闸门通过。
+
+Evidence：
+
+- **首屏改为 Identity 区**：`Frees Ling / 凛风` + 明确的研究方向
+  （AI 决策 / 计算机视觉 / 机器人实验）+ 为什么继续看（2025–2026 至今 17 篇、含推理过程
+  与失败尝试）。旧 hero 是站点名 `Frees Blog.` 加装饰圆环 —— 只回答了「这个站叫什么」。
+- **移除 `.practice-section`** —— 那块整幅反色块的四宫格内容与导航重复，
+  且是审计中标记的「整页最突兀的元素」。
+- **顺序调整为** Identity → Selected Work → Featured Writing → Recent Notes →
+  Current Signal → Quote。
+- **Selected Work** 用发丝线表格行（编号 / 类型 / 名称 / 描述 / 状态），不用卡片。
+- **Recent Notes** 是与卡片形成密度对比的**索引列表**（编号 + 日期 + 标题），
+  直接来自内容集合，**未引入硬编码白名单**（栏目数据化属 WEB-008）。
+- 全部内容为真实数据：项目取自 `site.ts`，文章取自内容集合，无编造数字或成果。
+
+三轮视觉 QA：
+
+1. **结构**：移动端工作行与索引列表的栅格重排独立成立。
+2. **层级与模板感**：修正工作行的 baseline 错位（大字号标题被压低）；
+   修正引言 `max-width:15ch` 对中文过窄导致的「保持具 / 体。」断行。
+3. **细节与一致性**：发现 `featured` 取 2 篇会在网格右侧留半格空白
+   （首篇 span 2 + 次篇半列），改为取 3 篇正好填满；
+   另修正 `PostCard` 的圆形箭头按钮（`border-radius:50%`）与全站直角语言冲突。
+
+验证：
+
+- `format:check`、`lint`、`lint:md`、`check:tokens`、`check`、`build`、`check:html` 全部通过。
+- 浏览器门禁：7 视口 × 16 路由，对比度 0 失败、横向溢出 0、键盘干净、控制台 0 错误。
+- `npm run a11y`：axe-core 0 违规、键盘走查干净。
+- 截图存于 `_backups/shots/web007-r1/`。
+
+超出本任务范围、已记录待后续处理：`about.astro` 的头像与文章页 CC 徽章仍为圆形
+（`border-radius:50%`），属 WEB-008 列表与页面语言的范畴。
+
+Commit：本文件所在提交。
 
 ### WEB-008 — 列表与栏目数据化
 
