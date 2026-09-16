@@ -199,7 +199,7 @@ refresh()
 const chat = { conversations: [], current: null, status: 'unknown' };
 
 function setTab(which) {
-  for (const name of ['notes', 'chat', 'memory']) {
+  for (const name of ['notes', 'chat', 'memory', 'settings']) {
     $(`view-${name}`).hidden = name !== which;
     $(`tab-${name}`).setAttribute('aria-current', String(name === which));
   }
@@ -207,6 +207,140 @@ function setTab(which) {
   $('search-form').closest('search').hidden = !isNotes;
   $('new').hidden = !isNotes;
   if (which === 'chat') checkModel();
+  if (which === 'settings') refreshSettings().catch(() => {});
+}
+
+// ── 配置（STUDIO-003）──
+//
+// 界面对两类配置的处理**刻意不同**：
+//   · 普通项 → 一个输入框，改完 PUT 回去
+//   · 敏感项 → 没有输入值的框，只有「去哪里取」的选择
+//
+// 后者不是省略，是设计：服务端本来就拒收明文（见 db/settings.mjs），
+// 界面上再给一个密码框，等于让用户白输一遍再被拒。
+
+const settings = { items: [] };
+
+async function refreshSettings() {
+  const data = await api('/api/settings');
+  settings.items = data.settings;
+  renderSettings();
+}
+
+function renderSettings() {
+  const host = $('settings');
+  host.replaceChildren(
+    ...settings.items.map((item) => {
+      const row = document.createElement('div');
+      row.className = 'setting';
+
+      const label = document.createElement('span');
+      label.className = 'setting-label';
+      label.textContent = item.label;
+      row.append(label);
+
+      if (item.kind === 'secret') {
+        // 只让用户挑「值放在哪」，不让填值
+        const kind = document.createElement('select');
+        kind.className = 'setting-input';
+        for (const [value, text] of [
+          ['env', '环境变量'],
+          ['keychain', '钥匙串'],
+        ]) {
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = text;
+          kind.append(opt);
+        }
+        kind.value = item.ref?.kind ?? 'env';
+
+        const name = document.createElement('input');
+        name.className = 'setting-input';
+        name.type = 'text';
+        name.value =
+          item.ref?.kind === 'keychain'
+            ? item.ref.service
+            : (item.ref?.name ?? '');
+        name.placeholder = 'FREES_WEBDAV_PASSWORD';
+
+        const save = async () => {
+          const value =
+            kind.value === 'keychain'
+              ? {
+                  kind: 'keychain',
+                  service: name.value,
+                  account: 'frees-studio',
+                }
+              : { kind: 'env', name: name.value.trim().toUpperCase() };
+          await putSetting(item.key, value);
+        };
+        kind.addEventListener('change', () => {
+          name.value =
+            kind.value === 'keychain'
+              ? (item.ref?.service ?? '')
+              : (item.ref?.name ?? '');
+          save().catch((e) =>
+            setSettingsStatus(`保存失败：${e.message}`, true),
+          );
+        });
+        name.addEventListener('change', () => {
+          save().catch((e) =>
+            setSettingsStatus(`保存失败：${e.message}`, true),
+          );
+        });
+
+        const meta = document.createElement('span');
+        meta.className = 'setting-meta';
+        meta.textContent = `只保存引用 · ${item.available ? '当前可读取' : '当前取不到值'}`;
+
+        row.append(kind, name, meta);
+      } else {
+        const input = document.createElement('input');
+        input.className = 'setting-input';
+        input.type = 'text';
+        input.value = item.value ?? '';
+        input.addEventListener('change', () => {
+          putSetting(item.key, input.value).catch((e) =>
+            setSettingsStatus(`保存失败：${e.message}`, true),
+          );
+        });
+
+        const meta = document.createElement('span');
+        meta.className = 'setting-meta';
+        meta.textContent = `来源：${item.source}${item.env ? ` · 环境变量 ${item.env}` : ''}`;
+
+        row.append(input, meta);
+      }
+
+      if (item.hint) {
+        const hint = document.createElement('span');
+        hint.className = 'setting-hint';
+        hint.textContent = item.hint;
+        row.append(hint);
+      }
+      return row;
+    }),
+  );
+}
+
+async function putSetting(key, value) {
+  const data = await api('/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify({ key, value }),
+  });
+  settings.items = data.settings;
+  renderSettings();
+  setSettingsStatus('已保存');
+}
+
+function setSettingsStatus(text, isError = false) {
+  const el = $('settings-status');
+  el.textContent = text;
+  el.classList.toggle('offline', isError);
+  if (!isError)
+    setTimeout(() => {
+      if (el.textContent === text) el.textContent = '';
+    }, 2000);
 }
 
 async function checkModel() {
@@ -378,6 +512,7 @@ async function saveAsDraft(messageId) {
 }
 
 $('tab-notes').addEventListener('click', () => setTab('notes'));
+$('tab-settings').addEventListener('click', () => setTab('settings'));
 $('tab-chat').addEventListener('click', () => setTab('chat'));
 $('new-conv').addEventListener('click', newConversation);
 $('composer').addEventListener('submit', sendPrompt);

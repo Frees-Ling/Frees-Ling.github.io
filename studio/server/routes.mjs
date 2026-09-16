@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { tokenMatches } from './index.mjs';
 import { handleChat } from './chat.mjs';
+import { listSettings, setSetting } from '../db/settings.mjs';
 import {
   hasSession,
   serveFile,
@@ -170,6 +171,35 @@ export async function handleRequest(req, res, deps) {
     // ── 健康检查 ──
     if (path === '/api/health' && method === 'GET') {
       send(res, 200, { ok: true });
+      return;
+    }
+
+    // ── 配置（STUDIO-003）──
+    //
+    // 列表走 listSettings：敏感项在里面**只有引用，没有值**。
+    // 这是值不外流的唯一出口，所以不要图省事在这里「顺便」把值带上。
+    if (path === '/api/settings' && method === 'GET') {
+      send(res, 200, { settings: listSettings(db) });
+      return;
+    }
+
+    if (path === '/api/settings' && method === 'PUT') {
+      const body = await readBody(req);
+      if (!body || typeof body.key !== 'string') {
+        send(res, 400, { error: '需要 { key, value }' });
+        return;
+      }
+      try {
+        setSetting(db, body.key, body.value);
+      } catch (error) {
+        // 校验错误是用户可读的，原样返回；这里的消息都是我们写的，
+        // 且刻意不回显输入值 —— 敏感项被拒时若把原文带回去，
+        // 就等于把密码写进了响应体和它经过的每一层日志
+        send(res, 400, { error: error.message });
+        return;
+      }
+      // 回读取整份配置，让界面拿到权威状态，而不是自己猜
+      send(res, 200, { settings: listSettings(db) });
       return;
     }
 

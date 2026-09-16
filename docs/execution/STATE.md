@@ -57,12 +57,15 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   Node 内置能力，**运行时第三方依赖为 0**。
 - 本地数据层已验证（STUDIO-002 DONE）：schema 版本与迁移、事务、重启恢复、
   备份一致性，全部在**真实文件库 + 跨进程**下测过。
+- 配置与 secret reference（STUDIO-003 DONE，ADR-026）：普通配置在界面里改，
+  敏感项**库里只存引用**（环境变量或钥匙串），界面里没有密码输入框。
+  实测库文件、数据目录、浏览器存储、DOM 均无明文。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
   Collection 与灾备恢复 UI 尚未实现。
 
 ## Current objective
 
-STUDIO-001 与 STUDIO-002 已完成。下一项见 Next READY task。
+STUDIO-003 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

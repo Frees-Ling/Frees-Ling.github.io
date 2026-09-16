@@ -21,6 +21,14 @@
         <button type="button" id="tab-memory" class="tab" aria-current="false">
           记忆
         </button>
+        <button
+          type="button"
+          id="tab-settings"
+          class="tab"
+          aria-current="false"
+        >
+          配置
+        </button>
       </nav>
       <!-- 用语义元素 <search> 而不是给 form 加 role="search" -->
       <search class="search">
@@ -143,6 +151,24 @@
           <span id="mem-status" class="status" role="status"></span>
         </div>
         <div id="memories" class="messages" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section class="layout settings" id="view-settings" hidden>
+      <nav class="list" aria-label="配置说明">
+        <p class="empty">
+          普通配置改完即生效，存在本地库里。<br /><br />
+          敏感项<strong>不存值</strong>：这里只指定「去哪里取」。
+          密码留在环境变量或钥匙串里，程序手上没有可泄漏的东西 ——
+          所以也<strong>没有</strong>密码输入框。
+        </p>
+      </nav>
+
+      <section class="pane">
+        <div class="chat-head">
+          <span id="settings-status" class="status" role="status"></span>
+        </div>
+        <div id="settings" class="messages"></div>
       </section>
     </section>
 

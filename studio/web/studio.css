@@ -350,3 +350,40 @@ body {
 .list-mode:empty {
   display: none;
 }
+
+/* ── 配置（STUDIO-003） ──
+   敏感项刻意**没有**密码输入框：服务端本来就拒收明文，
+   界面上再给一个框等于让用户白输一遍再被拒。
+   这里只让用户指定「值放在哪」。 */
+.setting {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 18px;
+  max-width: 62ch;
+}
+.setting-label {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.setting-input {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.setting-input:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+.setting-meta {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.setting-hint {
+  color: var(--ink-soft);
+  font-size: 12px;
+}

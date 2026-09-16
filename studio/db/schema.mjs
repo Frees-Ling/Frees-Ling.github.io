@@ -245,6 +245,27 @@ const MIGRATIONS = [
       db.exec(`CREATE INDEX idx_emb_model ON embeddings (model);`);
     },
   },
+  {
+    version: 5,
+    name: 'settings',
+    up: (db) => {
+      // ── 可配置项（STUDIO-003）──
+      //
+      // 一张极简的键值表。**不存任何密钥值** —— 敏感项在 value 里存的是
+      // 一个**引用**（指向环境变量或钥匙串条目），真正的值在用到时才去取。
+      // 见 db/settings.mjs 的 requireSecretRef：往敏感槽写明文会被拒绝。
+      //
+      // 为什么不做成每个配置一个列：配置项会增删，而 ALTER TABLE 加列
+      // 意味着每次都要写一个迁移。键值表让「加一个配置项」变成纯代码改动。
+      db.exec(`
+        CREATE TABLE settings (
+          key        TEXT PRIMARY KEY,
+          value      TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

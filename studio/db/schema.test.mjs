@@ -181,7 +181,13 @@ test('拒绝打开时不会把库留在被改动的状态', () => {
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all()
       .map((r) => r.version);
-    assert.deepEqual(versions, [1, 2, 3, 4, SCHEMA_VERSION + 1]);
+    // 从 SCHEMA_VERSION 推导，不写死 1..4 ——
+    // 写死的话每加一个迁移这条用例就会红一次，而它想验的
+    // 并不是「版本号是几」，是「拒绝时没有改动库」
+    assert.deepEqual(versions, [
+      ...Array.from({ length: SCHEMA_VERSION }, (_, i) => i + 1),
+      SCHEMA_VERSION + 1,
+    ]);
     raw.close();
     assert.ok(existsSync(path));
   });

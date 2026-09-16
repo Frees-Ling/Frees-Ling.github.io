@@ -1087,12 +1087,41 @@ Acceptance：SQLite schema version、事务、重启恢复、迁移/回滚、备
 
 ### STUDIO-003 — 配置与 secret reference
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: S2
 - Priority: P0
 - Depends-On: STUDIO-002
 
 Acceptance：普通配置可经 UI 修改；敏感项只持久化引用；日志/DB/浏览器/Git 扫描无明文 secret。
+
+Delivered：迁移 v5（`settings` 表）+ `studio/db/settings.mjs` / `settings-schema.mjs`、
+`/api/settings` 路由、界面「配置」页。决策见 ADR-026。
+
+Evidence（全部用随机哨兵串实测，不是断言「应该没问题」）：
+
+- **普通配置可经 UI 修改**：真实浏览器里改一个输入框 → 显示「已保存」→
+  刷新后仍是改过的值（说明真落库了，不是只改了 DOM）。
+- **敏感项只存引用**：库里 `webdav.password` 的值就是
+  `{"kind":"env","name":"FREES_WEBDAV_PASSWORD"}`。
+- **拒绝明文**：`setSetting('webdav.password', 'hunter2')` 抛错；
+  绕过界面直接 `PUT {"value":"hunter2"}` 得到 **HTTP 400**，
+  且响应里**不含** `hunter2` —— 拒绝不能反过来变成泄漏渠道。
+- **值不从读取接口出去**：`listSettings` 对敏感项**没有 `value` 键**
+  （断言 `Object.hasOwn(item,'value') === false`），整个响应序列化后不含哨兵。
+- **界面里没有密码输入框**：实测 `#settings input[type=password]` 数量为 **0**。
+- **扫描**：库文件字节、整个数据目录、浏览器 localStorage/sessionStorage/cookie、
+  页面 DOM —— 均不含哨兵。仓库侧由既有的 `check:secrets` 覆盖。
+- 203 项测试通过（新增 20 项），十一项闸门全绿。
+
+顺带修掉：新增迁移 v5 后，`schema.test.mjs` 里一条**写死了 `[1,2,3,4,…]`** 的
+用例红了。那条用例想验的是「拒绝时没有改动库」，不是「版本号是几」，
+已改为从 `SCHEMA_VERSION` 推导 —— 否则每加一个迁移都要为它改一次。
+
+遗留：`resolveSecret` 的钥匙串读取路径尚未接上真实 `security` 调用
+（reader 由调用方注入）；接的时候必须复用 `read-credential.sh` 的看门狗，
+否则钥匙串锁定时会挂起近两分钟（ADR-024 实测过）。
+
+Commit：本文件所在提交。
 
 ### EDITOR-001 — 统一文档模型与生产预览
 
