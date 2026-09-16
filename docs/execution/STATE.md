@@ -68,12 +68,14 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 - Owner 认证威胁模型已定（SEC-002 DONE，`docs/security-threat-model.md`）：
   **不做公网 Owner mode**；本地场景下成立的两条威胁（DNS rebinding、猜令牌）
   已修并测。会话无细粒度撤销，撤销手段是轮换令牌后重启。
+- 长期记忆服务已建立（MEM-001 DONE，`docs/memory-service.md`）：三层分离、
+  追加式纠正、去重与冲突标记、可见性、自动提取开关。31 项测试。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
   Collection 与灾备恢复 UI 尚未实现。
 
 ## Current objective
 
-SEC-002 已完成。下一项见 Next READY task。
+MEM-001 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

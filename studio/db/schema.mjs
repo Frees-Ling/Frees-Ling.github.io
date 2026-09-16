@@ -266,6 +266,51 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 6,
+    name: 'memory-service',
+    up: (db) => {
+      // ── 长期记忆的纠正、去重、冲突与可见性（MEM-001）──
+      //
+      // ── 为什么纠正不用「就地改写」──
+      //
+      // 就地 UPDATE 一条已确认的记忆，等于**静默篡改历史**：
+      // 昨天的结论被今天的改写覆盖，而没有任何痕迹说明它变过。
+      // 如果改写本身判错了（人来改也会错），那就连「原来的说法是什么」
+      // 都查不回来了。
+      //
+      // 所以纠正是**追加**：新写一条记忆，把旧的用 superseded_by 指过去。
+      // 两条都在，改的是「哪一条生效」。这与 ADR-023 里借鉴 Mem0 的那条
+      // 设计（ADD-only + 互链）是同一个理由。
+      //
+      // ── 为什么去重键是算出来的而不是判出来的 ──
+      //
+      // 「这两条是不是在说同一件事」需要语义判断，本地没有可靠手段。
+      // 但「规范化之后逐字相同」是确定的，且能挡掉绝大多数重复 ——
+      // AI 反复从同一段对话里提取同一句话是最常见的情形。
+      // 它只做**提示**，不自动合并：合并是判断，判断要留给人。
+      db.exec(`ALTER TABLE memories ADD COLUMN updated_at TEXT;`);
+      db.exec(`ALTER TABLE memories ADD COLUMN superseded_by TEXT
+                 REFERENCES memories(id) ON DELETE SET NULL;`);
+      // 冲突组：同一组内的记忆互相矛盾，需要人来裁决。
+      // **只支持人工标记** —— 自动判定矛盾需要语义理解，
+      // 假装能判会导致「系统认为它们不冲突」这种没人验证过的结论。
+      db.exec(`ALTER TABLE memories ADD COLUMN conflict_group TEXT;`);
+      // 去重键：内容规范化后的 sha256 前 16 位
+      db.exec(`ALTER TABLE memories ADD COLUMN dedup_key TEXT;`);
+      // 可见性默认 private：记忆来自私人对话，默认不对外是唯一安全的默认值。
+      // 将来 ACCESS-001 要放开时必须显式改成 exportable。
+      db.exec(`ALTER TABLE memories ADD COLUMN visibility TEXT NOT NULL
+                 DEFAULT 'private'`);
+
+      db.exec(`CREATE INDEX idx_memories_dedup ON memories (dedup_key);`);
+      // 注意：idx_memories_status 在 v1 就建过了。这里再加一次会让整个
+      // 迁移失败 —— 实测踩到过，事务回滚保住了一致性，但迁移就是没跑成。
+      db.exec(
+        `CREATE INDEX idx_memories_conflict ON memories (conflict_group);`,
+      );
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

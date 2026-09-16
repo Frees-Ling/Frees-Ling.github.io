@@ -19,13 +19,13 @@ import {
   deleteConversation,
   searchNotes,
   saveAnswerAsDraft,
-  proposeMemoryFromMessage,
   linkMemoryToNote,
   unlinkMemoryFromNote,
   getMemoryProvenance,
   searchEverything,
   semanticSearch,
 } from '../db/store.mjs';
+import { createMemoryService } from '../memory/service.mjs';
 
 /** 每次注入的最大引用条数。太多会把上下文挤满，也会稀释重点。 */
 const MAX_CITATIONS = 5;
@@ -203,18 +203,36 @@ async function route(req, res, deps, { path, method, readBody, send, url }) {
     // 不校验的话，来源链会记下一个与服务端事实不符的出处 ——
     // 而来源错了比没有来源更糟，追溯功能正建立在它可信的前提上。
     const message = db
-      .prepare('SELECT conversation_id, role FROM messages WHERE id = ?')
+      .prepare(
+        'SELECT conversation_id, role, content FROM messages WHERE id = ?',
+      )
       .get(messageId);
     if (!message || message.conversation_id !== id) {
       return send(res, 404, { error: '消息不存在于该对话中' });
     }
+    if (message.role !== 'assistant') {
+      return send(res, 400, { error: '只有 AI 的回答可以提取为记忆' });
+    }
 
-    const memory = proposeMemoryFromMessage(db, {
-      messageId,
-      content: body.content,
-      confidence: Number(body.confidence ?? 0.5),
-    });
-    return send(res, 201, { memory });
+    // 校验留在路由里，**写入只走 service 一条路** ——
+    // 去重键、可见性、自动提取开关这些规则只有一处实现，
+    // 各写一份迟早会漂移（原先这里是直接调 store 的另一个函数）。
+    //
+    // source 显式声明 'user'：这是用户点了「存为记忆」，不是自动提取，
+    // 因此不受自动提取开关影响 —— 否则「我把自动关了」会变成「手动也存不进去」。
+    let memory;
+    let duplicates;
+    try {
+      ({ memory, duplicates } = createMemoryService(db).add({
+        content: body.content || message.content,
+        sourceMessageId: messageId,
+        confidence: Number(body.confidence ?? 0.5),
+        source: 'user',
+      }));
+    } catch (error) {
+      return send(res, 400, { error: error.message });
+    }
+    return send(res, 201, { memory, duplicates });
   }
 
   // ── 统一检索：语义优先，端点不可用时降级为关键词 ──

@@ -70,6 +70,15 @@ export const SETTINGS_SCHEMA = [
     hint: '目录要在服务端先建好；程序不会自动创建',
   },
 
+  {
+    key: 'memory.autoCapture',
+    kind: 'plain',
+    env: 'FREES_MEMORY_AUTO_CAPTURE',
+    default: 'true',
+    label: '自动提取记忆',
+    hint: '关掉之后，对话里提取的结论不再自动进入待审核队列',
+  },
+
   // ── 以下只存引用 ──
   {
     key: 'webdav.password',
