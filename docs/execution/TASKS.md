@@ -268,6 +268,67 @@ Evidence：
 
 Commit：本文件所在提交。
 
+### KB-001 — 私人知识库服务层（K1）
+
+- Status: READY
+- Phase: K1
+- Priority: P0
+- Depends-On: 无（K0 存储层已 DONE）
+
+Objective：在 `studio/db/` 存储层之上建立本地 HTTP 服务，让知识库可被实际读写。
+
+Acceptance：
+
+- 只绑 `127.0.0.1`，不监听 `0.0.0.0`；不提供任何对公网开放的开关
+- 首次启动生成随机 token 写入 `~/.frees-studio/token`（权限 600），所有请求校验
+- 笔记的增删改查、标签、检索接口
+- 原始档案导入接口（幂等）、记忆提出与审核接口
+- 私人内容默认不可公开：不提供任何「发布到公网」的接口
+- 单元测试覆盖鉴权失败、参数校验、边界情况
+- 集成测试用合成数据跑通全部接口
+
+Evidence：（待填）
+
+### KB-002 — 本地编辑界面（K2）
+
+- Status: BACKLOG
+- Phase: K2
+- Priority: P0
+- Depends-On: KB-001
+
+Objective：在本地 Studio 中真正能创建、编辑、搜索、阅读私人笔记，延续蓝色中文书房风格。
+
+Acceptance：
+
+- 列表、阅读、编辑、新建、删除可用
+- 检索可用（含中文）
+- 复用 `prose.css` 与 `tokens.css`，不引入新的前端框架
+- 真实浏览器验证（截图），非仅构建通过
+- 键盘可达、对比度达标
+
+Evidence：（待填）
+
+### KB-003 — 模型适配层与模拟推理服务（K3）
+
+- Status: BACKLOG
+- Phase: K3
+- Priority: P1
+- Depends-On: KB-001
+
+Objective：建立 OpenAI 兼容的模型适配层，用模拟服务完成接口、存储与前端测试，
+不依赖本机是否安装 LM Studio。
+
+Acceptance：
+
+- 适配层可切换 base URL 与模型名
+- 提供模拟推理服务（本地、合成响应），供测试使用
+- 对话历史持久化
+- 知识库检索结果可作为引用进入对话
+- AI 回答可存为**草稿**（`origin='ai_draft'`），不直接成为已确认内容
+- 不向任何未授权的外部服务发送私人资料
+
+Evidence：（待填）
+
 ### RENDER-002 — Transformer 枢纽/分章迁移设计
 
 - Status: BACKLOG
