@@ -9,6 +9,7 @@
 
 import { join } from 'node:path';
 import { tokenMatches } from './index.mjs';
+import { handleChat } from './chat.mjs';
 import {
   hasSession,
   serveFile,
@@ -135,6 +136,16 @@ export async function handleRequest(req, res, deps) {
   }
 
   try {
+    // ── 对话相关（KB-004）── 未命中时返回 null，继续走下面的路由
+    const chatHandled = await handleChat(req, res, deps, {
+      path,
+      method,
+      url,
+      readBody,
+      send,
+    });
+    if (chatHandled !== null) return;
+
     // ── 健康检查 ──
     if (path === '/api/health' && method === 'GET') {
       send(res, 200, { ok: true });

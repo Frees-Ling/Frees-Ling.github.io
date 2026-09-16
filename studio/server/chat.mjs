@@ -1,0 +1,163 @@
+// 对话路由：把 KB-003 的适配层与对话存储接到 HTTP 上。
+//
+// ── 引用注入的设计 ──
+//
+// 用户提问时先在知识库检索，把命中的笔记作为**系统消息**注入。
+// 两个刻意的选择：
+//
+//  ① 引用是**显式列出**的，不是让模型自己去「回忆」——
+//     检索用 SQLite FTS5，结果可复现、可追溯、不依赖模型的记性。
+//  ② citations 持久化到消息上，而不是每次重新检索 ——
+//     笔记会被编辑和删除，事后重算得到的依据与当时看到的不再相同。
+//     「当时是基于什么回答的」必须能复原。
+
+import {
+  createConversation,
+  getConversation,
+  addMessage,
+  listConversations,
+  deleteConversation,
+  searchNotes,
+  saveAnswerAsDraft,
+} from '../db/store.mjs';
+
+/** 每次注入的最大引用条数。太多会把上下文挤满，也会稀释重点。 */
+const MAX_CITATIONS = 5;
+
+/** 引用片段的最大长度（字）。整篇塞进去既费 token 也无助于回答。 */
+const CITATION_CHARS = 600;
+
+export function buildCitationContext(hits) {
+  if (hits.length === 0) return null;
+  const parts = hits.map((note, i) => {
+    const body = (note.body || '').slice(0, CITATION_CHARS);
+    return `[${i + 1}] 《${note.title}》\n${body}`;
+  });
+  return (
+    '以下是知识库中与问题相关的引用记录，请优先依据它们回答；' +
+    '若它们不足以回答，请明确说明缺少什么，不要编造。\n\n' +
+    parts.join('\n\n')
+  );
+}
+
+/** 包一层：把 send 的调用记为「已处理」，便于主路由判断是否继续。 */
+export async function handleChat(req, res, deps, ctx) {
+  let handled = false;
+  const send = (...args) => {
+    handled = true;
+    return ctx.send(...args);
+  };
+  await route(req, res, deps, { ...ctx, send });
+  return handled ? true : null;
+}
+
+async function route(req, res, deps, { path, method, readBody, send }) {
+  const { db, provider } = deps;
+
+  // ── 对话列表 / 新建 ──
+  if (path === '/api/conversations') {
+    if (method === 'GET') {
+      return send(res, 200, { conversations: listConversations(db) });
+    }
+    if (method === 'POST') {
+      const body = await readBody(req).catch(() => ({}));
+      const conversation = createConversation(db, {
+        model: body.model || provider?.model || '',
+      });
+      return send(res, 201, { conversation });
+    }
+  }
+
+  const conv = path.match(/^\/api\/conversations\/([^/]+)$/);
+  if (conv) {
+    const id = decodeURIComponent(conv[1]);
+    if (method === 'GET') {
+      const conversation = getConversation(db, id);
+      if (!conversation) return send(res, 404, { error: '对话不存在' });
+      return send(res, 200, { conversation });
+    }
+    if (method === 'DELETE') {
+      const removed = deleteConversation(db, id);
+      if (!removed) return send(res, 404, { error: '对话不存在' });
+      return send(res, 200, { removed: true });
+    }
+  }
+
+  // ── 发送消息：检索 → 注入引用 → 调用模型 → 双写入库 ──
+  const sendMsg = path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
+  if (sendMsg && method === 'POST') {
+    const id = decodeURIComponent(sendMsg[1]);
+    const conversation = getConversation(db, id);
+    if (!conversation) return send(res, 404, { error: '对话不存在' });
+
+    const body = await readBody(req);
+    const content = String(body.content || '').trim();
+    if (!content) return send(res, 400, { error: '消息内容不能为空' });
+
+    if (!provider) {
+      return send(res, 503, {
+        error:
+          '没有可用的模型端点。请先启动本地推理服务（如 LM Studio），' +
+          '或在配置里指定一个 OpenAI 兼容端点。',
+      });
+    }
+
+    addMessage(db, id, { role: 'user', content });
+
+    // 检索 → 引用。检索失败不应让整轮对话失败，降级为无引用继续。
+    let hits = [];
+    try {
+      hits = searchNotes(db, content, { limit: MAX_CITATIONS });
+    } catch {
+      hits = [];
+    }
+    const citations = hits.map((n) => n.id);
+
+    const history = getConversation(db, id).messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    const context = buildCitationContext(hits);
+    const payload = context
+      ? [{ role: 'system', content: context }, ...history]
+      : history;
+
+    let answer;
+    try {
+      answer = await provider.chat(payload);
+    } catch (error) {
+      // 模型失败时**保留**用户消息（已经写了），把错误作为可读信息返回。
+      // 不把错误塞进 assistant 消息 —— 那会污染历史，让下次请求带上它。
+      return send(res, 502, {
+        error: error.message,
+        saved: { role: 'user', content },
+      });
+    }
+
+    const assistant = addMessage(db, id, {
+      role: 'assistant',
+      content: answer.content,
+      citations,
+    });
+
+    return send(res, 201, {
+      message: { ...assistant, citations },
+      citations: hits.map((n) => ({ id: n.id, title: n.title })),
+    });
+  }
+
+  // ── 把某条回答存为草稿 ──
+  const draft = path.match(/^\/api\/conversations\/([^/]+)\/draft$/);
+  if (draft && method === 'POST') {
+    const id = decodeURIComponent(draft[1]);
+    const body = await readBody(req);
+    const note = saveAnswerAsDraft(db, {
+      conversationId: id,
+      messageId: String(body.messageId || ''),
+      title: body.title,
+    });
+    return send(res, 201, { note });
+  }
+
+  return null; // 未命中，交回主路由
+}

@@ -34,6 +34,7 @@ import {
 } from '../db/store.mjs';
 
 import { handleRequest } from './routes.mjs';
+import { createProvider } from '../ai/provider.mjs';
 
 export const DEFAULT_PORT = 4319;
 export const BIND_HOST = '127.0.0.1'; // 刻意不允许改成 0.0.0.0
@@ -72,11 +73,12 @@ export function tokenMatches(expected, provided) {
   return timingSafeEqual(a, b);
 }
 
-export function createServer({ db, token, home }) {
+export function createServer({ db, token, home, provider = null }) {
   const deps = {
     db,
     token,
     home,
+    provider,
     store: {
       createNote,
       getNote,
@@ -113,19 +115,39 @@ export function createServer({ db, token, home }) {
 /** 启动服务。返回 { server, port, token }，供测试与 CLI 使用。 */
 export async function start({
   home = studioHome(),
+  provider,
   port = Number(process.env.FREES_STUDIO_PORT || DEFAULT_PORT),
   dbPath,
 } = {}) {
   const token = loadOrCreateToken(home);
   const db = openDatabase(dbPath || join(home, 'studio.db'));
-  const server = createServer({ db, token, home });
+
+  // 未显式传入 provider 时，默认指向本机常见的 LM Studio 端口。
+  // **不假设它一定在运行** —— 端点不可达时对话路由会给出可操作的提示
+  // （见 chat.mjs），而不是静默失败。
+  const activeProvider =
+    provider === undefined
+      ? createProvider({
+          baseUrl:
+            process.env.FREES_STUDIO_MODEL_URL || 'http://127.0.0.1:1234/v1',
+          model: process.env.FREES_STUDIO_MODEL || 'local-model',
+        })
+      : provider;
+
+  const server = createServer({ db, token, home, provider: activeProvider });
 
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, BIND_HOST, resolve);
   });
 
-  return { server, db, token, port: server.address().port };
+  return {
+    server,
+    db,
+    token,
+    provider: activeProvider,
+    port: server.address().port,
+  };
 }
 
 // 作为脚本直接运行

@@ -11,6 +11,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { openDatabase } from '../db/schema.mjs';
+import { createNote } from '../db/store.mjs';
+import { createProvider } from '../ai/provider.mjs';
+import { startMockServer } from '../ai/mock.mjs';
 import {
   createServer,
   loadOrCreateToken,
@@ -418,4 +421,219 @@ test('界面脚本不含任何令牌或内联色值', async () => {
       `studio.css 不应含颜色字面量，发现: ${literals}`,
     );
   });
+});
+
+// ─────────────────── 对话路由（KB-004）───────────────────
+
+test('对话：创建、列表、读取、删除', async () => {
+  await withServer(async ({ call }) => {
+    const created = await call('/api/conversations', {
+      method: 'POST',
+      body: '{}',
+    });
+    assert.equal(created.status, 201);
+    const { conversation } = await created.json();
+
+    const list = await call('/api/conversations');
+    assert.equal((await list.json()).conversations.length, 1);
+
+    const detail = await call(`/api/conversations/${conversation.id}`);
+    assert.equal(detail.status, 200);
+
+    assert.equal(
+      (
+        await call(`/api/conversations/${conversation.id}`, {
+          method: 'DELETE',
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (await call(`/api/conversations/${conversation.id}`)).status,
+      404,
+    );
+  });
+});
+
+test('没有可用模型端点时给出可操作的提示，而不是静默失败', async () => {
+  await withServer(async ({ call }) => {
+    const { conversation } = await (
+      await call('/api/conversations', { method: 'POST', body: '{}' })
+    ).json();
+    const res = await call(`/api/conversations/${conversation.id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content: '你好' }),
+    });
+    assert.equal(res.status, 503);
+    assert.match((await res.json()).error, /本地推理服务/);
+  });
+});
+
+test('空消息被拒绝', async () => {
+  await withServer(async ({ call }) => {
+    const { conversation } = await (
+      await call('/api/conversations', { method: 'POST', body: '{}' })
+    ).json();
+    const res = await call(`/api/conversations/${conversation.id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content: '   ' }),
+    });
+    assert.equal(res.status, 400);
+  });
+});
+
+test('模型不可达时保留用户消息，且不把错误写进历史', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'studio-chat-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  const provider = createProvider({
+    baseUrl: 'http://127.0.0.1:9/v1',
+    timeoutMs: 1500,
+  });
+  const server = createServer({ db, token, home, provider });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    const { conversation } = await (
+      await call('/api/conversations', { method: 'POST', body: '{}' })
+    ).json();
+    const res = await call(`/api/conversations/${conversation.id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content: '这条应该被保留' }),
+    });
+    assert.equal(res.status, 502);
+
+    const detail = await (
+      await call(`/api/conversations/${conversation.id}`)
+    ).json();
+    assert.equal(detail.conversation.messages.length, 1, '用户消息应保留');
+    assert.equal(detail.conversation.messages[0].role, 'user');
+    assert.doesNotMatch(
+      JSON.stringify(detail.conversation.messages),
+      /无法连接模型端点/,
+      '错误不应被写进历史，否则下次请求会带上它',
+    );
+  } finally {
+    await new Promise((r) => server.close(r));
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('引用注入：检索命中的笔记作为系统消息送达模型，并被持久化', async () => {
+  const mock = await startMockServer();
+  const home = mkdtempSync(join(tmpdir(), 'studio-cit-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  createNote(db, {
+    title: '线性代数与注意力机制',
+    body: '从几何直觉出发理解注意力',
+  });
+  const provider = createProvider({
+    baseUrl: mock.baseUrl,
+    model: 'mock-model',
+  });
+  const server = createServer({ db, token, home, provider });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    const { conversation } = await (
+      await call('/api/conversations', { method: 'POST', body: '{}' })
+    ).json();
+    const res = await call(`/api/conversations/${conversation.id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content: '注意力机制' }),
+    });
+    assert.equal(res.status, 201);
+    const body = await res.json();
+
+    // 模拟服务会数出注入了几段引用
+    assert.match(body.message.content, /附带 1 段知识库引用/);
+    assert.equal(body.citations.length, 1);
+    assert.equal(body.citations[0].title, '线性代数与注意力机制');
+    assert.deepEqual(body.message.citations, [body.citations[0].id]);
+
+    // 引用必须落库，事后可追溯
+    const detail = await (
+      await call(`/api/conversations/${conversation.id}`)
+    ).json();
+    const assistant = detail.conversation.messages.find(
+      (m) => m.role === 'assistant',
+    );
+    assert.equal(assistant.citations.length, 1);
+  } finally {
+    await new Promise((r) => server.close(r));
+    await mock.close();
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('把回答存为草稿：带 ai_draft 标记，且不进入已确认内容', async () => {
+  const mock = await startMockServer();
+  const home = mkdtempSync(join(tmpdir(), 'studio-draft-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  const provider = createProvider({
+    baseUrl: mock.baseUrl,
+    model: 'mock-model',
+  });
+  const server = createServer({ db, token, home, provider });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    const { conversation } = await (
+      await call('/api/conversations', { method: 'POST', body: '{}' })
+    ).json();
+    const sent = await (
+      await call(`/api/conversations/${conversation.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content: '随便问点什么' }),
+      })
+    ).json();
+
+    const res = await call(`/api/conversations/${conversation.id}/draft`, {
+      method: 'POST',
+      body: JSON.stringify({
+        messageId: sent.message.id,
+        title: '来自 AI 的草稿',
+      }),
+    });
+    assert.equal(res.status, 201);
+    const { note } = await res.json();
+    assert.equal(note.origin, 'ai_draft');
+    assert.equal(note.status, 'draft');
+  } finally {
+    await new Promise((r) => server.close(r));
+    await mock.close();
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
 });

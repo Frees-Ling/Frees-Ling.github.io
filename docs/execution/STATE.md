@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-004 — 对话路由与 Studio 界面接入
+KB-004（进行中）— 对话路由已完成，界面待做
 
 ## Last known implementation state
 
