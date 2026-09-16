@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-RENDER-002 — Transformer 枢纽/分章迁移设计
+KB-002 — 本地编辑界面（K2）
 
 ## Last known implementation state
 
@@ -23,6 +23,8 @@ RENDER-002 — Transformer 枢纽/分章迁移设计
 - 首页已按 Identity → Work → Writing → Notes → Signal 重构（WEB-007 DONE），首屏可答 Who/What/Why。
 - 列表已收敛为单一编排器 PostList，栏目由 `src/data/sections.ts` 驱动，无硬编码白名单（WEB-008 DONE）。
 - 文章渲染器契约已确立（RENDER-001 DONE），见 `docs/article-renderer.md`。
+- 知识库存储层（K0）与服务层（KB-001 DONE）已实现，40 项测试通过；
+  服务只绑 127.0.0.1、令牌鉴权、无任何发布到公网的路由。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。

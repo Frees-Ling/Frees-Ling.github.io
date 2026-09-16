@@ -16,7 +16,7 @@
 #  ① 单实例锁 —— mkdir 是原子的；锁内记录 PID 与启动时间，
 #     陈旧锁（超过 STALE_SECS）自动回收，避免崩溃后永久卡死
 #  ② 持久化状态 —— 进度写在 docs/execution/ 的文档里，不在内存里
-#  ③ 轮次与开销上限 —— --max-budget-usd 限制单轮花费
+#  ③ 轮次与开销上限 —— --max-budget-usd 限制单轮花费；工具白名单限制影响面
 #     注：本版本 claude CLI **没有** --max-turns（已实测），因此轮次上限
 #     靠提示词约束 + 预算上限共同兜底，不能只靠其中一个
 #  ④ 有限退避 —— 连续失败会写入退避状态，跳过后续若干轮
@@ -146,8 +146,22 @@ EOF
 STAMP=$(date -u +%Y%m%d-%H%M%S)
 OUT="$LOG_DIR/round-$STAMP.log"
 
+# ── 工具白名单 ──
+#
+# `--permission-prompts none` 只保证「**需要弹窗的**操作被拒绝」——
+# 它不限制那些本来就不弹窗的工具。也就是说单靠它，本轮的模型仍能
+# 执行任何默认允许的操作，影响面并不比默认模式小。
+#
+# 因此再加一层显式白名单：只有这里列出的工具可用，其余一律被拒。
+# 这与自主性不冲突 —— 开发所需的读写、检索、测试、本地提交都在名单内，
+# 而被排除的是推送、远程操作这类不该由无人值守轮次做的事。
+ALLOWED_TOOLS='Read,Edit,Write,Grep,Glob,Bash(node *),Bash(npm run *),Bash(npm test *),Bash(git status *),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git add *),Bash(sh scripts/automation/commit.sh *)'
+DISALLOWED_TOOLS='Bash(git push *),Bash(git remote *),Bash(git reset --hard *),Bash(git clean *),Bash(gh *),Bash(npm publish *)'
+
 claude -p "$PROMPT" \
   --permission-prompts none \
+  --allowedTools "$ALLOWED_TOOLS" \
+  --disallowedTools "$DISALLOWED_TOOLS" \
   --max-budget-usd "$MAX_BUDGET_USD" \
   --output-format text \
   >"$OUT" 2>&1
