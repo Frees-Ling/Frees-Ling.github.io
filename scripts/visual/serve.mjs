@@ -3,7 +3,13 @@
 // 不用 `astro preview`：它在本机是守护进程化的（有 stop/status/logs），
 // spawn 之后 kill 父进程杀不掉，会留下残留服务占用端口。
 
-import { createReadStream, existsSync, realpathSync, statSync } from 'node:fs';
+import {
+  createReadStream,
+  existsSync,
+  readdirSync,
+  realpathSync,
+  statSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
 import {
   basename,
@@ -11,6 +17,7 @@ import {
   extname,
   join,
   normalize,
+  relative,
   resolve,
   sep,
 } from 'node:path';
@@ -32,6 +39,30 @@ const TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
+
+/**
+ * 逐段校验路径的**真实大小写**与请求一致。
+ * 不区分大小写的文件系统上，existsSync('/tags/ai/') 会命中 /tags/AI/，
+ * 让本地验证通过而生产环境 404。
+ */
+function hasExactCase(filePath, root) {
+  const rel = relative(root, filePath);
+  if (rel.startsWith('..')) return true; // 越界交给上面的前缀检查处理
+
+  let current = root;
+  for (const segment of rel.split(sep)) {
+    if (!segment) continue;
+    let entries;
+    try {
+      entries = readdirSync(current);
+    } catch {
+      return true; // 读不到就交给 existsSync 的结果
+    }
+    if (!entries.includes(segment)) return false;
+    current = join(current, segment);
+  }
+  return true;
+}
 
 /**
  * @param {string} distDir 要服务的目录（通常是 dist/）
@@ -88,6 +119,17 @@ export function startStaticServer(distDir, port) {
     if (!existsSync(filePath) || !statSync(filePath).isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('Not found');
+      return;
+    }
+
+    // 大小写精确匹配。
+    // macOS 文件系统不区分大小写，existsSync 会让 /tags/ai/ 命中 /tags/AI/ ——
+    // 而生产环境（GitHub Pages 跑在 Linux）区分大小写，会 404。
+    // 注意：realpathSync 在本机**不归一化大小写**（实测返回输入原样），
+    // 所以必须逐段比对真实目录条目名。
+    if (!hasExactCase(filePath, root)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Not found (case mismatch)');
       return;
     }
 
