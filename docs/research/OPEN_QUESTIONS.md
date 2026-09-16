@@ -5,22 +5,30 @@
 
 ## P0 — 实施前必须回答
 
-### Studio 运行形态
+### ~~Studio 运行形态~~ —— 已结（ADR-025，STUDIO-001）
 
-- localhost Web、Tauri、Electron 或其他方案，哪一种在 macOS 优先、未来跨平台、文件系统、SQLite、
-  1Password CLI、自动更新和安全边界之间最合适？
-- 浏览器 UI 与本地特权服务如何认证，如何防止其他本机网页调用？
+- 结论：localhost Web + Node 内置能力，运行时第三方依赖为 0。
+  不引入 Tauri/Electron（它们解决的是「打包分发给别人」，而本项目要的是
+  「只在本机跑」）。代价如实记录：无托盘/自启/文件关联，跨浏览器未逐一验证。
+- 浏览器 UI 与本地特权服务的认证：见 ADR-024（令牌 + HttpOnly Cookie）。
 
-### 123 云盘 / WebDAV
+### 123 云盘 / WebDAV —— **官方资料部分已结**（`docs/research/webdav-provider.md`）
 
-- 当前官方 WebDAV/OpenAPI 的 PROPFIND、Range、写入、删除、限额、并发、直链与 token 能力是什么？
-- 是否存在适合匿名大文件提交的短期直传能力？若没有，数据面如何设计？
-- Public/Collection/Security 是否可由三个独立最小权限凭据可靠隔离？
+- 结论：官方文档里**只有 OpenAPI，没有 WebDAV 的协议说明**；
+  而我们的备份传输层走的正是 WebDAV。已确认 OpenAPI 的域名、鉴权、
+  token 有效期（30 天 / 最多 3 个）与逐接口 QPS 上限。
+- 仍然阻塞：`PROPFIND` 深度语义、href 形态、路径规范化（大小写 / NFC-NFD /
+  尾随空格）、专用密码的权限边界、三个 endpoint 能否用独立凭据隔离 ——
+  **都需要真实凭据实测**，文档里查不到。
+- 是否存在短期直传：官方只提到「断点续传与并行上传」，无「匿名直传」表述。
 
-### 1Password
+### ~~1Password~~ —— 已改用 macOS 钥匙串（ADR-024、SEC-001）
 
-- 目标平台上的 CLI/service account/desktop integration 最合适方式与解锁 UX。
-- `op://` 引用、短期缓存、锁定、轮换、错误输出和日志脱敏行为。
+- 个人版不支持 Service Account，改用 `apiKeyHelper` + 登录钥匙串。
+  读取脚本的退出码即状态（ok/missing/locked/denied/empty/unavailable/unset），
+  见 `studio/secrets/keychain.mjs`。
+- 仍然成立的一条：钥匙串**锁定或系统睡眠后无法自行解锁**，
+  因此无人值守会话不能用需要钥匙串的路径。
 
 ### 生产链路
 
@@ -42,21 +50,22 @@
 
 | 项 | 实测结果 | 影响 |
 | --- | --- | --- |
-| **Frees Studio 实现** | **零代码** —— 仓库中 `studio` / `sqlite` / `webdav` 的命中全部来自规划文档 | Studio 属**绿地开发**，不是「在现有实现上扩展」。S1 选型必须先做 |
-| **LM Studio** | **未安装**：无 `/Applications/LM Studio.app`、无 `~/.lmstudio`、无模型缓存目录、1234 端口无监听 | **阻塞**：S4 与记忆提取无法对真实本地模型验证，只能用 fixture 或 mock |
-| **1Password CLI** | `op` 2.39.0 已安装，`op account list` 有 2 个账号，但 **`op whoami` 报 account is not signed in** | **阻塞**：R1 的 `op://` 引用解析、锁定与轮换行为无法验证。需用户登录 |
+| **Frees Studio 实现** | ~~零代码~~ → **已建成**：KB-001～KB-011 全部完成，229 项测试 | 该行原记于 2026-09-16，当时属实。现已过期，订正于此 |
+| **LM Studio** | **未安装**：无 `/Applications/LM Studio.app`、无 `~/.lmstudio`、无模型缓存目录、1234 端口无监听 | **仍阻塞**：S4 与记忆提取无法对真实本地模型验证，只能用 fixture 或 mock |
+| **1Password CLI** | ~~阻塞~~ → **不再是本项目的依赖**（ADR-024 改用钥匙串） | 该行原记的阻塞已不适用；钥匙串方案另有「锁定后无法自解锁」的限制 |
 | **`node:sqlite`** | ✅ 可用（Node 26.8.2 内置） | **有利**：本地 SQLite 无需新增原生依赖，S2 可零依赖起步 |
 | **`sqlite3` CLI** | ✅ `/usr/bin/sqlite3` | 可用于人工核对与演练 |
-| **当前依赖** | 15 个，全部是 Astro 构建工具链；无 AI / 记忆 / 数据库 / 1Password SDK | 任何 Studio 相关能力都需新增依赖，须先过 S1 选型 |
-| **WebDAV 凭据** | 未提供 | **阻塞**：I2/I3/I4/R2 无法验证 |
+| **当前依赖** | 运行时依赖 **0**（Studio 只用 `node:` 内置）；`package.json` 的 6 个 dependencies 全属 Astro 公共站 | 订正：原文「15 个」是当时的快照 |
+| **WebDAV 凭据** | 未提供 | **仍阻塞**：I2/I3/I4/R2 无法验证 |
 
 ### 需要用户提供的解锁项
 
-1. **LM Studio 安装并加载模型**（或在 S1 中决定改用其他本地推理方案）。
-2. **`op` 登录**：`op signin`，并确认用于本项目的 service account 或用户账号。
-3. **123 云盘的三个 WebDAV endpoint 与最小权限凭据**（Public / Collection / Security 分离）。
-4. **确认 Studio 的运行形态偏好**（localhost Web / Tauri / Electron）——
-   这决定 S1 的 ADR 方向。
+1. **LM Studio 安装并加载模型**（或在 S1 中决定改用其他本地推理方案）—— **仍未解锁**。
+2. ~~`op` 登录~~ —— **已不需要**（ADR-024 改用 macOS 钥匙串）。
+3. **123 云盘的三个 WebDAV endpoint 与最小权限凭据**（Public / Collection / Security 分离）——
+   **仍未解锁**，且现在更明确：官方文档没有 WebDAV 的协议说明，
+   `docs/research/webdav-provider.md` 第五节列出的未知项只能靠实测回答。
+4. ~~确认 Studio 的运行形态偏好~~ —— **已定**（ADR-025：localhost Web）。
 
 ## 决策门槛
 

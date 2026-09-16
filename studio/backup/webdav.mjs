@@ -112,20 +112,40 @@ export function createWebdav({
       // 只认其中一种会让列举在某些服务上静默返回空 —— 而空列表会被
       // 保留策略解读成「没有备份」，那是很危险的误判。
       const dirPrefix = dirPath.replace(/\/+$/, '') + '/';
-      return [...xml.matchAll(/<[^>]*href[^>]*>([^<]+)<\/[^>]*href>/gi)]
-        .map((m) => decodeURIComponent(m[1]))
-        .map((href) => {
-          if (href.startsWith(baseUrl)) return href.slice(baseUrl.length);
-          try {
-            const u = new URL(href, baseUrl);
-            return u.pathname;
-          } catch {
-            return href;
-          }
-        })
-        .filter((p) => p.startsWith(dirPrefix) && p !== dirPrefix)
-        .map((p) => p.slice(dirPrefix.length))
-        .filter((name) => name && !name.endsWith('/'));
+      return (
+        [...xml.matchAll(/<[^>]*href[^>]*>([^<]+)<\/[^>]*href>/gi)]
+          // ── 顺序很重要：**先解析成路径，再解码** ──
+          //
+          // 反过来做会静默截断文件名。href 是编码过的（`hash%231.freesbk`），
+          // 若先解码再交给 `new URL()`，`#` 就被当成 fragment 分隔符、
+          // `?` 被当成 query 分隔符 —— 于是
+          //   `/backups/hash%231.freesbk` → 解码 → `/backups/hash#1.freesbk`
+          //   → `new URL(...).pathname` → `/backups/hash`
+          // 名字里 `#` 之后的部分**无声地没了**。实测在真实服务端上跑出来
+          // 才发现：`hash#1.freesbk` 与 `q?mark.freesbk` 分别变成 `hash` 与 `q`。
+          //
+          // 这在备份场景里是会出事的：保留策略按名字删除，两个
+          // `a#1` / `a#2` 会双双报成 `a`，于是删错文件或删不掉。
+          .map((m) => {
+            const raw = m[1];
+            try {
+              return new URL(raw, baseUrl).pathname;
+            } catch {
+              return raw;
+            }
+          })
+          .map((pathname) => {
+            // 解码放在解析之后；非法百分号序列不能让整次列举失败
+            try {
+              return decodeURIComponent(pathname);
+            } catch {
+              return pathname;
+            }
+          })
+          .filter((p) => p.startsWith(dirPrefix) && p !== dirPrefix)
+          .map((p) => p.slice(dirPrefix.length))
+          .filter((name) => name && !name.endsWith('/'))
+      );
     },
   };
 }
