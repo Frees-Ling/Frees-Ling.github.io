@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execFile } from 'node:child_process';
 import {
   mkdtempSync,
   rmSync,
@@ -18,6 +18,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createMockWebdav } from './backup/mock-webdav.mjs';
+import { decrypt } from './backup/crypto.mjs';
 import { openDatabase } from './db/schema.mjs';
 import { createNote, proposeMemory, reviewMemory } from './db/store.mjs';
 import { exportAll } from './db/portable.mjs';
@@ -262,5 +264,321 @@ test('import 到全新的、尚不存在的数据目录', () => {
   } finally {
     for (const d of [src, dir, parent])
       rmSync(d, { recursive: true, force: true });
+  }
+});
+
+/**
+ * 异步版 CLI 调用。
+ *
+ * **凡是用例里跑了 HTTP 服务，就必须用这个而不是 run()。**
+ * 原因不是风格：内存版 WebDAV 跑在**测试进程自己的事件循环**上，
+ * 而 execFileSync 会把那个循环整个阻塞住 —— 于是 CLI 等 HTTP 响应、
+ * 测试等 CLI 退出、服务器等循环空闲，三方互等，永远不结束，
+ * 而且不报任何错（事件循环被阻塞时连 --test-timeout 都触发不了）。
+ * 实测：整个测试文件挂满 10 分钟仍无任何输出。
+ */
+function runAsync(args, home, env = {}) {
+  return new Promise((resolve) => {
+    execFile(
+      'node',
+      [CLI, ...args],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, FREES_STUDIO_HOME: home, ...env },
+      },
+      (error, stdout, stderr) => {
+        // 退出码从 error.code 取：execFile 在非零退出时把 code 放在 error 上，
+        // 直接读 error.status 在信号终止的情况下是 null
+        resolve({
+          stdout: stdout ?? '',
+          stderr: stderr ?? '',
+          code: error ? (error.code ?? 1) : 0,
+        });
+      },
+    );
+  });
+}
+
+// ── 备份 / 恢复 / 保留策略（KB-011）──
+//
+// 这些用例跑**真实的 CLI 子进程 + 真实的 HTTP**（内存版 WebDAV）。
+// 只测函数不够：口令会不会漏进 stdout、退出码对不对、
+// dry-run 是不是真的没删东西 —— 全都只在「外壳」这一层才看得见。
+
+const PASSPHRASE = 'correct horse battery staple';
+
+/** 起一个内存 WebDAV。 */
+async function withWebdav(dirs = ['/backups']) {
+  const mock = createMockWebdav({
+    username: 'frees',
+    password: 'secret-pw',
+    dirs,
+  });
+  const url = await mock.start();
+  return { url, files: mock.files, close: () => mock.close() };
+}
+
+function webdavEnv(url, extra = {}) {
+  return {
+    FREES_WEBDAV_URL: url,
+    FREES_WEBDAV_USER: 'frees',
+    FREES_WEBDAV_PASSWORD: 'secret-pw',
+    FREES_WEBDAV_BACKUP_DIR: '/backups',
+    ...extra,
+  };
+}
+
+test('backup 未设口令时拒绝执行，并说明该从哪来', async () => {
+  const home = seedHome();
+  try {
+    const r = await runAsync(['backup'], home);
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /FREES_BACKUP_PASSPHRASE/);
+    // 「备份的意义在于文件泄露也没关系」—— 所以口令绝不能出现在命令行参数里。
+    // 这条断言防的是将来有人为了图方便加个 --passphrase 选项
+    assert.match(r.stderr, /不要写进文件或命令行参数/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('backup 缺 WebDAV 配置时逐项列出缺哪个', async () => {
+  const home = seedHome();
+  try {
+    const r = await runAsync(['backup'], home, {
+      FREES_BACKUP_PASSPHRASE: PASSPHRASE,
+    });
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /FREES_WEBDAV_URL/);
+    assert.match(r.stderr, /FREES_WEBDAV_PASSWORD/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('backup 端到端：上传的文件能解密且内容与源库一致', async () => {
+  const home = seedHome();
+  const dav = await withWebdav();
+  try {
+    const r = await runAsync(
+      ['backup'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stdout, /回读校验通过/);
+
+    // 直连内存服务取出密文 —— 这才叫「上传成功」，
+    // 而不是「本地算出来觉得成功」
+    const names = [...dav.files.keys()];
+    assert.equal(names.length, 1);
+    assert.match(names[0], /^\/backups\/frees-studio-.*\.freesbk$/);
+
+    const plain = decrypt(dav.files.get(names[0]), PASSPHRASE).toString('utf8');
+    const data = JSON.parse(plain);
+    assert.equal(data.notes.length, 1);
+    assert.equal(data.memories.length, 2);
+    // 向量是派生数据，不该进备份（体积大数倍，且换模型即作废）
+    assert.doesNotMatch(plain, /"vector"/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('backup 的输出里不含口令与 WebDAV 密码', async () => {
+  const home = seedHome();
+  const dav = await withWebdav();
+  try {
+    const r = await runAsync(
+      ['backup'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.ok(!r.stdout.includes(PASSPHRASE), 'stdout 泄漏了口令');
+    assert.ok(!r.stderr.includes(PASSPHRASE), 'stderr 泄漏了口令');
+    assert.ok(!r.stdout.includes('secret-pw'), 'stdout 泄漏了 WebDAV 密码');
+    assert.ok(!r.stderr.includes('secret-pw'), 'stderr 泄漏了 WebDAV 密码');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('backup 在远端目录不存在时明确报错，不自动建目录', async () => {
+  const home = seedHome();
+  const dav = await withWebdav(['/other']); // 没有 /backups
+  try {
+    const r = await runAsync(
+      ['backup'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /远端目录不存在/);
+    assert.equal(dav.files.size, 0, '不该在错误的位置悄悄建出目录');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('restore 能把备份恢复到全新的数据目录', async () => {
+  const src = seedHome();
+  const dav = await withWebdav();
+  const parent = mkdtempSync(join(tmpdir(), 'cli-parent-'));
+  const fresh = join(parent, 'restored-home'); // 刻意不创建
+  try {
+    const env = webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE });
+    assert.equal((await runAsync(['backup'], src, env)).code, 0);
+    const name = [...dav.files.keys()][0].split('/').pop();
+
+    const r = await runAsync(['restore', name], fresh, env);
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stdout, /已从 .* 恢复/);
+    assert.match(r.stdout, /rebuild/, '应提醒向量需要重算');
+
+    const status = await runAsync(['status'], fresh);
+    assert.match(status.stdout, /笔记\s+1/);
+    assert.match(status.stdout, /1 已确认 \/ 1 待审核/);
+  } finally {
+    for (const d of [src, parent]) rmSync(d, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('restore 口令不对时报错且不留半导入的库', async () => {
+  const src = seedHome();
+  const dav = await withWebdav();
+  const parent = mkdtempSync(join(tmpdir(), 'cli-parent-'));
+  const fresh = join(parent, 'wrong-pass-home');
+  try {
+    const env = webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE });
+    assert.equal((await runAsync(['backup'], src, env)).code, 0);
+    const name = [...dav.files.keys()][0].split('/').pop();
+
+    const r = await runAsync(
+      ['restore', name],
+      fresh,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: 'wrong passphrase here' }),
+    );
+    assert.equal(r.code, 1, '口令错必须失败，绝不能「尽力而为」地导入');
+
+    // 两种结果都可接受，但都必须「什么也没导入」：
+    //   尚未创建 —— 解密先于建库失败，这是当前实现，也是更好的那个
+    //   笔记 0   —— 万一将来解密挪到建库之后，也必须因事务回滚而空着
+    // 半导入的知识库比没有知识库更难收拾，所以这里只断言「没有数据」，
+    // 不锁死「库文件存不存在」这种实现细节
+    const status = await runAsync(['status'], fresh);
+    assert.match(status.stdout, /尚未创建|笔记\s+0/);
+    assert.doesNotMatch(
+      status.stdout,
+      /笔记\s+[1-9]/,
+      '绝不能留下半导入的数据',
+    );
+  } finally {
+    for (const d of [src, parent]) rmSync(d, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('restore 在远端没有这个备份时说清楚', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'cli-'));
+  const dav = await withWebdav();
+  try {
+    const r = await runAsync(
+      ['restore', 'nope.freesbk'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /没有这个备份/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+/** 往内存服务里塞 n 份假备份，返回文件名列表。 */
+function seedRemote(dav, stamps) {
+  for (const t of stamps) {
+    dav.files.set(`/backups/frees-studio-${t}.freesbk`, Buffer.from('x'));
+  }
+  return stamps.map((t) => `frees-studio-${t}.freesbk`);
+}
+
+test('retention 默认 dry-run：算出该删什么，但一个都不真删', async () => {
+  const home = seedHome();
+  const dav = await withWebdav();
+  try {
+    seedRemote(dav, [
+      '2026-01-01T00-00-00-000',
+      '2026-02-01T00-00-00-000',
+      '2026-03-01T00-00-00-000',
+      '2026-04-01T00-00-00-000',
+    ]);
+    const before = dav.files.size;
+
+    const r = await runAsync(
+      ['retention', '2'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stdout, /dry-run/);
+    assert.match(r.stdout, /将删除\s+frees-studio-2026-01-01/);
+    assert.match(r.stdout, /将删除\s+frees-studio-2026-02-01/);
+    assert.match(r.stdout, /--apply/);
+    assert.equal(dav.files.size, before, 'dry-run 绝不能真删');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('retention --apply 才真删，且保留最新', async () => {
+  const home = seedHome();
+  const dav = await withWebdav();
+  try {
+    seedRemote(dav, [
+      '2026-01-01T00-00-00-000',
+      '2026-02-01T00-00-00-000',
+      '2026-03-01T00-00-00-000',
+    ]);
+
+    const r = await runAsync(
+      ['retention', '1', '--apply'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.equal(r.code, 0, r.stderr);
+    assert.deepEqual(
+      [...dav.files.keys()],
+      ['/backups/frees-studio-2026-03-01T00-00-00-000.freesbk'],
+    );
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
+  }
+});
+
+test('retention 即使算出该全删也必须留下最后一份', async () => {
+  const home = seedHome();
+  const dav = await withWebdav();
+  try {
+    seedRemote(dav, ['2026-01-01T00-00-00-000', '2026-02-01T00-00-00-000']);
+
+    // keep=0 意味着「一份都不保留」—— 这个策略本身就是危险的。
+    // 一个没有备份的系统，比一个备份太多的系统危险得多
+    const r = await runAsync(
+      ['retention', '0', '--apply'],
+      home,
+      webdavEnv(dav.url, { FREES_BACKUP_PASSPHRASE: PASSPHRASE }),
+    );
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(dav.files.size, 1, '必须至少留下一份备份');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+    await dav.close();
   }
 });

@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-011 — 备份传输层（WebDAV 上传/回读/保留策略）
+KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 
 ## Last known implementation state
 
@@ -39,12 +39,16 @@ KB-011 — 备份传输层（WebDAV 上传/回读/保留策略）
   重建全算完才落库以避免半新半旧。
 - 命令行入口（KB-009 DONE）：status / start / export / import / rebuild，`npm run studio`。
 - 加密备份格式（KB-010 DONE）：AES-256-GCM + scrypt，口令不落盘。
-  传输层待做（依赖 WebDAV 凭证）。
+- 备份传输层（KB-011 DONE）：WebDAV 上传 → **回读校验** → 保留策略（默认 dry-run、
+  永不删最后一份）。CLI 有 `backup` / `restore` / `retention`。
+  已用真实 WebDAV 服务端（wsgidav）做过端到端验证，不只是 mock。
+  **尚无真实凭证**，托管服务的认证/配额/限流等失败模式未验证。
 - 三层关联（KB-005 DONE）：记忆可追溯到来源消息/档案并关联知识库条目；
   删除来源不销毁结论；统一检索排除待审核记忆。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
-- Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。
+- Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
+  Collection 与灾备恢复 UI 尚未实现。
 
 ## Current objective
 

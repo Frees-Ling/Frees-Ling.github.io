@@ -783,6 +783,61 @@ Evidence：
 
 Commit：本文件所在提交。
 
+### KB-011 — 备份传输层（WebDAV 上传 / 回读校验 / 保留策略）
+
+- Status: DONE
+- Phase: R2
+- Priority: P0
+- Depends-On: KB-010
+
+Objective：把加密备份送到远端并**验证它真的能取回来**，同时管理保留份数。
+
+Delivered：
+
+- `studio/backup/webdav.mjs` —— 最小客户端，只实现 PUT / GET / DELETE / PROPFIND。
+  凭证只从环境变量读，缺失时逐项报出缺哪个，而不是拿空值去连
+- `studio/backup/remote.mjs` —— `runBackup`（快照 → 加密 → 上传 → **回读校验**）、
+  `applyRetention` / `runRetention`（默认 dry-run，永不删最后一份）
+- `studio/backup/mock-webdav.mjs` —— 内存版服务，用于无凭证时把逻辑测透
+- `studio/cli.mjs` —— 新增 `backup` / `restore` / `retention [n] [--apply]`
+- `studio/backup/remote.test.mjs`（17 项）+ `studio/cli.test.mjs` 新增 11 项外壳用例
+
+Evidence：
+
+- **全量 174 项测试通过**（新增 28 项），十项闸门全绿。
+- 外壳层用例跑**真实 CLI 子进程 + 真实 HTTP**，验证的不是函数而是行为：
+  口令与 WebDAV 密码不出现在 stdout/stderr；退出码；dry-run 后远端份数不变；
+  `--apply` 后只剩最新一份；`keep=0` 时仍留下最后一份。
+- **用真实 WebDAV 服务端（wsgidav 4.3.5）做了端到端验证**，不只是自己的 mock：
+  上传 → 服务端落盘 → 回读校验通过 → 密文以 `FREESBK1` 魔数开头、
+  `grep` 搜不到笔记正文 → 保留策略 dry-run 4 份不变 / `--apply` 后剩 1 份 →
+  `restore` 到全新目录后 `status` 显示 1 篇笔记、1 已确认 / 1 待审核，与源库一致。
+- 真实服务端返回的 PROPFIND href 用的是 `ns0:` 命名空间前缀 +**绝对路径**，
+  与 mock 的 `d:` 前缀不同 —— 这验证了列举实现的前缀无关正则确实必要，
+  而不是照着 mock 写的巧合。
+
+修复（都是被这批测试逼出来的，不是预先想到的）：
+
+1. `retention` 的份数原先从 `argv[4]` 取，而那是 `--apply` 的位置。
+   `Number('--apply')` = `NaN`，于是 `retention 1 --apply` **报成功却一份都不删**，
+   备份会一直累积。现在从 `argv[3]` 取，且非整数直接报错而非静默放过。
+2. `mock-webdav` 的 `close()` 只调 `server.close(cb)`，而它要等所有连接关闭 ——
+   客户端保持 keep-alive 时回调永不触发。已改为先 `closeAllConnections()`。
+3. 与其配套的测试陷阱：mock 跑在**测试进程自己的事件循环**上，
+   用 `execFileSync` 去跑访问它的子进程会三方互等、静默挂死
+   （实测整个文件挂满 10 分钟无输出，`--test-timeout` 也触发不了，
+   因为同步调用阻塞的是事件循环本身）。已改用异步 `runAsync`，并把原因写进注释。
+
+遗留与限制：
+
+- 真实服务端只观察到**绝对路径**形态的 href；**完整 URL** 形态仅由单测覆盖，
+  尚未在真实服务上遇到过。
+- 只验证了 wsgidav 一个实现。第三方服务（坚果云、Nextcloud 等）的
+  认证方式、目录配额、非 ASCII 文件名行为均未验证。
+- 没有真实凭证，因此没有测过认证失败、配额超限、限流这些真实世界的失败模式。
+
+Commit：本文件所在提交。
+
 ### RENDER-002 — Transformer 枢纽/分章迁移设计
 
 - Status: BACKLOG
