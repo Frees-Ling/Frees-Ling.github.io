@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-研究任务：长期记忆引擎选型（Mem0 / Letta / OpenMemory）
+KB-007 — 记忆的语义检索（嵌入接入）
 
 ## Last known implementation state
 
@@ -31,6 +31,8 @@ W1 收口 → W2 — Article Renderer
   非本机必须显式 allowRemote；AI 回答只能存为 ai_draft 草稿。
 - AI Studio（KB-004 DONE）可用：对话、引用注入、存为草稿，
   有真实浏览器验收脚本（模拟推理服务，不依赖本机是否装 LM Studio）。
+- 长期记忆引擎选型已定：自建，不引入第三方（ADR-023，研究见 docs/research/memory-engines.md）。
+- 记忆审核界面（KB-006 DONE）可用。
 - 三层关联（KB-005 DONE）：记忆可追溯到来源消息/档案并关联知识库条目；
   删除来源不销毁结论；统一检索排除待审核记忆。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。

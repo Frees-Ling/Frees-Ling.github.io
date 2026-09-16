@@ -257,3 +257,26 @@
   两层保护都在，启动警告消失，差异仅限这两条。
 - 未声称: 完全无人值守。睡眠/重启后登录钥匙串会锁定且无法自行解锁；
   屏幕锁定状态未验证。
+
+## ADR-023 — 长期记忆自建，不引入 Mem0 / Letta / OpenMemory
+
+- Status: Accepted
+- Decision: 本项目自建最小记忆层（KB-001～KB-006 已完成），不引入第三方记忆引擎。
+- Reason: 研究基于仓库页面、LICENSE、包元数据与源码实测，结论可核查：
+  · **OpenMemory 已归档**（2026-07-23 移入 openmemory-archive，安装脚本实测 404），
+    且 `mem0ai/openmemory` 仓库名已被挪用给一个与记忆无关的项目
+  · **Letta 已重写为 TypeScript** 并迁至 `letta-ai/letta-code`，原仓库源码清空、
+    Python 版冻结在 archive 分支。且它是**完整 agent 平台**（TUI、App Server、
+    多智能体、MCP、crons…），为一个记忆层引入它体系严重过载
+  · **Mem0 本地模型支持最强**（`lmstudio.py` 默认即 `localhost:1234/v1`，零配置），
+    但仍不满足决定性需求 —— 见下
+- 决定性理由: **三者都没有「人工审核」门禁**。Mem0 的 `add()` 立即生效，
+  其 64KB prompt 文件中 `confidence|source|provenance|human review|approv`
+  的 grep 命中数为 **0**；Letta 文档明确说复核「does not ask you for approval」。
+  这不是文档没写，是代码里没有这个概念。而它正是本项目三层模型的基石。
+  另：两者**默认都联网**（Mem0 → PostHog，Letta → api.letta.com），
+  需要显式关闭遥测。
+- 借鉴: Mem0 的 `ADDITIVE_EXTRACTION_PROMPT` 两点设计值得采用（Apache-2.0，只借思路）：
+  ADD-only + 互链（比让 LLM 决定 UPDATE/DELETE 可审计得多，后者判错即静默篡改历史）；
+  相对时间必须锚定成绝对日期（「上周去了巴黎」六个月后毫无用处）。
+  详见 `docs/research/memory-engines.md` 第四节。
