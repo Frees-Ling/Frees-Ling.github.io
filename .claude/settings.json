@@ -39,9 +39,15 @@
     ],
     "deny": [
       "Edit(/archives/**)",
-      "Write(/archives/**)",
       "Edit(/public/history/**)",
-      "Write(/public/history/**)"
+      "Read(~/.ssh/id_*)",
+      "Read(~/.ssh/frees_blog_automation_ed25519)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git filter-branch *)",
+      "Bash(git rebase -i *)"
     ]
   },
   "hooks": {
@@ -52,6 +58,15 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-paths.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-paths-bash.sh"
           }
         ]
       }
