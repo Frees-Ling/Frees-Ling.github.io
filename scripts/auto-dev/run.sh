@@ -153,9 +153,20 @@ OUT="$LOG_DIR/round-$STAMP.log"
 # 执行任何默认允许的操作，影响面并不比默认模式小。
 #
 # 因此再加一层显式白名单：只有这里列出的工具可用，其余一律被拒。
-# 这与自主性不冲突 —— 开发所需的读写、检索、测试、本地提交都在名单内，
-# 而被排除的是推送、远程操作这类不该由无人值守轮次做的事。
-ALLOWED_TOOLS='Read,Edit,Write,Grep,Glob,Bash(node *),Bash(npm run *),Bash(npm test *),Bash(git status *),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git add *),Bash(sh scripts/automation/commit.sh *)'
+#
+# **刻意不含 `Bash(node *)`。** 那等于放行 `node -e "任意代码"` ——
+# 一个通用执行引擎，会让白名单形同虚设。开发所需的测试与校验都由
+# `npm run *` 覆盖（脚本集合是可审阅的 package.json），不需要裸 node。
+#
+# ── 这份白名单能做什么、不能做什么 ──
+#
+# 能：把无人值守轮次**限定在开发范围内** —— 推送、发布、远程操作、
+#     破坏性 git 都不在名单内，被明确排除。
+# 不能：充当沙箱。本轮同时拥有 Edit 与 Write，可以写一个脚本再经
+#     `npm run` 路径执行它 —— 这是「让 agent 自主写代码并运行」这件事本身
+#     决定的，任何命令白名单都挡不住。真正的隔离需要容器/虚拟机，
+#     当前环境不具备，因此记为已知限制而非已解决的问题。
+ALLOWED_TOOLS='Read,Edit,Write,Grep,Glob,Bash(npm run *),Bash(npm test *),Bash(git status *),Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git add *),Bash(sh scripts/automation/commit.sh *)'
 DISALLOWED_TOOLS='Bash(git push *),Bash(git remote *),Bash(git reset --hard *),Bash(git clean *),Bash(gh *),Bash(npm publish *)'
 
 claude -p "$PROMPT" \
