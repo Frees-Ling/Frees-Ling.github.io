@@ -85,12 +85,23 @@ SHORTSTAT=$(git diff --cached --shortstat 2>/dev/null | sed 's/^ *//')
 # 本 hook 恰恰在没有人在场时触发，而 op-ssh-sign 需要应用解锁：
 # 锁定时会以 `error: 1Password: failed to fill whole buffer` 中断提交。
 # 自动化身份是独立的（Frees Blog Automation），不冒用个人签名。
-# 异常处理：自动化入口若失败（密钥校验拦下、密钥缺失、脚本被改坏），
-# 回退到默认 git 配置再试一次 —— 而不是让本轮改动悄悄留在工作区。
+#
+# 失败时**不重试、不回退**。
+#
+# 这里曾经有一个「自动化入口失败就回退到默认 git 配置再试一次」的分支。
+# 那是错的：默认配置 = 个人身份 + op-ssh-sign，一旦它成功，
+# 提交就变成了**冒用个人签名**；而它失败时只会再产生一次 1Password 报错噪音。
+# 正确的行为是把改动留在工作区并留下可诊断的错误 —— 工作区是安全的，
+# 默默换一个身份签名不是。
 COMMIT_SH="$REPO_ROOT/scripts/automation/commit.sh"
-COMMITTED=0
-if [ -f "$COMMIT_SH" ]; then
-  if sh "$COMMIT_SH" -q -F - >/dev/null 2>&1 <<EOF
+COMMIT_ERR="$GIT_DIR/claude-stop-commit.err"
+
+if [ ! -f "$COMMIT_SH" ]; then
+  printf 'Stop hook: 找不到自动化提交入口 %s，已保留工作区未提交。\n' "$COMMIT_SH" > "$COMMIT_ERR"
+  exit 0
+fi
+
+if ! sh "$COMMIT_SH" -q -F - >/dev/null 2>"$COMMIT_ERR" <<EOF
 chore: 自动提交 ${COUNT} 个文件
 
 ${SHORTSTAT}
@@ -99,22 +110,12 @@ ${SHORTSTAT}
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>
 EOF
-  then
-    COMMITTED=1
-  fi
+then
+  # 不重试、不换身份。错误写入 git 目录（不进工作区，不会被下次 add -A 带走）
+  printf 'Stop hook: 自动化提交失败，改动已保留在工作区。\n时间: %s\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$COMMIT_ERR"
+  exit 0
 fi
 
-if [ "$COMMITTED" -eq 0 ]; then
-  # 退路：默认 git 配置。1Password 锁定时这里会失败，属预期 —— 不重试、不报错。
-  git commit -q -F - >/dev/null 2>&1 <<EOF
-chore: 自动提交 ${COUNT} 个文件
-
-${SHORTSTAT}
-
-由 Stop hook 兜底提交（本轮改动未经 Claude 主动提交）。
-
-Co-Authored-By: Claude Code <noreply@anthropic.com>
-EOF
-fi
+rm -f "$COMMIT_ERR" 2>/dev/null
 
 exit 0
