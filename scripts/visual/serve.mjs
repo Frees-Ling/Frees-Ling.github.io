@@ -12,6 +12,7 @@ import {
   join,
   normalize,
   resolve,
+  sep,
 } from 'node:path';
 
 const TYPES = {
@@ -72,7 +73,10 @@ export function startStaticServer(distDir, port) {
         /* 保持原值，交由下面的 404 分支处理 */
       }
     }
-    if (!realPath.startsWith(realRoot)) {
+    // 分隔符感知的比较。单纯的 startsWith(realRoot) 会被同名前缀绕过：
+    // realRoot 为 /dist 时，/dist-evil/x 也满足 startsWith('/dist')。
+    const realRootWithSep = realRoot.endsWith(sep) ? realRoot : realRoot + sep;
+    if (realPath !== realRoot && !realPath.startsWith(realRootWithSep)) {
       res.writeHead(403);
       res.end();
       return;
