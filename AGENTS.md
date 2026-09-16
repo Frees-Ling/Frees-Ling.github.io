@@ -3,6 +3,20 @@
 Frees Ling 的个人数字花园，使用 Astro 构建并部署到 GitHub Pages。
 当前站点源码位于仓库根目录，旧版工程已归档到 `archives/sites/Frees-Blog/`。
 
+## 开始工作前
+
+先阅读：
+
+1. `docs/execution/STATE.md`
+2. `docs/execution/TASKS.md`
+3. `docs/execution/MASTER_PLAN.md`
+4. 当前任务对应的产品、架构或设计文档
+
+文档分工与入口见 `docs/README.md`。不要依赖聊天上下文或临时任务列表保存长期状态。
+
+当文档与仓库现状冲突时，先核实当前代码、Git 历史与测试结果，再修正文档并记录重要决策；
+不要静默偏离。
+
 ## 开发
 
 启动开发服务器请使用后台模式：
@@ -38,6 +52,9 @@ CI（`.github/workflows/quality.yml`）会逐项执行这些命令。
 1. 先跑校验，全部通过再提交：`npm run format:check`、`lint`、`lint:md`、`check`
 2. 提交信息用中文，讲清**为什么改**，而不是罗列改了哪些文件
 3. **不要 push** —— 上线由维护者审核后手动推送（`git push` 已配置为需确认）
+
+完成可独立验收的计划任务时，同步更新 `docs/execution/TASKS.md` 的 Evidence/Commit 与
+`docs/execution/STATE.md`。影响长期架构的决定写入 `docs/execution/DECISIONS.md`。
 
 `.claude/hooks/stop-commit.sh` 会在每轮回复结束时兜底：若发现未提交的改动，
 它同样会先跑上述校验，通过才提交（信息形如 `chore: 自动提交 N 个文件`）。
@@ -79,9 +96,15 @@ CI（`.github/workflows/quality.yml`）会逐项执行这些命令。
 全站样式集中在 `src/styles/global.css` 与各 `.astro` 的内联 `<style>` 中，
 没有引入 Tailwind 或 CSS 框架。
 
+### 密钥与外部服务
+
+不得把 API key、WebDAV 密码、Cloudflare/GitHub token、TOTP seed、备份密钥写入 Git、
+公开前端、SQLite 明文、浏览器存储、日志、截图或测试夹具。供应商能力与限制可能变化，
+实现前必须核对当前官方资料，并把结论记录到 `docs/research/OPEN_QUESTIONS.md` 或决策记录。
+
 ## 文档
 
-Astro 完整文档：https://docs.astro.build
+Astro 完整文档：[docs.astro.build](https://docs.astro.build)
 
 动手前按主题查阅：
 

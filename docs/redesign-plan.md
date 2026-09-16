@@ -1,5 +1,8 @@
 # 重设计执行计划
 
+> 本文是公共站 FIELD LOG 视觉重设计的专项子计划。平台级阶段、Studio、Knowledge、存储与恢复计划见
+> `docs/execution/MASTER_PLAN.md`；当前真实状态见 `docs/execution/STATE.md`。
+
 概念见 `design-system.md`，结构见 `information-architecture.md`，
 现状见 `design-audit.md`，进度见 `redesign-progress.md`。
 

@@ -1,0 +1,319 @@
+# 持久任务清单
+
+状态：`BACKLOG / READY / ACTIVE / BLOCKED / DONE / DROPPED`。
+
+只有满足 Acceptance 并填入 Evidence/Commit 后才能标记 DONE。
+
+## 当前队列
+
+### GOV-001 — 建立长期计划真相源
+
+- Status: DONE
+- Phase: G0
+- Priority: P0
+- Depends-On: none
+
+Objective：把共享对话的最终决定与当前仓库事实整理为不冲突、可迁移、可执行的文档体系。
+
+Acceptance：
+
+- 产品、架构、存储、安全、恢复、总计划、任务、状态、决策、测试、发布与开放问题均有明确文档。
+- 明确记录早期方案被覆盖的关系。
+- 保留现有重设计专项文档，不重置已完成阶段。
+- `AGENTS.md` 指向新的真相源，且当前“不 push”规则保持不变。
+- 所有仓库质量命令通过并提交。
+
+Evidence：
+
+- `npm run format:check`、`lint`、`lint:md`、`check:tokens`、`check` 全部通过。
+- `npm run build` 构建 66 页，Pagefind 索引 17 页；`npm run check:html` 检查 65 个 HTML 文件通过。
+- 对新增治理文档额外运行 markdownlint，0 issue。
+- `scripts/visual/serve.mjs` 的并行工作区改动未纳入本任务。
+
+Commit：本文件所在的 GOV-001 治理提交。
+
+### WEB-006 — P5c Site Chrome 最终回归
+
+- Status: READY
+- Phase: W1
+- Priority: P0
+- Depends-On: GOV-001
+
+Objective：以提交 `17d3e9a` 为基线完成导航、页脚、主题、移动菜单和全部路由的最终验收。
+
+Acceptance：
+
+- 1440/1024/768/430/390 代表视口，深浅主题，无横向溢出。
+- 键盘、Escape、焦点回交、收起导航不可聚焦。
+- 导航和页脚覆盖全部主要路由，旧 URL 可达。
+- 对比度、控制台、HTML、token、a11y、构建闸门通过。
+- `docs/redesign-progress.md` 不再保留矛盾/重复状态行。
+
+### WEB-007 — 首页编辑化重构
+
+- Status: BACKLOG
+- Phase: W1
+- Priority: P0
+- Depends-On: WEB-006
+
+Objective：按 Identity → Selected Work → Featured Writing → Recent Notes → Current Signal 重构首页。
+
+Acceptance：首屏 5 秒测试可回答 Who/What/Why；无标签云/模板卡片墙；真实内容；三轮视觉 QA；
+移动端独立成立；所有质量闸门通过。
+
+### WEB-008 — 列表与栏目数据化
+
+- Status: BACKLOG
+- Phase: W1/W4
+- Priority: P1
+- Depends-On: WEB-007
+
+Acceptance：Work/Notes/Archive 使用统一编排器；无文章标题白名单；人工内容字段可验证；空内容诚实降权。
+
+### RENDER-001 — 文章渲染器审计与契约
+
+- Status: BACKLOG
+- Phase: W2
+- Priority: P0
+- Depends-On: WEB-006
+
+Acceptance：确定语义节点、样式责任、Studio 复用边界、fixture 集与兼容策略；不改文章正文事实。
+
+### RENDER-002 — Transformer 枢纽/分章迁移设计
+
+- Status: BACKLOG
+- Phase: W2
+- Priority: P0
+- Depends-On: RENDER-001
+
+Acceptance：记录章节划分、旧 slug/anchor 兼容、搜索/RSS/SEO 策略、迁移脚本和回滚；迁移前后内容 hash/覆盖率可核验。
+
+### PERF-001 — 图片与字体管线
+
+- Status: BACKLOG
+- Phase: W3
+- Priority: P1
+- Depends-On: WEB-007
+
+Acceptance：响应式图像、固定尺寸、懒加载、OG 独立资产、字体体积/CLS 预算；构建不依赖不稳定网络。
+
+### CONTENT-001 — 内容发布契约
+
+- Status: BACKLOG
+- Phase: W4
+- Priority: P1
+- Depends-On: RENDER-001
+
+Acceptance：schema、slug、摘要、TOC、媒体引用、预览、验证与 Git 步骤被脚本化；不要求每篇手写排版。
+
+### STUDIO-001 — Studio 技术选型研究
+
+- Status: BACKLOG
+- Phase: S1
+- Priority: P0
+- Depends-On: GOV-001
+
+Acceptance：比较 localhost Web、Tauri/Electron 等候选的安全、跨平台、文件/SQLite/1Password 集成与维护成本；
+用最小原型验证关键风险并写 ADR。
+
+### STUDIO-002 — 本地数据与迁移原型
+
+- Status: BACKLOG
+- Phase: S1
+- Priority: P0
+- Depends-On: STUDIO-001
+
+Acceptance：SQLite schema version、事务、重启恢复、迁移/回滚、备份一致性在可抛弃原型中验证。
+
+### STUDIO-003 — 配置与 secret reference
+
+- Status: BACKLOG
+- Phase: S2
+- Priority: P0
+- Depends-On: STUDIO-002
+
+Acceptance：普通配置可经 UI 修改；敏感项只持久化引用；日志/DB/浏览器/Git 扫描无明文 secret。
+
+### EDITOR-001 — 统一文档模型与生产预览
+
+- Status: BACKLOG
+- Phase: S3
+- Priority: P0
+- Depends-On: STUDIO-002, RENDER-001
+
+Acceptance：ARTICLE/KNOWLEDGE/PROJECT 共用稳定 block ID 和生产渲染预览；重启恢复编辑状态。
+
+### EDITOR-002 — AI 选区 diff 协议
+
+- Status: BACKLOG
+- Phase: S3/S4
+- Priority: P0
+- Depends-On: EDITOR-001
+
+Acceptance：选区边界权威；输出结构化 patch、解释和 source gap；可接受/拒绝；无越界静默修改。
+
+### AI-001 — Provider-neutral gateway
+
+- Status: BACKLOG
+- Phase: S4
+- Priority: P1
+- Depends-On: STUDIO-003, EDITOR-001
+
+Acceptance：能力/模型/端点抽象；至少两个 OpenAI-compatible 或不同供应商 fixture；超时、取消、重试、用量可见。
+
+### MEDIA-001 — 本地媒体目录与索引
+
+- Status: BACKLOG
+- Phase: M1
+- Priority: P1
+- Depends-On: STUDIO-002
+
+Acceptance：稳定 media ID/hash、元数据、EXIF 策略、派生物、反向引用、重复导入和崩溃恢复测试。
+
+### MEDIA-002 — 响应式公开派生物
+
+- Status: BACKLOG
+- Phase: M1
+- Priority: P1
+- Depends-On: MEDIA-001, PERF-001
+
+Acceptance：照片墙首屏不请求原图；srcset/尺寸/lazy/placeholder；lightbox 按需加载；大图库渐进渲染。
+
+### MEDIA-003 — AI 生图适配器
+
+- Status: BACKLOG
+- Phase: M2
+- Priority: P2
+- Depends-On: MEDIA-001, AI-001
+
+Acceptance：生成物自动归档、记录模型/提示/参数、可上传并跨文档复用；密钥不泄露。
+
+### INTEG-001 — GitHub Project 构建期同步
+
+- Status: BACKLOG
+- Phase: I1
+- Priority: P2
+- Depends-On: CONTENT-001
+
+Acceptance：缓存元数据、失败降级、速率限制、人工覆盖优先；公开页面无运行时 GitHub 依赖。
+
+### INTEG-002 — Friends 数据与 RSS 健康
+
+- Status: BACKLOG
+- Phase: I1
+- Priority: P2
+- Depends-On: CONTENT-001
+
+Acceptance：Studio/结构化数据可维护；RSS 可选、失败不阻断构建；首页不自动聚合 Friends feed。
+
+### WEBDAV-001 — 官方能力验证
+
+- Status: BACKLOG
+- Phase: I2
+- Priority: P0
+- Depends-On: STUDIO-001
+
+Acceptance：用当前官方资料/受控测试确认 PROPFIND、读写、Range、限额、直链、分片/直传和路径语义；记录日期与证据。
+
+### WEBDAV-002 — Endpoint 能力探测与路径安全
+
+- Status: BACKLOG
+- Phase: I2
+- Priority: P0
+- Depends-On: WEBDAV-001, STUDIO-003
+
+Acceptance：正确识别 read-only/read-write；canonical root 持久化；`..`/编码/大小写/分隔符/符号链接负向测试通过。
+
+### VAULT-001 — Public Vault/Music 交付
+
+- Status: BACKLOG
+- Phase: I3
+- Priority: P2
+- Depends-On: WEBDAV-002
+
+Acceptance：公开浏览器无凭据；清单/代理/缓存策略明确；音频 Range 与移动网络实测；故障可降级。
+
+### COLLECT-001 — Collection threat model 与协议
+
+- Status: BACKLOG
+- Phase: I4
+- Priority: P0
+- Depends-On: WEBDAV-001
+
+Acceptance：隔离、令牌、限额、过期、删除、Owner 查看、大文件数据面和滥用控制全部有协议与测试计划。
+
+### COLLECT-002 — 隔离提交 MVP
+
+- Status: BACKLOG
+- Phase: I4
+- Priority: P0
+- Depends-On: COLLECT-001, WEBDAV-002
+
+Acceptance：访客只能管理当前临时提交；跨提交读取/列举/修改均失败；无可复用 WebDAV 凭据下发。
+
+### KNOW-001 — Knowledge schema 与公开路由
+
+- Status: BACKLOG
+- Phase: K1
+- Priority: P1
+- Depends-On: EDITOR-001, RENDER-001
+
+Acceptance：节点、来源、前置知识、关联、反链、修订、搜索可构建；事实来源可追溯。
+
+### KNOW-002 — 研究与审查流水线
+
+- Status: BACKLOG
+- Phase: K2
+- Priority: P1
+- Depends-On: KNOW-001, AI-001
+
+Acceptance：已有知识查重、来源分级、冲突、claim/source 校验、review queue；AI 不可绕过人工发布。
+
+### KNOW-003 — 公开批注与讨论
+
+- Status: BACKLOG
+- Phase: K3
+- Priority: P2
+- Depends-On: KNOW-001, EDITOR-002
+
+Acceptance：稳定 anchor、公开/本地状态、合理编辑后的迁移策略、Giscus 映射和无障碍显示。
+
+### SEC-001 — 1Password 集成与密钥扫描
+
+- Status: BACKLOG
+- Phase: R1
+- Priority: P0
+- Depends-On: STUDIO-003
+
+Acceptance：reference resolve、不可用/锁定状态、最小泄露日志、仓库/DB/浏览器存储扫描测试。
+
+### SEC-002 — Owner 认证 threat model
+
+- Status: BACKLOG
+- Phase: R1
+- Priority: P0
+- Depends-On: SEC-001
+
+Acceptance：明确是否真的需要公网 Owner mode；若需要，覆盖 TOTP、会话、重放、撤销、恢复和限流；OTP 不参与加密。
+
+### RECOVERY-001 — 加密备份 MVP
+
+- Status: BACKLOG
+- Phase: R2
+- Priority: P0
+- Depends-On: SEC-001, WEBDAV-002
+
+Acceptance：一致性快照、成熟认证加密、上传回读、解密、manifest/DB 校验、保留策略 dry-run。
+
+### RECOVERY-002 — 干净环境完整恢复
+
+- Status: BACKLOG
+- Phase: R2
+- Priority: P0
+- Depends-On: RECOVERY-001
+
+Acceptance：新环境通过 Studio UI 恢复并生成迁移报告；失败不覆盖现有状态；记录真实演练证据。
+
+## 完成任务归档
+
+公共站 P0–P3、P5a、P5c 的详细证据与提交记录保留在 `docs/redesign-progress.md`，避免在此重复。
