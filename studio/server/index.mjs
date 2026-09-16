@@ -34,6 +34,7 @@ import {
 } from '../db/store.mjs';
 
 import { handleRequest } from './routes.mjs';
+import { createLoginThrottle } from './guard.mjs';
 import { createProvider } from '../ai/provider.mjs';
 
 export const DEFAULT_PORT = 4319;
@@ -86,6 +87,10 @@ export function createServer({
     home,
     provider,
     embedder,
+    // 限流器属于**这个服务实例**，不是模块级的全局状态。
+    // 写成模块级会让同一进程里的两个服务共用一份计数，
+    // 更麻烦的是它把「限流状态」变成了跨实例、无法重置的东西。
+    loginThrottle: createLoginThrottle(),
     store: {
       createNote,
       getNote,

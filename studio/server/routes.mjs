@@ -9,6 +9,7 @@
 
 import { join } from 'node:path';
 import { tokenMatches } from './index.mjs';
+import { hostAllowed, createLoginThrottle } from './guard.mjs';
 import { handleChat } from './chat.mjs';
 import { listSettings, setSetting } from '../db/settings.mjs';
 import {
@@ -110,8 +111,35 @@ export async function handleRequest(req, res, deps) {
     return;
   }
 
+  // ── Host 校验（SEC-002）──
+  //
+  // 挡 DNS rebinding：外站把域名解析到 127.0.0.1 之后，浏览器会认为
+  // 「外站与本地服务同源」，于是请求照样打到这儿，而 remoteAddress
+  // 确实是 127.0.0.1。区别只在 Host 头 —— 它写的是外站域名。
+  //
+  // 这里返回 403 而不是 401：这是**地址不对**，不是凭据不对，
+  // 提示语要能让人分辨，否则会去反复检查令牌。
+  // 端口取自连接本身（req.socket.localPort），而不是 createServer 时的参数 ——
+  // 那时端口还没绑定（测试里用 0 让系统分配），拿不到真实值。
+  if (!hostAllowed(req.headers.host, req.socket.localPort)) {
+    send(res, 403, { error: '只接受本机回环地址访问' });
+    return;
+  }
+
   // 建立会话：校验令牌后下发 HttpOnly Cookie
   if (path === '/api/session' && method === 'POST') {
+    const who = req.socket.remoteAddress || 'unknown';
+    if (!deps.loginThrottle.check(who)) {
+      const wait = deps.loginThrottle.retryAfter(who);
+      res.writeHead(429, {
+        'content-type': 'text/html; charset=utf-8',
+        'retry-after': String(wait),
+      });
+      res.end(
+        LOGIN_PAGE.replace('%ERROR%', `尝试过于频繁，请 ${wait} 秒后再试`),
+      );
+      return;
+    }
     // 登录页是原生表单，提交的是 application/x-www-form-urlencoded，
     // **不是** JSON。这里曾经只按 JSON 解析，于是 token 永远是空字符串、
     // 登录必然失败 —— 单测传 JSON 所以没发现，是浏览器验证抓出来的。
@@ -125,10 +153,12 @@ export async function handleRequest(req, res, deps) {
         : (JSON.parse(raw || '{}').token ?? ''),
     );
     if (!tokenMatches(token, provided)) {
+      deps.loginThrottle.recordFailure(req.socket.remoteAddress || 'unknown');
       res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' });
       res.end(LOGIN_PAGE.replace('%ERROR%', '令牌不对，请重新复制'));
       return;
     }
+    deps.loginThrottle.recordSuccess(req.socket.remoteAddress || 'unknown');
     res.writeHead(303, {
       location: '/',
       'set-cookie': `${COOKIE}=${encodeURIComponent(provided)}; HttpOnly; SameSite=Strict; Path=/`,
