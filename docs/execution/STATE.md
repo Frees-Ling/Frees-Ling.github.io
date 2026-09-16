@@ -26,7 +26,9 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 - Transformer 分章设计已定（RENDER-002 DONE），见 `docs/transformer-chaptering.md`：
   采用**页内分章**（不拆 URL）；实测结构为 109 h1 / 471 h2 / 71 h3（修正了 RENDER-001
   按源码 grep 得出的错误数字）。内容覆盖率闸门 `npm run check:coverage` 已可用。
-  实现见 RENDER-003。
+- 页内分章已落地（RENDER-003 DONE）：正文标题在渲染期下移，页面标题成为唯一 h1
+  （改动前 transformer 有 110 个），650 个锚点哈希逐字未变；长文目录按章节折叠、
+  当前章跟随。`.md` 一个字节未改。
 - 知识库存储层（K0）与服务层（KB-001 DONE）已实现，40 项测试通过；
   服务只绑 127.0.0.1、令牌鉴权、无任何发布到公网的路由。
 - 本地编辑界面（KB-002 DONE）可用：登录、列表、阅读、编辑、新建、删除、检索、双主题。
@@ -56,7 +58,7 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 
 ## Current objective
 
-按 `docs/transformer-chaptering.md` 落地页内分章实现（RENDER-003）。
+RENDER-003 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

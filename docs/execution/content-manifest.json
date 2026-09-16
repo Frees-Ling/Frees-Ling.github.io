@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-16T22:24:21.840Z",
+  "generatedAt": "2026-09-16T22:38:56.393Z",
   "articles": {
     "ai": {
       "title": "本地部署AI方法",
       "chars": 5246,
       "sha256": "4483ed66b1236521c11111e07c3e61cd6c14edb9d31a354cd8e7b98dd2687089",
       "headings": {
-        "1": 1,
-        "2": 5,
-        "3": 5
+        "2": 1,
+        "3": 5,
+        "4": 5
       },
       "anchors": 11,
       "anchorHash": "d0d52437f1a4e3c5342410ef8f9c263d1f7000a3001c8b9b435c2040ed80272b"
@@ -18,8 +18,8 @@
       "chars": 1266,
       "sha256": "dcfa4a65fee26e815016bc960ab8dec1eb72fa74d8c728cd90bd3be88004566c",
       "headings": {
-        "1": 6,
-        "2": 2
+        "2": 6,
+        "3": 2
       },
       "anchors": 8,
       "anchorHash": "635ddbeb00bc7f81bf80f8a19235eb0f3d9bf99eccc41e596fd6e070c15bb16f"
@@ -29,9 +29,9 @@
       "chars": 9845,
       "sha256": "bf09681cec964d6cb4338130a4c619190de834e7d91a00876691dce107824b59",
       "headings": {
-        "1": 6,
-        "2": 2,
-        "3": 1
+        "2": 6,
+        "3": 2,
+        "4": 1
       },
       "anchors": 9,
       "anchorHash": "bd4b0a8f4df763bd6feb6baa6b43097ce3f4fed60e2aa7b56de631bfb3c97845"
@@ -41,8 +41,8 @@
       "chars": 2118,
       "sha256": "5df2873334bb3807fc133c1ab75aa39e60313d21c0b3452fea798351f920ff6c",
       "headings": {
-        "1": 4,
-        "2": 6
+        "2": 4,
+        "3": 6
       },
       "anchors": 10,
       "anchorHash": "ae95622abc1b26838f361da87ab466bc01434efdc30ec34dc49f0b6b42b5e2f5"
@@ -52,7 +52,7 @@
       "chars": 18,
       "sha256": "29e1fe5463ba3b9ac6323c7da9912316e3a66ac47145e0ad6754f5439fcf82d1",
       "headings": {
-        "1": 2
+        "2": 2
       },
       "anchors": 2,
       "anchorHash": "7ed62ecf06abcdea2ee9836f08ff55171cfe93d939124e8829d4294a1a3c60ec"
@@ -62,9 +62,9 @@
       "chars": 3609,
       "sha256": "1904ec1d5afff4d5f6e88ddf5aba35fa547282388950a11763ac5c44b33cb8d6",
       "headings": {
-        "1": 5,
-        "2": 16,
-        "3": 10
+        "2": 5,
+        "3": 16,
+        "4": 10
       },
       "anchors": 31,
       "anchorHash": "200510f35da4e673abc0fcabaee39b852e1a5e583b3673f8516dd705119deba1"
@@ -90,7 +90,7 @@
       "chars": 656,
       "sha256": "21917ffc2e2e5e1d9ce2068b9e60d6aed70e1201992fc716826369a7d1e6e0ad",
       "headings": {
-        "1": 2
+        "2": 2
       },
       "anchors": 2,
       "anchorHash": "cc406aab8f81827d1f4a5f547fb6fcdfe5716491dde4d239c80b8aeeb9c410ce"
@@ -100,7 +100,7 @@
       "chars": 17064,
       "sha256": "dcb7c32c7602e6d0a7f6cec92ca9b6c4342b7412dd50ac73116a9d59ffd6b5aa",
       "headings": {
-        "1": 4
+        "2": 4
       },
       "anchors": 4,
       "anchorHash": "c7b368328ce1c5b442f7e81f165fb9afdc69124c4dc885bd397cd008c75dc2cf"
@@ -110,8 +110,8 @@
       "chars": 1992,
       "sha256": "2b1ac6a218f043e9a63f920c1b344817a54517895d57431e854bbcc1d6383d74",
       "headings": {
-        "1": 5,
-        "2": 3
+        "2": 5,
+        "3": 3
       },
       "anchors": 8,
       "anchorHash": "440e815df2d1c460c8db134641353312afb51a3e2bd1c44209e308b14159a3e0"
@@ -121,10 +121,10 @@
       "chars": 8227,
       "sha256": "30378c106ec3dfce74419c7e4a66510f32f144d37fbb3098e2c3c26d798794fe",
       "headings": {
-        "1": 2,
-        "2": 8,
-        "3": 4,
-        "4": 1
+        "2": 2,
+        "3": 8,
+        "4": 4,
+        "5": 1
       },
       "anchors": 15,
       "anchorHash": "e66d326afb524bfe57f8b3102fb1b7328c024e34eacd501f2e92c533ab9f3f91"
@@ -134,8 +134,8 @@
       "chars": 3737,
       "sha256": "7899877b73a858fc2df9edf92ce59655cb2a212a6bcc8be006023f879fe3dbcc",
       "headings": {
-        "1": 1,
-        "2": 3
+        "2": 1,
+        "3": 3
       },
       "anchors": 4,
       "anchorHash": "d7ced3de1c03cd39d6632fff3e9f7ba61072ea323c6d1c700825f7e2930558ca"
@@ -145,9 +145,9 @@
       "chars": 218796,
       "sha256": "a90c56efafb911d5fe70ddacc73fddebc8aeceddb8df370842d02b6dd08b5393",
       "headings": {
-        "1": 109,
-        "2": 470,
-        "3": 71
+        "2": 109,
+        "3": 470,
+        "4": 71
       },
       "anchors": 650,
       "anchorHash": "7a00804a24759ad2cd673e82720a588b190890fbb71bd2ecb82df0e7b3892220"
@@ -157,9 +157,9 @@
       "chars": 2264,
       "sha256": "d0e1a3e98e2e6755a1794eeb211ef7b3e1b43dca9c19d220c46ecfb9a62462d8",
       "headings": {
-        "1": 2,
-        "2": 6,
-        "3": 7
+        "2": 2,
+        "3": 6,
+        "4": 7
       },
       "anchors": 15,
       "anchorHash": "d32884c4800fad15f31e224a97fce434b16a5fa7486909692de64d25cadfaeb1"
@@ -169,8 +169,8 @@
       "chars": 1768,
       "sha256": "0da1245e9cd81f5c368de3e9bed8ef1153ebc9627c671981a5d76ea9cf7fa172",
       "headings": {
-        "1": 4,
-        "2": 3
+        "2": 4,
+        "3": 3
       },
       "anchors": 7,
       "anchorHash": "3dea3f798b47269226a0fcf657fcd36e778277059dec2b508c299e38600a7cb5"
@@ -180,8 +180,8 @@
       "chars": 149,
       "sha256": "8ef3945def197fc20e29f11a76398432dd1411cdd86ecefa2fc440841e232486",
       "headings": {
-        "1": 2,
-        "2": 2
+        "2": 2,
+        "3": 2
       },
       "anchors": 4,
       "anchorHash": "a5e86cfbae918b12d82014d971704a9a9a7bf2f2eb5dd87ba6b420329c6f9508"
