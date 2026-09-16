@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-010 — 备份到 WebDAV（阶段六）
+KB-011 — 备份传输层（WebDAV 上传/回读/保留策略）
 
 ## Last known implementation state
 
@@ -38,6 +38,8 @@ KB-010 — 备份到 WebDAV（阶段六）
 - 完整导出/导入与向量重建（KB-008 DONE）：导出不含向量、导入只接受空库、
   重建全算完才落库以避免半新半旧。
 - 命令行入口（KB-009 DONE）：status / start / export / import / rebuild，`npm run studio`。
+- 加密备份格式（KB-010 DONE）：AES-256-GCM + scrypt，口令不落盘。
+  传输层待做（依赖 WebDAV 凭证）。
 - 三层关联（KB-005 DONE）：记忆可追溯到来源消息/档案并关联知识库条目；
   删除来源不销毁结论；统一检索排除待审核记忆。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
