@@ -11,12 +11,22 @@
   <body>
     <header class="bar">
       <span class="mark">书房</span>
-      <form class="search" role="search" id="search-form">
-        <label class="sr-only" for="q">检索笔记</label>
-        <input id="q" type="search" placeholder="检索标题与正文…" autocomplete="off" />
-      </form>
+      <!-- 用语义元素 <search> 而不是给 form 加 role="search" -->
+      <search class="search">
+        <form id="search-form">
+          <label class="sr-only" for="q">检索笔记</label>
+          <input
+            id="q"
+            type="search"
+            placeholder="检索标题与正文…"
+            autocomplete="off"
+          />
+        </form>
+      </search>
       <button type="button" id="new" class="btn primary">新建</button>
-      <button type="button" id="theme" class="btn" aria-pressed="false">深色</button>
+      <button type="button" id="theme" class="btn" aria-pressed="false">
+        深色
+      </button>
     </header>
 
     <main class="layout">
@@ -32,11 +42,26 @@
 
         <form id="editor" hidden>
           <label class="sr-only" for="title">标题</label>
-          <input id="title" class="title" type="text" placeholder="标题" required />
+          <input
+            id="title"
+            class="title"
+            type="text"
+            placeholder="标题"
+            required
+          />
           <label class="sr-only" for="tags">标签（逗号分隔）</label>
-          <input id="tags" class="tags" type="text" placeholder="标签，用逗号分隔" />
+          <input
+            id="tags"
+            class="tags"
+            type="text"
+            placeholder="标签，用逗号分隔"
+          />
           <label class="sr-only" for="body">正文</label>
-          <textarea id="body" class="body" placeholder="用 Markdown 写…"></textarea>
+          <textarea
+            id="body"
+            class="body"
+            placeholder="用 Markdown 写…"
+          ></textarea>
 
           <div class="actions">
             <button type="submit" class="btn primary">保存</button>

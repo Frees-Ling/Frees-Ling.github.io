@@ -12,10 +12,12 @@
 import puppeteer from 'puppeteer-core';
 import { resolveChrome } from '../../scripts/visual/chrome-path.mjs';
 import { start } from '../server/index.mjs';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+const SHOTS = '/tmp/kb2-shots';
+mkdirSync(SHOTS, { recursive: true });
 const home = mkdtempSync(join(tmpdir(), 'kb2-'));
 const { server, token, port, db } = await start({ home, port: 0 });
 const base = `http://127.0.0.1:${port}`;
@@ -66,10 +68,10 @@ await page.click('#theme');
 await new Promise((r) => setTimeout(r, 200));
 const theme = await page.evaluate(() => document.documentElement.dataset.theme);
 
-await page.screenshot({ path: '/tmp/kb2/light.png' });
+await page.screenshot({ path: `${SHOTS}/light.png` });
 await page.click('#theme');
 await new Promise((r) => setTimeout(r, 200));
-await page.screenshot({ path: '/tmp/kb2/dark.png' });
+await page.screenshot({ path: `${SHOTS}/dark.png` });
 
 // ⑥ 键盘可达性：Tab 若干次，确认焦点始终可见
 const focusOk = await page.evaluate(async () => {
