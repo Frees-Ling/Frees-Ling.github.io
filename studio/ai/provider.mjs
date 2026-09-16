@@ -117,6 +117,13 @@ export function createProvider({
     try {
       return await fetchImpl(url, {
         ...init,
+        // 禁止自动跟随重定向。
+        //
+        // assertEndpointAllowed 只校验了**初始** URL。若本机端点返回 302
+        // 指向外部主机，默认的 redirect:'follow' 会把请求（连同私人笔记）
+        // 发到那个地址 —— 「内容不离开本机」这条保证就被静默绕过了。
+        // 模型端点没有理由重定向，因此直接拒绝而不是手动跟进。
+        redirect: 'error',
         signal: init.signal || controller.signal,
       });
     } catch (error) {

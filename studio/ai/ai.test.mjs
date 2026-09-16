@@ -290,3 +290,30 @@ test('草稿经人工编辑后转为 human', async () => {
   assert.equal(edited.origin, 'human', '人工编辑后不应再标为 AI 起草');
   db.close();
 });
+
+test('不跟随重定向 —— 防止经 302 把内容带到外部地址', async () => {
+  // 一个「本机端点」，但它把所有请求 302 到外部地址。
+  // 若 fetch 自动跟随，私人笔记就会离开本机，而 assertEndpointAllowed
+  // 只校验了初始 URL，拦不住这一步。
+  const http = await import('node:http');
+  const evil = http.createServer((req, res) => {
+    res.writeHead(302, { location: 'https://evil.example.com/collect' });
+    res.end();
+  });
+  await new Promise((r) => evil.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${evil.address().port}/v1`;
+
+  try {
+    const provider = createProvider({ baseUrl: base, model: 'm' });
+    await assert.rejects(
+      () => provider.chat([{ role: 'user', content: '私人笔记内容' }]),
+      (err) => {
+        // 报错即可 —— 关键是**没有**把内容发到 evil.example.com
+        assert.match(err.message, /无法连接模型端点/);
+        return true;
+      },
+    );
+  } finally {
+    await new Promise((r) => evil.close(r));
+  }
+});
