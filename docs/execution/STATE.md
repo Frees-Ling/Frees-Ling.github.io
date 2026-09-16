@@ -23,6 +23,10 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 - 首页已按 Identity → Work → Writing → Notes → Signal 重构（WEB-007 DONE），首屏可答 Who/What/Why。
 - 列表已收敛为单一编排器 PostList，栏目由 `src/data/sections.ts` 驱动，无硬编码白名单（WEB-008 DONE）。
 - 文章渲染器契约已确立（RENDER-001 DONE），见 `docs/article-renderer.md`。
+- Transformer 分章设计已定（RENDER-002 DONE），见 `docs/transformer-chaptering.md`：
+  采用**页内分章**（不拆 URL）；实测结构为 109 h1 / 471 h2 / 71 h3（修正了 RENDER-001
+  按源码 grep 得出的错误数字）。内容覆盖率闸门 `npm run check:coverage` 已可用。
+  实现见 RENDER-003。
 - 知识库存储层（K0）与服务层（KB-001 DONE）已实现，40 项测试通过；
   服务只绑 127.0.0.1、令牌鉴权、无任何发布到公网的路由。
 - 本地编辑界面（KB-002 DONE）可用：登录、列表、阅读、编辑、新建、删除、检索、双主题。
@@ -52,8 +56,7 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 
 ## Current objective
 
-设计 Transformer 的分章迁移：章节划分、旧 slug/anchor 兼容、
-搜索/RSS/SEO 策略、迁移脚本与回滚。
+按 `docs/transformer-chaptering.md` 落地页内分章实现（RENDER-003）。
 
 ## Next READY task
 

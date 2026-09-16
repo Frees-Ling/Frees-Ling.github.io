@@ -840,12 +840,62 @@ Commit：本文件所在提交。
 
 ### RENDER-002 — Transformer 枢纽/分章迁移设计
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: W2
 - Priority: P0
 - Depends-On: RENDER-001
 
 Acceptance：记录章节划分、旧 slug/anchor 兼容、搜索/RSS/SEO 策略、迁移脚本和回滚；迁移前后内容 hash/覆盖率可核验。
+
+Delivered：`docs/transformer-chaptering.md`
+
+Evidence：
+
+- **修正了 RENDER-001 的两处数字**。它按 `grep -c '^## '` 数源码得到「543 个 h2」，
+  而这个数法把**代码块里的 Python 注释**当成了标题 —— `grep '^# '` 数出 437 个 h1，
+  其中绝大多数是注释。按产出 HTML 重数为：**109 个 h1 / 471 个 h2 / 71 个 h3，
+  共 651 个标题，且 651 个都有 id**。事实以渲染结果为准，不以源码文本为准。
+- 方案定为**页内分章**（不拆 URL）。拆成枢纽页 + 章节页被否决，理由是可核验的：
+  用户已定「文章 URL 完全不动」；GitHub Pages 不支持服务端重定向，拆完 651 个
+  锚点会全部落空；拆分会把现有搜索权重摊薄。被否决的方案连同理由一并写进文档。
+- 记录了三处**内容侧**既有问题（课号 66/67/68 各出现两次、第 80 课夹在 71–76 之间、
+  缺失「第一阶段」标记）。这是用户的内容决定，渲染器不代为重新编号 ——
+  锚点一旦按课号生成，重号就会互相覆盖。
+- 交付覆盖率闸门 `npm run check:coverage` + 基线 `docs/execution/content-manifest.json`，
+  逐篇比对标题、正文纯文本 sha256、锚点 id 集合、各级标题计数。
+  **这道闸门被实测证伪过两次并已修复**，两条都是「会说谎」的缺陷：
+  ① 取正文区时切到 `</article>`，把上下篇导航算了进去，导致改 A 的标题会报
+  B 的正文变化（实测：改 thinking 的标题，闸门报 shadowrocket）；
+  ② 在陈旧产物上 `--write`，把从未存在过的中间态记成基线。
+  两条的复现步骤与修法都写在文档第四节。
+- 顺带修掉两个**线上真实缺陷**（axe 实测，非推断）：
+  `transformer` 有一个 KaTeX 解析错误（`\text{}` 内的裸下划线），
+  页面一直在渲染一串红色报错文本；以及 5 个公式块横向可滚动但不能用键盘滚。
+  后者只给**真正溢出**的块加 `tabindex`（496 个公式块全加会制造 496 个 Tab 停靠点，
+  比原问题更糟），实测桌面 5/124、手机 34/124，零误标零漏标。
+- `/blog/transformer/` 已加入 axe 默认路由集 —— 它此前不在其中，所以这两个缺陷
+  一直没被这道闸门看到。
+
+遗留：标题降级与两级目录是**实现**，见 RENDER-003。本条只交付设计与闸门。
+
+Commit：本文件所在提交。
+
+### RENDER-003 — Transformer 页内导航实现
+
+- Status: BACKLOG
+- Phase: W2
+- Priority: P1
+- Depends-On: RENDER-002
+
+Objective：按 `docs/transformer-chaptering.md` 落地页内分章。
+
+Acceptance：
+
+- 正文标题在**渲染期**整体降一级（生成页面标题为唯一 h1），id 不变；
+  不改任何 `.md`
+- 目录改为按顶级章节分组的两级结构，默认只展开当前章，当前章高亮
+- `npm run check:coverage` 在改动前后均通过（锚点集合与正文哈希不变）
+- 真实浏览器验收：1440 / 390 两档视口，键盘可走完目录
 
 ### PERF-001 — 图片与字体管线
 

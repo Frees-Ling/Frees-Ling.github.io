@@ -111,3 +111,10 @@
   overflow-x: auto;
   overflow-y: hidden;
 }
+
+/* 溢出的公式块会被脚本加上 tabindex，以便键盘横向滚动。
+   没有可见的焦点提示，键盘用户就不知道自己现在停在哪里。 */
+.prose .katex-display:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}

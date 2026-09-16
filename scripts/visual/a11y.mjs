@@ -24,6 +24,10 @@ const DEFAULT_ROUTES = [
   '/',
   '/blog/',
   '/blog/thinking/',
+  // transformer 是渲染器的边界样本：651 个标题、496 个公式、538 个 hr。
+  // 它曾经带着一个 KaTeX 解析错误和 5 个不可键盘滚动的公式块上线，
+  // 而默认路由集里没有它，所以那些缺陷一直没被这道闸门看到。
+  '/blog/transformer/',
   '/about/',
   '/projects/',
   '/archive/',

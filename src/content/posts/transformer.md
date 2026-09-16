@@ -6330,7 +6330,7 @@ $$
 \text{Step 1 (取数据): } & \text{从训练数据中随机取一批文本, 切成 token 序列} \\
 \text{Step 2 (前向传播): } & \text{输入 "今天天气真", 模型预测每个位置的下一个 token} \\
 \text{Step 3 (算 Loss): } & \text{比较预测和实际的下一个 token ("好"), 用 Cross Entropy 算差距} \\
-\text{Step 4 (反向传播): } & \text{从 Loss 倒推出每个参数 (W_Q, W_K, W_V, W_1, W_2, ...) 的梯度} \\
+\text{Step 4 (反向传播): } & \text{从 Loss 倒推出每个参数 (W\_Q, W\_K, W\_V, W\_1, W\_2, ...) 的梯度} \\
 \text{Step 5 (更新参数): } & W \leftarrow W - \eta \nabla W \quad \text{(梯度下降, 第18课)}
 \end{aligned}
 $$

@@ -46,6 +46,50 @@ const related = getRelated(post, buildRelations(allPosts), 4);
   </article>
   <Fragment slot="scripts">
     <script>
+      // 横向可滚动的公式块必须能用键盘滚 —— 只有鼠标能滚等于对键盘用户不可用
+      // （axe 的 scrollable-region-focusable）。
+      //
+      // 但**只给真正溢出的块加 tabindex**：transformer 一篇有 496 个公式块，
+      // 全加上就是 496 个 Tab 停靠点，那比原问题更糟 —— 键盘用户要按 496 次
+      // Tab 才能走到下一个真正的内容链接。是否溢出取决于栏宽，所以
+      // 布局完成、字体加载完成、以及窗口尺寸变化时都要重算。
+      const markScrollableMath = () => {
+        for (const el of document.querySelectorAll('.prose .katex-display')) {
+          const overflows = el.scrollWidth > el.clientWidth + 1;
+          const marked = el.hasAttribute('tabindex');
+          if (overflows && !marked) {
+            el.setAttribute('tabindex', '0');
+            // 用 group 而不是 region：region 在 ARIA 里是**地标**，
+            // 一篇里 4 个同名地标会被 axe 判为 landmark-unique 违规，
+            // 对屏幕阅读器用户也确实是歧义（"区域"列表里 4 个一模一样）。
+            // 公式是局部内容，本就不该是页面地标。
+            el.setAttribute('role', 'group');
+            el.setAttribute('aria-label', '数学公式，可横向滚动');
+          } else if (!overflows && marked) {
+            el.removeAttribute('tabindex');
+            el.removeAttribute('role');
+            el.removeAttribute('aria-label');
+          }
+        }
+      };
+
+      let pending = false;
+      const scheduleMark = () => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => {
+          pending = false;
+          markScrollableMath();
+        });
+      };
+
+      markScrollableMath();
+      // KaTeX 的字体是异步加载的，字体到位后宽度会变
+      document.fonts?.ready.then(markScrollableMath);
+      addEventListener('resize', scheduleMark);
+      addEventListener('load', markScrollableMath);
+    </script>
+    <script>
       const bar=document.querySelector<HTMLElement>('.reading-progress span');
       const update=()=>{const max=document.documentElement.scrollHeight-innerHeight;const value=max>0?scrollY/max*100:0;if(bar)bar.style.width=`${Math.min(100,value)}%`};addEventListener('scroll',update,{passive:true});update();
     </script>
