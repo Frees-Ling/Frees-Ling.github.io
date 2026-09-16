@@ -13,5 +13,5 @@ const { title = '回应与讨论', term } = Astro.props;
   new MutationObserver(updateGiscusTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 </script>
 <style>
-  .comments{margin-top:80px;padding-top:56px;border-top:1px solid var(--line)}.comments-heading{margin-bottom:32px}h2{margin:0 0 10px;font-family:Georgia,"Songti SC",serif;font-size:34px;font-weight:550}.comments-heading>p:last-child{margin:0;color:var(--ink-soft)}.comments-fallback{margin:16px 0 0;color:var(--ink-faint);font-size:12px}.comments-fallback a{color:var(--cyan)}
+  .comments{margin-top:80px;padding-top:56px;border-top:1px solid var(--line)}.comments-heading{margin-bottom:32px}h2{margin:0 0 10px;font-family:Georgia,"Songti SC",serif;font-size:34px;font-weight:550}.comments-heading>p:last-child{margin:0;color:var(--ink-soft)}.comments-fallback{margin:16px 0 0;color: var(--ink-soft);font-size:12px}.comments-fallback a{color:var(--accent-text)}
 </style>

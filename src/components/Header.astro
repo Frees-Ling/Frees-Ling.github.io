@@ -57,15 +57,15 @@ const path = Astro.url.pathname;
   .site-header { position: relative; z-index: 20; border-bottom: 1px solid var(--line); }
   .header-inner { width: min(calc(100% - 48px), var(--content)); min-height: 78px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
   .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); font-weight: 750; letter-spacing: -0.02em; text-decoration: none; }
-  .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--coral); font-family: Georgia, serif; font-size: 20px; }
+  .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--signal-text); font-family: Georgia, serif; font-size: 20px; }
   .site-nav { display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); }
   .site-nav a { position: relative; color: var(--ink-soft); font-size: 14px; font-weight: 650; text-decoration: none; }
   .site-nav a:hover, .site-nav a[aria-current='page'] { color: var(--ink); }
-  .site-nav a[aria-current='page']::after { position: absolute; right: 0; bottom: -13px; left: 0; height: 2px; border-radius: 2px; background: var(--coral); content: ''; }
+  .site-nav a[aria-current='page']::after { position: absolute; right: 0; bottom: -13px; left: 0; height: 2px; border-radius: 2px; background: var(--signal); content: ''; }
   .search-link { font-size: 23px !important; font-weight: 400 !important; line-height: 1; }
   .theme-toggle, .menu-toggle { border: 0; background: transparent; color: var(--ink); cursor: pointer; }
   .theme-toggle { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 50%; }
-  .theme-toggle:hover { border-color: var(--cyan); }
+  .theme-toggle:hover { border-color: var(--accent-text); }
   .theme-sun, :root[data-theme='light'] .theme-moon { display: none; }
   :root[data-theme='light'] .theme-sun { display: inline; }
   .menu-toggle { display: none; align-items: center; gap: 10px; padding: 10px 0; font-size: 14px; font-weight: 700; }

@@ -26,7 +26,7 @@
   align-items: center;
   gap: 10px;
   margin: 0 0 18px;
-  color: var(--cyan);
+  color: var(--accent-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -83,7 +83,7 @@
 }
 .text-link::after {
   content: '↗';
-  color: var(--coral);
+  color: var(--signal-text);
   transition: transform 180ms ease;
 }
 .text-link:hover::after {
@@ -105,17 +105,17 @@
   transition: 180ms ease;
 }
 .button:hover {
-  border-color: var(--cyan);
-  background: rgba(100, 216, 202, 0.08);
+  border-color: var(--accent-text);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
   transform: translateY(-2px);
 }
 .button.primary {
-  border-color: var(--coral);
-  background: var(--coral);
-  color: var(--on-coral);
+  border-color: var(--signal);
+  background: var(--signal);
+  color: var(--on-signal);
 }
 .button.primary:hover {
-  background: var(--coral-hover);
+  background: var(--signal-hover);
 }
 
 .page-hero {
@@ -145,7 +145,7 @@
   text-decoration: none;
 }
 .tag:hover {
-  border-color: var(--cyan);
+  border-color: var(--accent-text);
   color: var(--ink);
 }
 

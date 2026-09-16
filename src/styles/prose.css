@@ -41,7 +41,7 @@
   margin-block: 1.25em;
 }
 .prose a {
-  color: var(--cyan);
+  color: var(--accent-text);
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
 }
@@ -52,7 +52,7 @@
 .prose blockquote {
   margin: 2em 0;
   padding: 2px 0 2px 24px;
-  border-left: 3px solid var(--coral);
+  border-left: 3px solid var(--signal);
   color: var(--ink);
   font-family: Georgia, 'Songti SC', serif;
   font-size: 1.1em;
@@ -68,7 +68,7 @@
   padding: 0.15em 0.38em;
   border-radius: 5px;
   background: var(--surface-2);
-  color: var(--cyan);
+  color: var(--accent-text);
   font-size: 0.86em;
 }
 

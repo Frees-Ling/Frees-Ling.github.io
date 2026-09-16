@@ -55,8 +55,8 @@ body::before {
 }
 
 ::selection {
-  color: #06171d;
-  background: var(--cyan);
+  color: var(--canvas);
+  background: var(--accent-text);
 }
 
 a {
