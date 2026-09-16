@@ -23,7 +23,8 @@
     "format:check": "prettier --check .",
     "shot": "node scripts/visual/screenshot.mjs",
     "a11y": "node scripts/visual/a11y.mjs",
-    "gate": "node scripts/visual/gate.mjs"
+    "gate": "node scripts/visual/gate.mjs",
+    "studio": "node studio/cli.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.3.0",

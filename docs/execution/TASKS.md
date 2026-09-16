@@ -681,6 +681,52 @@ Evidence：
 
 Commit：本文件所在提交。
 
+### KB-009 — 知识库命令行入口
+
+- Status: DONE
+- Phase: K1
+- Priority: P1
+- Depends-On: KB-008
+
+Objective：导出、重建、启动目前都要手写 Node 单行命令，日常不可用。
+
+Acceptance：
+
+- `status` / `start` / `export <file>` / `import <file>` / `rebuild` 五个子命令
+- 不打印令牌与任何私人内容
+- `export` 默认**拒绝覆盖已存在的文件**（导出是备份，静默覆盖等于毁掉上一份）
+- 数据目录可用 `FREES_STUDIO_HOME` 覆盖
+- 子命令失败时给出可操作的提示，退出码非零
+- 测试覆盖各子命令的实际行为，不只是「能跑」
+
+Evidence：
+
+`studio/cli.mjs` 五个子命令：`status` / `start` / `export` / `import` / `rebuild`，
+并有 `npm run studio` 快捷入口。
+
+- **不打印令牌**：终端会被截图、也进 scrollback；有测试断言输出里不含令牌内容
+- **`export` 拒绝覆盖已存在的文件**。导出是备份，静默覆盖会毁掉上一份，
+  而人往往在需要它时才发现。有测试断言旧文件内容原封不动
+- **`status` 在库未创建时说明情况而不是报错** —— 未建库是正常状态
+- 数据目录可用 `FREES_STUDIO_HOME` 覆盖，便于测试与多环境
+
+测试：**134 项全部通过**（新增 14 项）。用**子进程**跑真实命令行入口，
+而不是直接调函数 —— CLI 的价值就在参数解析、退出码、输出这些外壳上，
+只测函数等于把它最容易被写错的部分跳过去了。
+
+**端到端实操抓出一个测试没覆盖的真实 bug**：
+
+`import` 到**全新的数据目录**时失败 —— 目录还不存在，SQLite 建不了文件，
+报 `unable to open database file`。而「在新机器上从备份恢复」正是
+`import` 最常见的用法。
+
+之所以没被测出：测试里总是先 `mkdtempSync` 建目录，恰好绕过了这条路径。
+已修（导入前 `mkdirSync`）并补上专门的测试用例。
+
+这与本会话前几次同类：**测试覆盖的是「我以为的用法」，而不是真实用法**。
+
+Commit：本文件所在提交。
+
 ### RENDER-002 — Transformer 枢纽/分章迁移设计
 
 - Status: BACKLOG
