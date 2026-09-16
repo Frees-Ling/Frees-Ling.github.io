@@ -358,3 +358,132 @@ export function saveAnswerAsDraft(db, { conversationId, messageId, title }) {
     origin: 'ai_draft',
   });
 }
+
+// ──────────────── 三层关联（KB-005）────────────────
+
+/**
+ * 从一条对话回答提取待审核记忆。
+ *
+ * 刻意只写 pending：AI 从对话里提炼的结论**不是**用户确认的事实。
+ * 与 proposeMemory 的区别只在于自动带上来源消息，因此可追溯
+ * 「这条记忆是从哪次对话的哪句回答来的」。
+ */
+export function proposeMemoryFromMessage(
+  db,
+  { messageId, content, confidence = 0.5 },
+) {
+  const message = db
+    .prepare('SELECT * FROM messages WHERE id = ?')
+    .get(messageId);
+  if (!message) throw new Error('消息不存在');
+  if (message.role !== 'assistant') {
+    throw new Error('只有 AI 的回答可以提取为记忆');
+  }
+  const memory = proposeMemory(db, {
+    content: content || message.content,
+    confidence,
+  });
+  db.prepare('UPDATE memories SET source_message_id = ? WHERE id = ?').run(
+    messageId,
+    memory.id,
+  );
+  return db.prepare('SELECT * FROM memories WHERE id = ?').get(memory.id);
+}
+
+/** 关联记忆与知识库条目。可重复调用而不产生重复行。 */
+export function linkMemoryToNote(db, memoryId, noteId) {
+  const memory = db
+    .prepare('SELECT 1 AS ok FROM memories WHERE id = ?')
+    .get(memoryId);
+  if (!memory) throw new Error(`记忆不存在: ${memoryId}`);
+  const note = db.prepare('SELECT 1 AS ok FROM notes WHERE id = ?').get(noteId);
+  if (!note) throw new Error(`笔记不存在: ${noteId}`);
+
+  db.prepare(
+    `INSERT OR IGNORE INTO memory_notes (memory_id, note_id, created_at)
+     VALUES (?, ?, ?)`,
+  ).run(memoryId, noteId, now());
+  return { memoryId, noteId };
+}
+
+export function unlinkMemoryFromNote(db, memoryId, noteId) {
+  return (
+    db
+      .prepare('DELETE FROM memory_notes WHERE memory_id = ? AND note_id = ?')
+      .run(memoryId, noteId).changes > 0
+  );
+}
+
+/**
+ * 一条记忆的完整来源链。
+ *
+ * 三层各自的 id 分散在四张表里，调用方要追溯「这条结论从哪来」
+ * 不该自己去拼 SQL —— 拼错一次就会得到一条看似合理实则错误的来源。
+ */
+export function getMemoryProvenance(db, memoryId) {
+  const memory = db
+    .prepare('SELECT * FROM memories WHERE id = ?')
+    .get(memoryId);
+  if (!memory) return null;
+
+  const archive = memory.source_entry_id
+    ? db
+        .prepare(
+          'SELECT id, kind, source, created_at FROM archive_entries WHERE id = ?',
+        )
+        .get(memory.source_entry_id)
+    : null;
+
+  const message = memory.source_message_id
+    ? db
+        .prepare(
+          `SELECT m.id, m.conversation_id, m.created_at, c.title AS conversation_title
+             FROM messages m JOIN conversations c ON c.id = m.conversation_id
+            WHERE m.id = ?`,
+        )
+        .get(memory.source_message_id)
+    : null;
+
+  const notes = db
+    .prepare(
+      `SELECT n.id, n.title FROM memory_notes mn
+         JOIN notes n ON n.id = mn.note_id
+        WHERE mn.memory_id = ? ORDER BY n.updated_at DESC`,
+    )
+    .all(memoryId);
+
+  return { memory, archive, message, notes };
+}
+
+export function listNotesForMemory(db, memoryId) {
+  return db
+    .prepare(
+      `SELECT n.* FROM memory_notes mn JOIN notes n ON n.id = mn.note_id
+        WHERE mn.memory_id = ? ORDER BY n.updated_at DESC`,
+    )
+    .all(memoryId);
+}
+
+/**
+ * 统一检索：一次查询同时拿到笔记与**已确认**记忆。
+ *
+ * 待审核记忆刻意**不进入**结果 —— 检索是给人用的，
+ * 把未经确认的 AI 推测混进「我的知识」里，等于让推测冒充事实。
+ * 它们要经过 reviewMemory 才会出现在这里。
+ */
+export function searchEverything(db, query, { limit = 10 } = {}) {
+  const q = String(query ?? '').trim();
+  if (!q) return { notes: [], memories: [] };
+
+  const notes = searchNotes(db, q, { limit });
+
+  const memories = db
+    .prepare(
+      `SELECT * FROM memories
+        WHERE status = 'approved' AND content LIKE ?
+        ORDER BY reviewed_at DESC LIMIT ?`,
+    )
+    .all(`%${q}%`, limit);
+
+  return { notes, memories };
+}

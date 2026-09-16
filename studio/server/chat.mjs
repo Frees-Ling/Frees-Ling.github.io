@@ -51,7 +51,7 @@ export async function handleChat(req, res, deps, ctx) {
   return handled ? true : null;
 }
 
-async function route(req, res, deps, { path, method, readBody, send }) {
+async function route(req, res, deps, { path, method, readBody, send, url }) {
   const { db, provider } = deps;
 
   // ── 模型端点状态 ──
@@ -180,6 +180,52 @@ async function route(req, res, deps, { path, method, readBody, send }) {
       message: { ...assistant, citations },
       citations: hits.map((n) => ({ id: n.id, title: n.title })),
     });
+  }
+
+  // ── 从某条回答提取待审核记忆 ──
+  const extract = path.match(/^\/api\/conversations\/([^/]+)\/memories$/);
+  if (extract && method === 'POST') {
+    const body = await readBody(req);
+    const memory = proposeMemoryFromMessage(db, {
+      messageId: String(body.messageId || ''),
+      content: body.content,
+      confidence: Number(body.confidence ?? 0.5),
+    });
+    return send(res, 201, { memory });
+  }
+
+  // ── 统一检索：笔记 + 已确认记忆 ──
+  if (path === '/api/search-all' && method === 'GET') {
+    const q = url.searchParams.get('q') || '';
+    return send(res, 200, { query: q, ...searchEverything(db, q) });
+  }
+
+  // ── 记忆的来源链 ──
+  const prov = path.match(/^\/api\/memories\/([^/]+)\/provenance$/);
+  if (prov && method === 'GET') {
+    const result = getMemoryProvenance(db, decodeURIComponent(prov[1]));
+    if (!result) return send(res, 404, { error: '记忆不存在' });
+    return send(res, 200, result);
+  }
+
+  // ── 记忆 ↔ 知识库条目的关联 ──
+  const memNotes = path.match(/^\/api\/memories\/([^/]+)\/notes$/);
+  if (memNotes) {
+    const memoryId = decodeURIComponent(memNotes[1]);
+    if (method === 'POST') {
+      const body = await readBody(req);
+      return send(
+        res,
+        201,
+        linkMemoryToNote(db, memoryId, String(body.noteId || '')),
+      );
+    }
+    if (method === 'DELETE') {
+      const noteId = url.searchParams.get('noteId') || '';
+      const removed = unlinkMemoryFromNote(db, memoryId, noteId);
+      if (!removed) return send(res, 404, { error: '关联不存在' });
+      return send(res, 200, { removed: true });
+    }
   }
 
   // ── 把某条回答存为草稿 ──

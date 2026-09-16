@@ -22,6 +22,14 @@ import {
   reviewMemory,
   listApprovedMemories,
   listPendingMemories,
+  proposeMemoryFromMessage,
+  linkMemoryToNote,
+  listNotesForMemory,
+  getMemoryProvenance,
+  searchEverything,
+  createConversation,
+  addMessage,
+  deleteConversation,
 } from './store.mjs';
 
 const fresh = () => openDatabase(':memory:');
@@ -276,5 +284,149 @@ test('记忆可以追溯到来源档案', () => {
   });
 
   assert.equal(memory.source_entry_id, entry.id);
+  db.close();
+});
+
+// ──────────────── 三层关联（KB-005）────────────────
+
+test('从对话回答提取记忆时带上来源消息', async () => {
+  const db = fresh();
+  const conv = createConversation(db);
+  const msg = addMessage(db, conv.id, {
+    role: 'assistant',
+    content: '结论：先验证再下判断',
+  });
+
+  const memory = proposeMemoryFromMessage(db, { messageId: msg.id });
+  assert.equal(memory.status, 'pending');
+  assert.equal(memory.source_message_id, msg.id);
+
+  const prov = getMemoryProvenance(db, memory.id);
+  assert.equal(prov.message.conversation_id, conv.id);
+  db.close();
+});
+
+test('只有 AI 回答能提取为记忆', () => {
+  const db = fresh();
+  const conv = createConversation(db);
+  const msg = addMessage(db, conv.id, { role: 'user', content: '我自己说的' });
+  assert.throws(
+    () => proposeMemoryFromMessage(db, { messageId: msg.id }),
+    /只有 AI 的回答/,
+  );
+  db.close();
+});
+
+test('记忆可关联到知识库条目，且可反向查询', () => {
+  const db = fresh();
+  const note = createNote(db, { title: '评估方法' });
+  const memory = proposeMemory(db, { content: '偏好可复现的实验' });
+
+  linkMemoryToNote(db, memory.id, note.id);
+  assert.equal(listNotesForMemory(db, memory.id).length, 1);
+  assert.equal(listNotesForMemory(db, memory.id)[0].title, '评估方法');
+
+  const prov = getMemoryProvenance(db, memory.id);
+  assert.equal(prov.notes[0].id, note.id);
+  db.close();
+});
+
+test('重复关联不产生重复行', () => {
+  const db = fresh();
+  const note = createNote(db, { title: 'x' });
+  const memory = proposeMemory(db, { content: 'y' });
+  linkMemoryToNote(db, memory.id, note.id);
+  linkMemoryToNote(db, memory.id, note.id);
+  assert.equal(listNotesForMemory(db, memory.id).length, 1);
+  db.close();
+});
+
+test('关联不存在的记忆或笔记时报错', () => {
+  const db = fresh();
+  const note = createNote(db, { title: 'x' });
+  const memory = proposeMemory(db, { content: 'y' });
+  assert.throws(() => linkMemoryToNote(db, 'nope', note.id), /记忆不存在/);
+  assert.throws(() => linkMemoryToNote(db, memory.id, 'nope'), /笔记不存在/);
+  db.close();
+});
+
+test('删除来源消息不销毁记忆，只把来源置空', () => {
+  const db = fresh();
+  const conv = createConversation(db);
+  const msg = addMessage(db, conv.id, { role: 'assistant', content: '结论' });
+  const memory = proposeMemoryFromMessage(db, { messageId: msg.id });
+
+  // 清掉整段对话
+  deleteConversation(db, conv.id);
+
+  const after = db
+    .prepare('SELECT * FROM memories WHERE id = ?')
+    .get(memory.id);
+  assert.ok(after, '记忆本身必须保留 —— 删对话不该销毁一条结论');
+  assert.equal(after.source_message_id, null, '来源应被置空');
+  db.close();
+});
+
+test('删除笔记会清理关联行但保留记忆', () => {
+  const db = fresh();
+  const note = createNote(db, { title: 'x' });
+  const memory = proposeMemory(db, { content: 'y' });
+  linkMemoryToNote(db, memory.id, note.id);
+  deleteNote(db, note.id);
+
+  assert.equal(listNotesForMemory(db, memory.id).length, 0);
+  assert.ok(
+    db.prepare('SELECT 1 AS ok FROM memories WHERE id = ?').get(memory.id),
+  );
+  db.close();
+});
+
+test('统一检索同时返回笔记与已确认记忆，待审核的不出现', () => {
+  const db = fresh();
+  createNote(db, { title: '注意力机制的几何直觉', body: '' });
+  const approved = proposeMemory(db, { content: '注意力机制要先看几何直觉' });
+  const pending = proposeMemory(db, {
+    content: '注意力机制的另一条未确认推测',
+  });
+  reviewMemory(db, approved.id, 'approved');
+
+  const hits = searchEverything(db, '注意力机制');
+  assert.equal(hits.notes.length, 1);
+  assert.equal(hits.memories.length, 1, '只有已确认的记忆才进入检索');
+  assert.equal(hits.memories[0].id, approved.id);
+  assert.ok(!hits.memories.some((m) => m.id === pending.id));
+  db.close();
+});
+
+test('空查询的统一检索返回空，不返回全部', () => {
+  const db = fresh();
+  createNote(db, { title: 'x' });
+  assert.deepEqual(searchEverything(db, ''), { notes: [], memories: [] });
+  db.close();
+});
+
+test('来源链可完整追溯：档案 → 记忆 → 笔记', () => {
+  const db = fresh();
+  const entry = importArchiveEntry(db, {
+    kind: 'conversation',
+    source: 'chat.md',
+    content: '讨论评估方法',
+  });
+  const note = createNote(db, { title: '评估方法笔记' });
+  const memory = proposeMemory(db, {
+    content: '偏好可复现实验',
+    sourceEntryId: entry.id,
+  });
+  linkMemoryToNote(db, memory.id, note.id);
+
+  const prov = getMemoryProvenance(db, memory.id);
+  assert.equal(prov.archive.source, 'chat.md');
+  assert.equal(prov.notes[0].id, note.id);
+  db.close();
+});
+
+test('不存在的记忆返回 null 而不是抛错', () => {
+  const db = fresh();
+  assert.equal(getMemoryProvenance(db, 'nope'), null);
   db.close();
 });

@@ -182,6 +182,40 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    version: 3,
+    name: 'memory-links',
+    up: (db) => {
+      // ── 把三层连起来（KB-005）──
+      //
+      // 此前三层各自存在但互不连通：
+      //   档案（archive_entries）· 记忆（memories）· 知识库（notes）· 对话（messages）
+      // 已有的连接只有 memories.source_entry_id → archive_entries。
+      //
+      // 这里补两条：
+      //   ① 记忆可以来自一条对话消息（AI 从对话里提取的结论）
+      //   ② 记忆可以关联到知识库条目（这条结论在哪几篇笔记里被用到/印证）
+
+      // ① 来源消息。用 ALTER 而不是重建表 —— 已有数据必须保留。
+      //    ON DELETE SET NULL 而非 CASCADE：删掉一条对话不该抹掉它产生的记忆，
+      //    那等于用一次清理动作销毁一条已确认的结论。来源没了就置空。
+      db.exec(`
+        ALTER TABLE memories ADD COLUMN source_message_id TEXT
+          REFERENCES messages(id) ON DELETE SET NULL;
+      `);
+
+      // ② 记忆 ↔ 知识库条目的多对多
+      db.exec(`
+        CREATE TABLE memory_notes (
+          memory_id TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+          note_id   TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (memory_id, note_id)
+        );
+      `);
+      db.exec(`CREATE INDEX idx_memory_notes_note ON memory_notes (note_id);`);
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
