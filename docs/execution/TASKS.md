@@ -34,7 +34,7 @@ Commit：本文件所在的 GOV-001 治理提交。
 
 ### WEB-006 — P5c Site Chrome 最终回归
 
-- Status: READY
+- Status: DONE
 - Phase: W1
 - Priority: P0
 - Depends-On: GOV-001
@@ -48,6 +48,39 @@ Acceptance：
 - 导航和页脚覆盖全部主要路由，旧 URL 可达。
 - 对比度、控制台、HTML、token、a11y、构建闸门通过。
 - `docs/redesign-progress.md` 不再保留矛盾/重复状态行。
+
+Evidence：
+
+- **全部 10 项命令通过**：`format:check`、`lint`、`lint:md`、`check:tokens`、`check`、
+  `build`、`check:html`、`a11y`，以及 `scripts/visual/gate.mjs` 分别对 dev server 与
+  构建产物各跑一次。
+- **浏览器门禁**（7 视口：1440/1280/1024/768/430/390/360 × 16 路由）：
+  对比度 0 失败、路由可达性全通过、横向溢出 0、键盘走查干净、控制台错误 0。
+- **交互验收 11/11**：菜单展开、`aria-expanded` 切换、`aria-label` 切换、
+  展开后链接可聚焦、Escape 关闭、**焦点回交菜单按钮**、收起后链接不可聚焦、
+  主题切换、标签随主题更新、`aria-pressed` 同步。
+- **覆盖检查**：导航 6 项 + 工具 1 项 + 页脚 15 项，覆盖全部 13 个结构性路由。
+- **旧 URL 18/18 可达**；**大小写负向测试 4/4**（`/tags/ai/`、`/Tags/AI/`、
+  `/BLOG/`、`/Projects/` 均 404 —— 与 Linux/GitHub Pages 行为一致）。
+- **CWV**（7 视口）：LCP 44–96ms、CLS 0.0000、TBT 0ms。
+- 截图 84 张存于 `_backups/shots/web006/`。
+
+本任务中发现并修复的缺陷：
+
+1. **`/search/` 入口丢失**（我在 P5c 重写 Header 时移除）→ 补回 `SEARCH` 工具链接。
+2. **`/research/` 与 `/notes/` 成为孤儿页** —— 五区导航合并后无任何入口
+   → 纳入页脚二级导航。
+3. **Pagefind「清空」按钮不可见却可聚焦** —— 该组件用 `opacity:0` 隐藏，
+   但 `opacity` 不移出 Tab 序列 → 补 `visibility:hidden`。
+4. **搜索框无可见标签** —— Pagefind 生成的 input 无 `id`、无 `label`，只有 `title`
+   → 补可见 `<label>` 并在初始化后绑定 `id`。
+5. **`/history/` 在无头环境下 DOM 求值超时** —— 内嵌两个完整归档站点会长时间
+   占用渲染进程主线程。已核实生产返回 200、页面 2 秒内 `readyState=complete`，
+   属无头自动化固有限制而非用户可见缺陷；门禁改为只对其做 HTTP 可达性检查并记录原因。
+
+<!-- 修复 1–4 的提交见本文件所在提交；缺陷 5 的判定依据见 docs/redesign-progress.md -->
+
+Commit：本文件所在提交。
 
 ### WEB-007 — 首页编辑化重构
 

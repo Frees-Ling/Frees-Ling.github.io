@@ -4,7 +4,7 @@ Updated: 2026-09-16
 
 Branch: `main`
 
-Verified starting HEAD: `afce569` (`修复视觉脚本静态服务器的大小写盲点`)
+Verified starting HEAD: `0519dba` (`docs: 建立长期计划真相源避免需求漂移`)
 
 ## Current phase
 
@@ -12,24 +12,24 @@ W1 — FIELD LOG public-site completion
 
 ## Current task
 
-WEB-006 — P5c Site Chrome 最终回归
+WEB-007 — 首页编辑化重构
 
 ## Last known implementation state
 
 - 公共 Astro 站、17 篇文章和两代历史展馆已存在。
-- 重设计 P0–P3、P5a 已完成。
-- P5c Site Chrome 已提交；`docs/redesign-progress.md` 仍标记“待最终验收”。
-- 视觉静态服务器已补充大小写精确检查（`afce569`），应纳入 WEB-006 路由回归。
+- 重设计 P0–P3、P5a、P5c 已完成并**通过最终回归**（WEB-006 DONE）。
+- 站点 chrome 已是 FIELD LOG 语言：masthead + colophon，无圆形徽章 / 光晕 / 胶囊。
+- 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。
 
 ## Current objective
 
-在不开始新视觉功能的前提下，对提交 `17d3e9a` 完成多视口、双主题、键盘、路由与浏览器闸门回归，
-修正 `docs/redesign-progress.md` 中剩余的实际状态。
+按 Identity → Selected Work → Featured Writing → Recent Notes → Current Signal
+重构首页，使首屏 5 秒内可回答 Who / What / Why。
 
 ## Next READY task
 
-WEB-006 完成后进入 WEB-007 — 首页编辑化重构。
+WEB-008 — 列表与栏目数据化（依赖 WEB-007）。
 
 ## Blockers / human decisions
 

@@ -36,6 +36,7 @@ const isActive = (href: string) =>
     </nav>
 
     <div class="tools">
+      <a class="tool-link" href="/search/" title="搜索">SEARCH</a>
       <button class="theme-toggle" type="button" aria-pressed="false">
         <span class="theme-label">DARK</span>
       </button>
@@ -190,6 +191,7 @@ const isActive = (href: string) =>
   }
 
   /* 主题开关与菜单触发都是文字控件，不是圆形按钮 */
+  .tool-link,
   .theme-toggle,
   .menu-toggle {
     display: inline-flex;
@@ -206,9 +208,13 @@ const isActive = (href: string) =>
     cursor: pointer;
     transition: color 140ms ease;
   }
+  .tool-link:hover,
   .theme-toggle:hover,
   .menu-toggle:hover {
     color: var(--ink);
+  }
+  .tool-link {
+    text-decoration: none;
   }
 
   .menu-toggle {

@@ -64,14 +64,15 @@ CI（`.github/workflows/quality.yml`）会逐项执行这些命令。
 
 以下几条是**反直觉**的，改动前请先读完原因。
 
-### 不要格式化 `.astro` 与 `src/styles/global.css`
+### 不要格式化 `.astro`
 
-这两处采用刻意紧凑的手写风格：`.astro` 的内联 `<style>` 块是压缩成单行的 CSS，
-模板标记也按可读性手工折行。
+`.astro` 的内联 `<style>` 块按可读性手工折行，模板标记也是。
+`.prettierignore` 已排除它们，**不要移除该排除项**。实测把 Prettier 套上去
+会让 `src/` 从 627 行膨胀到 3300 行（+425%）。
 
-`.prettierignore` 已排除它们，**不要移除这些排除项**。实测把 Prettier 套上去
-会让 `src/` 从 627 行膨胀到 3300 行（+425%），既破坏原有排版意图，
-也会增大每个页面内联的 CSS 体积、拖慢首屏。
+样式文件（`src/styles/*.css`）**不在排除之列**，它们走 Prettier 正常格式化 ——
+P3 已把原先的单体 `global.css` 拆为 `tokens.css` / `base.css` / `primitives.css` /
+`prose.css`，拆分后即采用常规多行格式。
 
 ### 不要移除 `biome.json` 中 `.astro` 的规则覆盖
 
@@ -93,8 +94,13 @@ CI（`.github/workflows/quality.yml`）会逐项执行这些命令。
 
 ### 站点样式
 
-全站样式集中在 `src/styles/global.css` 与各 `.astro` 的内联 `<style>` 中，
-没有引入 Tailwind 或 CSS 框架。
+全站样式分两处：`src/styles/` 下的四个全局文件
+（`tokens.css` / `base.css` / `primitives.css` / `prose.css`）
+与各 `.astro` 的内联 scoped `<style>`。没有引入 Tailwind 或 CSS 框架。
+
+**颜色字面量只允许出现在 `tokens.css`**，由 `npm run check:tokens` 强制。
+该脚本还会检查 `var()` 引用完整性 —— CSS 变量引用未定义时**完全不报错**，
+属性会静默失效，所以这条闸门不能绕过。
 
 ### 密钥与外部服务
 
