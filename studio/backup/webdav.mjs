@@ -43,8 +43,29 @@ export function createWebdav({
     'Basic ' +
     Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
 
-  const url = (path) =>
-    `${baseUrl}${path.split('/').map(encodeURIComponent).join('/')}`;
+  /**
+   * 构造请求 URL。
+   *
+   * **逐段拒绝 `.` 与 `..`**。`encodeURIComponent` 不会转义点号，
+   * 因此一个 `..` 段会原样出现在 URL 里，被 HTTP 客户端规范化掉 ——
+   * 于是 `/backups/../evil` 实际请求的是 `/evil`，**越出了备份目录**。
+   *
+   * 这是第二道防线。第一道在 list()：它只返回不含分隔符的文件名。
+   * 两道都要有 —— list() 的结果会被保留策略拿去做删除路径，
+   * 而删除是不可逆的，这里宁可报错也不要「按字面意思发出去」。
+   */
+  const url = (path) => {
+    const segments = path.split('/');
+    for (const segment of segments) {
+      if (segment === '.' || segment === '..') {
+        throw new Error(
+          `拒绝构造含「${segment}」段的请求路径：${path}。` +
+            '点号段会被 HTTP 客户端规范化，实际请求的地址会越出预期目录。',
+        );
+      }
+    }
+    return `${baseUrl}${segments.map(encodeURIComponent).join('/')}`;
+  };
 
   async function request(method, path, { body, headers = {} } = {}) {
     const res = await fetchImpl(url(path), {
@@ -144,7 +165,20 @@ export function createWebdav({
           })
           .filter((p) => p.startsWith(dirPrefix) && p !== dirPrefix)
           .map((p) => p.slice(dirPrefix.length))
-          .filter((name) => name && !name.endsWith('/'))
+          // ── 只接受**单个文件名** ──
+          //
+          // 到这里名字已经解码过了，而解码会引入分隔符：`%2F` 在 URL 解析
+          // 阶段**不是**分隔符（规范如此），于是 `/backups/..%2Fevil` 解析出来
+          // 仍是 `/backups/..%2Fevil`，解码后才变成 `/backups/../evil` ——
+          // 它通过上面的 startsWith 检查，切出来就是 `../evil`。
+          // 实测确认过：这个形态会让保留策略去 DELETE `/backups/../evil`，
+          // 被 HTTP 客户端规范化成 `/evil`，**删到备份目录外面**。
+          //
+          // 深度 1 的 PROPFIND 本来就不该返回带路径分隔符的项，
+          // 因此这里直接丢掉而不是放行。丢掉的代价是「少看到一个文件」，
+          // 放行的代价是「删错文件」—— 两者不对等，所以选丢掉。
+          .filter((name) => name && !name.endsWith('/') && !name.includes('/'))
+          .filter((name) => name !== '.' && name !== '..')
       );
     },
   };

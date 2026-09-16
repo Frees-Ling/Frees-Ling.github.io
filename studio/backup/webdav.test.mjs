@@ -99,7 +99,11 @@ test('list 忽略目录自身与子目录，只给文件名', async () => {
   assert.deepEqual(await dav.list('/backups'), ['x.freesbk']);
 });
 
-test('list 最多只解一层目录前缀，嵌套路径不会漏进来', async () => {
+test('list 丢弃带路径分隔符的项，只返回文件名', async () => {
+  // 这条用例原先断言的是**相反**的行为（嵌套项带相对路径一起返回）。
+  // 那个断言是错的：它把一个可被利用的形态固定成了「预期行为」。
+  // 深度 1 的 PROPFIND 本来就不该返回带分隔符的项，
+  // 而带上分隔符之后，下游（保留策略的删除路径）就能被带出目录。
   const dav = davWith(
     multistatus([
       '/backups/',
@@ -107,11 +111,50 @@ test('list 最多只解一层目录前缀，嵌套路径不会漏进来', async 
       '/backups/top.freesbk',
     ]),
   );
-  assert.deepEqual(
-    await dav.list('/backups'),
-    ['sub/deep.freesbk', 'top.freesbk'],
-    '本实现按前缀切分，嵌套项会带上相对路径 —— 保留策略要靠前缀过滤，' +
-      '所以这里把它固定下来，将来改动会立刻被这条用例看见',
+  assert.deepEqual(await dav.list('/backups'), ['top.freesbk']);
+});
+
+test('list 丢弃解码后产生的点号段与越界项', async () => {
+  // `%2F` 在 URL 解析阶段不是分隔符（规范如此），因此
+  // `/backups/..%2Fevil` 解析出来仍是 `/backups/..%2Fevil`，
+  // 直到解码才变成 `/backups/../evil` —— 它会通过 startsWith 检查。
+  // 实测确认过：放行的话保留策略会去 DELETE 一个被规范化成
+  // `/evil` 的地址，**删到备份目录外面**。删除不可逆，所以宁可丢掉。
+  const dav = davWith(
+    multistatus([
+      '/backups/',
+      '/backups/..%2Fevil',
+      '/backups/%2E%2E%2Fevil',
+      '/backups/frees-studio-..%2F..%2Fevil',
+      '/backups/%2Fetc%2Fpasswd',
+      '/backups/.',
+      '/backups/ok.freesbk',
+    ]),
+  );
+  assert.deepEqual(await dav.list('/backups'), ['ok.freesbk']);
+});
+
+test('构造请求路径时拒绝点号段（第二道防线）', async () => {
+  // 即便 list() 漏了，也不该真的把 `/backups/../evil` 发出去。
+  // 两道防线互相独立 —— 这与 resolveStatic 的情况一样：
+  // 只测其中一道被删掉是测不出来的，所以这里直接测 url() 本身。
+  const dav = createWebdav({
+    baseUrl: 'http://127.0.0.1:8401',
+    username: 'u',
+    password: 'p',
+    fetchImpl: async () => {
+      throw new Error('不该发出请求');
+    },
+  });
+  for (const bad of ['/backups/../evil', '/backups/./x', '/a/../..']) {
+    await assert.rejects(() => dav.put(bad, Buffer.from('x')), /拒绝构造/);
+    await assert.rejects(() => dav.del(bad), /拒绝构造/);
+  }
+  // 正常路径不受影响
+  await assert.rejects(
+    () => dav.put('/backups/ok.freesbk', Buffer.from('x')),
+    /不该发出请求/,
+    '正常路径应当真的走到 fetch',
   );
 });
 
