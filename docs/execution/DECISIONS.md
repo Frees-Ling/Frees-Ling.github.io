@@ -132,17 +132,34 @@
 - 边界: 不改变 push 策略（ADR-010）。该密钥未加入 GitHub，也不是 deploy key，
   不能读写任何仓库。
 
-## ADR-017 — 视觉方向由 FIELD LOG 转为 Fuwari 式蓝色书房
+## ADR-017 — 视觉方向转为「书房」：单色相、中文优先
 
 - Status: Accepted
-- Supersedes: P5a 配色基座与 P5c Site Chrome 的视觉部分（WEB-006/007/008 的结构成果保留）
-- Decision: 以 `archives/sites/Frees-Blog/`（Fuwari 派生）为视觉与交互参考，
-  采用**借鉴设计语言**而非迁移模板：保留 Astro 7、零框架、零 hydration、Pagefind、
-  内容集合与 WEB-008 的列表编排器，只替换视觉层。
-- Reason: 用户 2026-09-16 明确反馈现有视觉「夸张的字体、大量英文、过度装饰」，
-  并指定 Fuwari 为参考。这与刚完成的 FIELD LOG 方向（拉丁导航、118px 衬线首屏、
-  直角、单色 + signal red）直接冲突，以用户判断为准。
-  实测 Fuwari 的调色是单 `--hue` 驱动的 oklch 体系（旧配置 `hue: 250` 即蓝色），
-  与本站既有的 CSS 变量分层同构，因此可以只移植 token 与组件外观。
-  迁移模板则需要 Astro 7→5 降级并引入 Tailwind/Stylus/Svelte/swup，
-  会破坏现有 token 闸门、视觉门禁与零 JS 基线，代价远高于收益。
+- Supersedes: P5a 配色基座与 P5c Site Chrome 的**视觉部分**
+  （WEB-006/007/008 的结构成果保留：编排器、栏目数据层、闸门、门禁）
+- Decision: 以「书房」为隐喻、单一蓝色相为色彩语言、简体中文为界面语言。
+  选定的方向是**书房 · 卡片目录**，并把知识地图并入 ——
+  卡片上的「参见」是关系数据的局部视图，地图是同一份数据的全局视图，
+  两者同源，不是两个并列功能。
+- Reason: 用户 2026-09-16 明确反馈 FIELD LOG 的视觉「夸张的字体、大量英文、过度装饰」。
+  这不是执行偏差而是方向不合，以用户判断为准。
+  随后用户指定 Fuwari 为审美参考，但补充要求**不得复制其组件与布局**，
+  并给出理由：复制构件会丢掉原理、只留下皮。
+  因此本方向只采用从 Fuwari 提炼的四条原理 ——
+  单色相（全部颜色来自一个色相族）、低彩度背景（彩度 ≤ 0.034）、
+  高度规律（同类条目形状完全一致）、元信息从属（不与被描述对象竞争）。
+- 技术边界: 不迁移 Fuwari 模板。保持 Astro 7、零框架、零 hydration、Pagefind、
+  内容集合与 WEB-008 的列表编排器。不引入 Tailwind / Stylus / Svelte / swup。
+- 已废止的具体做法: 拉丁导航、118px 衬线首屏、全大写 mono 眉标、
+  坐标与条目编号装饰、signal red 第二强调色、直角。
+
+## ADR-018 — 字体栈必须走 token，并由闸门强制
+
+- Status: Accepted
+- Decision: `check-tokens.mjs` 增加第 ⑤ 项检查：`font-family` 只允许
+  `var(--font-display|sans|mono)` 或 `inherit`。
+- Reason: 本次把 `--font-display` 从 Georgia 衬线改为中文优先的无衬线栈后，
+  实测**只有 11 处生效**，另有 35 处写死在组件里（12 个文件用 `Georgia, serif`），
+  页面上的文章标题仍是衬线 —— 也就是说「统一换字体」这件事在大部分文件里静默失效。
+  原先的闸门只检查颜色、断点与 var() 引用，管不到字体族。
+  这与 ADR 里记录过的 token 失效是同一类问题：**没有报错，只是没生效**。

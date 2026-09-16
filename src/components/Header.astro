@@ -36,9 +36,9 @@ const isActive = (href: string) =>
     </nav>
 
     <div class="tools">
-      <a class="tool-link" href="/search/" title="搜索">SEARCH</a>
+      <a class="tool-link" href="/search/" title="搜索">搜索</a>
       <button class="theme-toggle" type="button" aria-pressed="false">
-        <span class="theme-label">DARK</span>
+        <span class="theme-label">深色</span>
       </button>
       <button
         class="menu-toggle"
@@ -47,7 +47,7 @@ const isActive = (href: string) =>
         aria-controls="site-nav"
         aria-label="打开导航菜单"
       >
-        <span class="menu-label">MENU</span>
+        <span class="menu-label">菜单</span>
         <span class="menu-icon" aria-hidden="true"></span>
       </button>
     </div>
@@ -88,7 +88,7 @@ const isActive = (href: string) =>
   const syncTheme = () => {
     const isLight = document.documentElement.dataset.theme === 'light';
     themeToggle?.setAttribute('aria-pressed', String(isLight));
-    if (themeLabel) themeLabel.textContent = isLight ? 'LIGHT' : 'DARK';
+    if (themeLabel) themeLabel.textContent = isLight ? '浅色' : '深色';
   };
 
   themeToggle?.addEventListener('click', () => {

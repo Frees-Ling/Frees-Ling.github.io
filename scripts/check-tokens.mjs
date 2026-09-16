@@ -9,6 +9,11 @@
 //   ② 断点白名单                error
 //   ③ 颜色字面量只允许在 tokens.css  error（--strict）／warning（默认）
 //   ④ 间距裸 px 值              warning
+//   ⑤ 字体栈裸值                error
+//
+// 第 ⑤ 项是补上的：组件里写死 `Georgia, serif` 时，改 --font-display 不会生效，
+// 而 check-tokens 原先只查颜色与 var() 引用 —— 于是「统一换字体」这件事
+// 会在 12 个文件里静默失效，只有逐个看页面才能发现。
 //
 // 用法：
 //   node scripts/check-tokens.mjs            # 迁移期：颜色只警告
@@ -93,6 +98,12 @@ function extractUses(code) {
 const COLOR_RE =
   /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch|color)\s*\(/g;
 
+// 只报告真正写死的字体栈；var(--font-*) 与 inherit 是正确写法
+// 注意负向先行断言里也要吃掉空白：写成 (?!var\(--font) 时，
+// `\s*` 可以回溯成匹配零个空格，于是 `font-family: var(--font-mono)` 照样命中 ——
+// 看起来正确却把全站 41 处合法写法全报成错误。
+const FONT_RE = /font-family\s*:\s*(?!\s*(?:var\(--font|inherit))[^;}]+/g;
+
 const SPACING_RE =
   /(?:^|[;{\s])(?:margin|padding|gap|row-gap|column-gap|inset|top|right|bottom|left)(?:-[\w]+)?\s*:\s*[^;{}]*?\b\d+px/g;
 
@@ -153,6 +164,14 @@ for (const file of files) {
           `${rel}:${baseLine + line}  断点 ${bp}px 不在白名单 {${[...ALLOWED_BREAKPOINTS].join(', ')}} 内`,
         );
       }
+    }
+
+    // ⑤ 字体栈裸值（error）
+    for (const m of code.matchAll(FONT_RE)) {
+      const line = code.slice(0, m.index).split('\n').length;
+      errors.push(
+        `${rel}:${baseLine + line}  字体栈写死 \`${m[0].replace(/font-family\s*:\s*/, '').trim()}\` —— 应改为 var(--font-display|sans|mono)`,
+      );
     }
 
     // ④ 间距裸 px（仅警告）

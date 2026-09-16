@@ -15,7 +15,7 @@ const { tag, posts } = Astro.props;
 ---
 <Layout title={`标签：${tag}`} description={`标签「${tag}」下的全部文章。`}>
   <header class="page-hero container">
-    <p class="eyebrow">TAG · {posts.length} ENTRIES</p>
+    <p class="eyebrow">标签 · {posts.length} 篇</p>
     <h1 class="page-title">#{tag}</h1>
     <p class="lede">同一个关键词连接起来的文章。</p>
   </header>

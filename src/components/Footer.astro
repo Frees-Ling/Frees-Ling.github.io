@@ -7,7 +7,7 @@ const year = new Date().getFullYear();
 // 此前的问题正是：导航与页脚零重叠，14 个页面被切成两个互不相通的簇。
 const links = [
   ...nav.map((item) => ({ href: item.href, label: item.label })),
-  ...secondaryNav.map((item) => ({ href: item.href, label: item.latin })),
+  ...secondaryNav.map((item) => ({ href: item.href, label: item.label })),
 ];
 
 const github = `https://github.com/${site.repo.split('/')[0]}`;
@@ -39,8 +39,8 @@ const github = `https://github.com/${site.repo.split('/')[0]}`;
     <div class="colophon-meta">
       <span>© {year}</span>
       <span>UTC+8</span>
-      <span>BUILT WITH ASTRO</span>
-      <a class="to-top" href="#top">↑ TOP</a>
+      <span>由 Astro 构建</span>
+      <a class="to-top" href="#top">↑ 回到顶部</a>
     </div>
   </div>
 </footer>

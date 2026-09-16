@@ -3,7 +3,11 @@ import Layout from '../layouts/Layout.astro';
 import PostList from '../components/PostList.astro';
 import { nowItems, projects, site } from '../data/site';
 import { byNewest, formatDate, type Post } from '../utils/posts';
-import { getAllPosts, splitBySubstance } from '../utils/posts-query';
+import {
+  getAllPosts,
+  splitBySubstance,
+  substanceLength,
+} from '../utils/posts-query';
 
 const posts = await getAllPosts();
 const { substantial } = splitBySubstance(posts);
@@ -30,6 +34,16 @@ const recent = substantial.filter((post) => !featuredIds.has(post.id)).slice(0, 
 // 而同一条记录在归档、栏目页、首页必须始终是同一个编号。
 const entryNumber = (post: Post) =>
   String(posts.length - posts.indexOf(post)).padStart(3, '0');
+
+// 「最长一篇」由内容集合计算，不写死 ——
+// 上一版这里硬编码了「232K 字 · Transformer」，与文章真实长度不符。
+const longest = substantial.reduce(
+  (max, post) => (substanceLength(post) > substanceLength(max) ? post : max),
+  substantial[0],
+);
+const longestLabel = longest
+  ? `${Math.round(substanceLength(longest) / 1000)}K 字 · ${longest.data.title}`
+  : '—';
 
 const oldest = posts.at(-1);
 const newest = posts.at(0);
@@ -70,10 +84,10 @@ const yearSpan =
       </div>
 
       <dl class="identity-facts">
-        <div><dt>RECORDING SINCE</dt><dd>2025</dd></div>
-        <div><dt>ENTRIES</dt><dd>{posts.length}</dd></div>
-        <div><dt>LAST LOGGED</dt><dd>{posts[0] ? formatDate(posts[0].data.published) : '—'}</dd></div>
-        <div><dt>LONGEST</dt><dd>232K 字 · Transformer</dd></div>
+        <div><dt>开始记录</dt><dd>2025</dd></div>
+        <div><dt>条目</dt><dd>{posts.length}</dd></div>
+        <div><dt>最近一篇</dt><dd>{posts[0] ? formatDate(posts[0].data.published) : '—'}</dd></div>
+        <div><dt>最长一篇</dt><dd>{longestLabel}</dd></div>
       </dl>
     </div>
   </section>
@@ -84,7 +98,7 @@ const yearSpan =
     <div class="container">
       <div class="section-header">
         <div>
-          <p class="eyebrow">SELECTED WORK</p>
+          <p class="eyebrow">在做的事</p>
           <h2 id="work-title" class="section-title">持续构建中</h2>
         </div>
         <a class="text-link" href="/projects/">完整项目时间线</a>
@@ -114,7 +128,7 @@ const yearSpan =
     <div class="container">
       <div class="section-header">
         <div>
-          <p class="eyebrow">FEATURED WRITING</p>
+          <p class="eyebrow">最近写的</p>
           <h2 id="writing-title" class="section-title">最近写下的</h2>
         </div>
         <p>技术不是孤岛。这里同时保存过程、困惑，以及某个时刻真正想说的话。</p>
@@ -130,7 +144,7 @@ const yearSpan =
     <div class="container">
       <div class="section-header">
         <div>
-          <p class="eyebrow">RECENT NOTES</p>
+          <p class="eyebrow">更早的记录</p>
           <h2 id="notes-title" class="section-title">更早的记录</h2>
         </div>
         <p>按时间倒序的全部条目，包含短文与实验片段。</p>
@@ -146,7 +160,7 @@ const yearSpan =
   <section class="section signal" aria-labelledby="signal-title">
     <div class="container signal-grid">
       <div>
-        <p class="eyebrow">CURRENT SIGNAL</p>
+        <p class="eyebrow">此刻</p>
         <h2 id="signal-title" class="section-title">此刻，<br />我正在……</h2>
         <a class="text-link" href="/now/">打开 Now 页面</a>
       </div>
@@ -200,7 +214,7 @@ const yearSpan =
   .identity-name {
     margin: 0 0 26px;
     font-family: var(--font-display);
-    font-size: clamp(52px, 8.5vw, 118px);
+    font-size: clamp(30px, 4.4vw, 46px);
     font-weight: 500;
     letter-spacing: -0.045em;
     line-height: 0.94;
@@ -363,7 +377,7 @@ const yearSpan =
        会把「保持具体。」拆成两行。断行交给内容里的 <br /> 控制。 */
     margin: 0 0 26px;
     font-family: var(--font-display);
-    font-size: clamp(30px, 5.4vw, 66px);
+    font-size: clamp(22px, 2.8vw, 32px);
     font-weight: 500;
     letter-spacing: -0.04em;
     line-height: 1.2;

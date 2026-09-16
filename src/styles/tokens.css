@@ -1,4 +1,4 @@
-/* FREES / FIELD LOG —— 设计 token
+/* FREES / 书房 —— 设计 token
  *
  * 全站唯一的颜色字面量所在地。规则由 scripts/check-tokens.mjs 强制：
  *   ① 颜色字面量只允许出现在本文件
@@ -7,91 +7,113 @@
  *   ④ 间距应使用 4px 基数的刻度
  *
  * ─────────────────────────────────────────────
+ * 单一色相：整套颜色来自同一个蓝色族（色相 250–265）。
+ *
+ * 这是「安静」的首要来源 —— 页面上不存在第二个争夺注意力的强调色。
+ * 上一版同时使用 signal blue 与 signal red，两者互相竞争，
+ * 结果每个强调都要求读者重新判断「这个颜色是什么意思」。
+ *
+ * 现在只有一条规则：
+ *   --primary      品牌与操作（按钮填充、导航选中、焦点环）
+ *   --accent-text  链接与可点击文字（比 primary 深，保证 AA）
+ * 其余全部是中性色，只带一点蓝的暗示（彩度 ≤ 0.034）。
+ *
+ * ─────────────────────────────────────────────
  * BREAKPOINTS（CSS 变量不能用在 @media 里，故在此记录为唯一真相）
  *   640px   小屏手机
- *   900px   唯一切换点：导航折叠 / 容器收窄 / 网格转单列 / TOC 收起
+ *   900px   唯一切换点：导航折叠 / 容器收窄 / 网格转单列 / 目录收起
  *   1200px  桌面
  *   1440px  宽屏
  *
  * ─────────────────────────────────────────────
  * 文字层级只有两级：--ink 与 --ink-soft
- *
- * light 主题下 --ink-soft 已是 4.75，比它更淡的三级色必然低于 AA 要求的 4.5 ——
- * 也就是说，**三级文字层在浅色主题下不可能同时满足无障碍**。
- *
- * 因此元信息的层级由 字号 / 字重 / 字体（mono） 承担，而不是颜色。
  * --ink-faint 保留，但**只用于非文字装饰**（分隔线、标记、禁用态）。
- * ─────────────────────────────────────────────
  */
 
 :root {
   /* ① 原始层 —— 只有本文件允许出现颜色字面量 */
-  --raw-paper-0: #0b0c0d;
-  --raw-paper-1: #131517;
-  --raw-paper-2: #1a1d20;
-  --raw-paper-deep: #08090a;
-  --raw-ink-0: #eceae4;
-  --raw-ink-1: #8a8985;
-  --raw-ink-deco: #4a4a48;
-  --raw-inverse: #f2f0e9;
-  --raw-inverse-ink: #111111;
+  --raw-blue-50: #eff6ff;
+  --raw-blue-100: #dbeafe;
+  --raw-blue-300: #93c5fd;
+  --raw-blue-500: #3b82f6;
+  --raw-blue-600: #2563eb;
+  --raw-blue-700: #1d4ed8;
 
-  --raw-blue: #315cff; /* signal blue —— 品牌色，用于填充 / 指示 / 大字 */
-  --raw-blue-text: #6b8aff; /* 文字安全变体，6.25 */
-  --raw-red: #ff4b3e; /* signal red —— 品牌色，5.90 本主题下文字也可用 */
+  --raw-slate-50: #f8fafc;
+  --raw-slate-100: #f1f5f9;
+  --raw-slate-200: #e2e8f0;
+  --raw-slate-300: #cbd5e1;
+  --raw-slate-500: #64748b;
+  --raw-slate-700: #334155;
+  --raw-slate-800: #1e293b;
+  --raw-slate-900: #0f172a;
+  --raw-slate-950: #0b1220;
+
+  --raw-white: #ffffff;
 
   /* ② 语义层 —— 组件只用这一层 */
-  --canvas: var(--raw-paper-0);
-  --canvas-deep: var(--raw-paper-deep);
-  --surface: var(--raw-paper-1);
-  --surface-2: var(--raw-paper-2);
+  --canvas: var(--raw-slate-900);
+  --canvas-deep: var(--raw-slate-950);
+  --surface: var(--raw-slate-800);
+  --surface-2: var(--raw-slate-700);
 
-  --ink: var(--raw-ink-0); /* 16.27 */
-  --ink-soft: var(--raw-ink-1); /* 5.59 */
-  --ink-faint: var(--raw-ink-deco); /* 仅装饰，勿用于文字 */
+  --ink: var(--raw-slate-200); /* 11.6 —— 正文 */
+  --ink-soft: #94a3b8; /* 6.9 —— 次要文字 */
+  --ink-faint: #475569; /* 仅装饰，勿用于文字 */
 
-  --line: rgba(236, 234, 228, 0.12);
-  --line-strong: rgba(236, 234, 228, 0.24);
+  --line: rgba(226, 232, 240, 0.12);
+  --line-strong: rgba(226, 232, 240, 0.24);
 
-  /* 反色容器：深色页面里的浅色"纸" */
-  --paper: var(--raw-inverse);
-  --paper-ink: var(--raw-inverse-ink);
+  /* 反色容器（深色页面里的浅色块）。书房语言里用于「图版」与引用。 */
+  --paper: var(--raw-slate-100);
+  --paper-ink: var(--raw-slate-900);
 
-  /* 强调色：品牌值用于填充，文字用安全变体 */
-  --accent: var(--raw-blue);
-  --accent-text: var(--raw-blue-text);
-  --signal: var(--raw-red);
-  --signal-text: var(--raw-red);
+  /* 唯一强调色族 */
+  --primary: var(--raw-blue-500);
+  --primary-soft: rgba(59, 130, 246, 0.14);
+  --accent-text: var(--raw-blue-300); /* 9.8 */
+  --on-primary: var(--raw-slate-950); /* 深色文字压在亮蓝上 5.1 */
 
-  /* 压在这两个强调色背景上的文字 */
-  /* 压在这两个强调色上的文字要分别取值，方向相反：
-     accent blue #315CFF 偏暗 → 白色 5.12 ✅，深色仅 3.69 ❌
-     signal red #FF4B3E 偏亮 → 深色 5.69 ✅，白色仅 3.32 ❌ */
-  --on-accent: #ffffff;
-  --on-signal: var(--raw-inverse-ink);
-  --signal-hover: #ff6b60;
+  /* 兼容旧名：原先的第二个强调色已并入蓝色族。
+     保留这两个名字是因为约 20 个文件仍在使用它们 ——
+     改名会让 check-tokens 的 var() 完整性检查失败，而外观上
+     「进行中 / 选中」本来就该用同一个强调色，不需要第二个。 */
+  --signal: var(--primary);
+  --signal-text: var(--accent-text);
+  --on-signal: var(--on-primary);
+  --signal-hover: #5b9bff;
 
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  --accent: var(--primary);
+
+  /* 阴影：克制。层次优先靠间距、排版与细边框，阴影只用于浮动面板。 */
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 24px rgba(0, 0, 0, 0.28);
 
   /* 尺度 */
-  --radius: 0;
-  --radius-sm: 2px;
+  --radius: 12px; /* 卡片、面板 */
+  --radius-sm: 6px; /* 标签、按钮、输入 */
+  --radius-lg: 16px; /* 大面板、图版 */
   --content: 1180px;
-  --reading: 720px;
+  --reading: 740px;
 
   /* 全局框架 —— 页面不再各自设置留白 */
   --gutter: 48px;
   --gutter-mobile: 20px;
-  --header-h: 64px;
-  --section-y: clamp(64px, 9vw, 120px);
+  --header-h: 60px;
+  --section-y: clamp(56px, 8vw, 104px);
 
-  /* 字体分工：display 衬线 / 界面无衬线 / 元信息 mono */
-  --font-display: Georgia, 'Times New Roman', 'Songti SC', serif;
+  /* 字体分工：中文优先。
+     界面、标题、正文共用一套无衬线栈 —— 上一版用 Georgia 衬线做标题，
+     中文与西文衬线混排会在字重与重心上打架，且让页面显得「在表演」。
+     只有代码与编号使用等宽。 */
+  --font-display:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    'PingFang SC', 'Microsoft YaHei', sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-mono:
-    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Noto Sans Mono',
+    monospace;
 
   color-scheme: dark;
 }
@@ -100,36 +122,37 @@
  *
  * 这里曾有一个结构性缺陷：只覆盖中性色，四个强调色沿用为深色底调的值，
  * 结果在浅底上对比度低至 1.16（几乎不可见），axe-core 实测报出 37 处失败。
- *
- * 下列取值均经脚本计算，在 light 的各层背景上 ≥ 4.5。
  */
 :root[data-theme='light'] {
-  --canvas: var(--raw-inverse);
-  --canvas-deep: #e8e5dc;
-  --surface: #f7f5ee;
-  --surface-2: #edeae1;
+  --canvas: var(--raw-slate-50);
+  --canvas-deep: #eef2f7;
+  --surface: var(--raw-white);
+  --surface-2: var(--raw-slate-100);
 
-  --ink: var(--raw-inverse-ink); /* 16.56 */
-  --ink-soft: #6b6a65; /* 4.75 —— 简报原值 #72716C 为 4.29，未达 AA 故下调 */
-  --ink-faint: #b5b2a8; /* 仅装饰 */
+  --ink: var(--raw-slate-800); /* 14.0 */
+  --ink-soft: var(--raw-slate-500); /* 4.56 */
+  --ink-faint: var(--raw-slate-300); /* 仅装饰 */
 
-  --line: rgba(17, 17, 17, 0.14);
-  --line-strong: rgba(17, 17, 17, 0.28);
+  --line: var(--raw-slate-200);
+  --line-strong: var(--raw-slate-300);
 
   /* light 里的反色容器是深色块 */
-  --paper: #111111;
-  --paper-ink: #eceae4;
+  --paper: var(--raw-slate-800);
+  --paper-ink: var(--raw-slate-100);
 
-  --accent: var(--raw-blue); /* 品牌色 4.49，仅用于填充 / 大字 */
-  --accent-text: #2a50e0; /* 5.54 */
-  --signal: var(--raw-red); /* 品牌色 2.91，仅用于填充 */
-  --signal-text: #c4342a; /* 4.76 */
+  --primary: var(--raw-blue-600);
+  --primary-soft: var(--raw-blue-50);
+  --accent-text: var(--raw-blue-700); /* 6.4 */
+  --on-primary: var(--raw-white); /* 白字压在 600 上 5.2 */
 
-  --on-accent: #ffffff; /* 品牌蓝填充上是深色底，白色 5.12 ✅ */
-  --on-signal: var(--raw-inverse-ink); /* 品牌红偏亮，深色 5.69 ✅ */
-  --signal-hover: #b02e24;
+  --signal: var(--primary);
+  --signal-text: var(--accent-text);
+  --on-signal: var(--on-primary);
+  --signal-hover: #1e5ae0;
 
-  --shadow: 0 24px 80px rgba(17, 17, 17, 0.12);
+  --accent: var(--primary);
+
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
 
   color-scheme: light;
 }

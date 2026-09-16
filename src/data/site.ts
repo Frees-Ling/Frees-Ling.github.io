@@ -19,11 +19,11 @@ export const site = {
  * GitHub Pages 不支持服务端重定向，新增路由会产生 404 或重定向页。
  */
 export const nav = [
-  { href: '/', label: 'INDEX', title: '首页' },
-  { href: '/projects/', label: 'WORK', title: '项目' },
-  { href: '/blog/', label: 'NOTES', title: '文章' },
-  { href: '/archive/', label: 'ARCHIVE', title: '归档' },
-  { href: '/about/', label: 'ABOUT', title: '关于' },
+  { href: '/', label: '首页', title: '首页' },
+  { href: '/projects/', label: '项目', title: '项目' },
+  { href: '/blog/', label: '文章', title: '文章' },
+  { href: '/archive/', label: '归档', title: '归档' },
+  { href: '/about/', label: '关于', title: '关于' },
 ];
 
 /** 页脚承载的低频页面 —— 与一级导航互补，两者合计覆盖全站，不留孤岛。 */

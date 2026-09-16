@@ -10,7 +10,7 @@ const posts = getBySection(await getAllPosts(), 'research');
 ---
 <Layout title="研究" description="AI、决策系统、机器学习与机器人研究记录。">
   <header class="page-hero container">
-    <p class="eyebrow">RESEARCH NOTEBOOK · {posts.length} ENTRIES</p>
+    <p class="eyebrow">研究 · {posts.length} 篇</p>
     <h1 class="page-title">先寻找证据，<br />再给出结论。</h1>
     <p class="lede">这是研究过程的公开部分：问题、实验、失败和仍未验证的想法会被明确地区分。</p>
   </header>
@@ -31,7 +31,7 @@ const posts = getBySection(await getAllPosts(), 'research');
   <section class="section container">
     <div class="section-header">
       <div>
-        <p class="eyebrow">RELATED WRITING</p>
+        <p class="eyebrow">相关记录</p>
         <h2 class="section-title">研究相关记录</h2>
       </div>
       <p>从入门实践到长篇推演，保留理解发生变化的全过程。</p>
