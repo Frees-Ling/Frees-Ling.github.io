@@ -276,7 +276,9 @@ export async function handleRequest(req, res, deps) {
     // 其余一律 500 且不泄露细节。
     const message = String(error.message || '');
     const isValidation =
-      /不能为空|未知的|必须在|只能是|不存在或已审核|请求体/.test(message);
+      /不能为空|未知的|必须在|只能是|不存在或已审核|请求体|只有|不存在于/.test(
+        message,
+      );
     if (isValidation) {
       send(res, 400, { error: message });
     } else {

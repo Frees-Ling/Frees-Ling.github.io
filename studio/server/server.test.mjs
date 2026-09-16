@@ -637,3 +637,227 @@ test('把回答存为草稿：带 ai_draft 标记，且不进入已确认内容'
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('提取记忆时校验消息确实属于 URL 中的对话', async () => {
+  const mock = await startMockServer();
+  const home = mkdtempSync(join(tmpdir(), 'studio-idor-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  const provider = createProvider({
+    baseUrl: mock.baseUrl,
+    model: 'mock-model',
+  });
+  const server = createServer({ db, token, home, provider });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    // 两段对话，各自产生一条回答
+    const mk = async () => {
+      const { conversation } = await (
+        await call('/api/conversations', { method: 'POST', body: '{}' })
+      ).json();
+      const sent = await (
+        await call(`/api/conversations/${conversation.id}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({
+            content: '问题 ' + conversation.id.slice(0, 6),
+          }),
+        })
+      ).json();
+      return { conversation, messageId: sent.message.id };
+    };
+    const a = await mk();
+    const b = await mk();
+
+    // 用对话 A 的路径 + 对话 B 的消息 → 必须拒绝
+    const wrong = await call(
+      `/api/conversations/${a.conversation.id}/memories`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ messageId: b.messageId }),
+      },
+    );
+    assert.equal(wrong.status, 404, '来源与路径不符时必须拒绝');
+
+    // 正确的组合仍然可用
+    const right = await call(
+      `/api/conversations/${a.conversation.id}/memories`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ messageId: a.messageId }),
+      },
+    );
+    assert.equal(
+      right.status,
+      201,
+      '实际响应: ' +
+        JSON.stringify(
+          await right
+            .clone()
+            .json()
+            .catch(() => null),
+        ),
+    );
+  } finally {
+    await new Promise((r) => server.close(r));
+    await mock.close();
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+// ─────────── KB-005 的路由（此前只测了 store，路由未覆盖）───────────
+
+/** 起一个带模拟模型的完整服务，跑一段对话，返回常用句柄。 */
+async function withChat(fn) {
+  const mock = await startMockServer();
+  const home = mkdtempSync(join(tmpdir(), 'studio-k5-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  const provider = createProvider({
+    baseUrl: mock.baseUrl,
+    model: 'mock-model',
+  });
+  const server = createServer({ db, token, home, provider });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    const { conversation } = await (
+      await call('/api/conversations', { method: 'POST', body: '{}' })
+    ).json();
+    const sent = await (
+      await call(`/api/conversations/${conversation.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content: '注意力机制的几何直觉' }),
+      })
+    ).json();
+    await fn({ call, conversation, messageId: sent.message.id, db });
+  } finally {
+    await new Promise((r) => server.close(r));
+    await mock.close();
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
+}
+
+test('路由：从回答提取记忆，带来源消息', async () => {
+  await withChat(async ({ call, conversation, messageId }) => {
+    const res = await call(`/api/conversations/${conversation.id}/memories`, {
+      method: 'POST',
+      body: JSON.stringify({ messageId }),
+    });
+    assert.equal(res.status, 201);
+    const { memory } = await res.json();
+    assert.equal(memory.status, 'pending', '提取的记忆必须是待审核');
+    assert.equal(memory.source_message_id, messageId);
+  });
+});
+
+test('路由：来源链可查', async () => {
+  await withChat(async ({ call, conversation, messageId }) => {
+    const { memory } = await (
+      await call(`/api/conversations/${conversation.id}/memories`, {
+        method: 'POST',
+        body: JSON.stringify({ messageId }),
+      })
+    ).json();
+
+    const res = await call(`/api/memories/${memory.id}/provenance`);
+    assert.equal(res.status, 200);
+    const prov = await res.json();
+    assert.equal(prov.message.conversation_id, conversation.id);
+  });
+});
+
+test('路由：记忆与知识库条目的关联增删', async () => {
+  await withChat(async ({ call, conversation, messageId }) => {
+    const { note } = await (
+      await call('/api/notes', {
+        method: 'POST',
+        body: JSON.stringify({ title: '几何直觉笔记' }),
+      })
+    ).json();
+    const { memory } = await (
+      await call(`/api/conversations/${conversation.id}/memories`, {
+        method: 'POST',
+        body: JSON.stringify({ messageId }),
+      })
+    ).json();
+
+    const linked = await call(`/api/memories/${memory.id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ noteId: note.id }),
+    });
+    assert.equal(linked.status, 201);
+
+    const prov = await (
+      await call(`/api/memories/${memory.id}/provenance`)
+    ).json();
+    assert.equal(prov.notes[0].id, note.id);
+
+    const unlinked = await call(
+      `/api/memories/${memory.id}/notes?noteId=${note.id}`,
+      { method: 'DELETE' },
+    );
+    assert.equal(unlinked.status, 200);
+    const after = await (
+      await call(`/api/memories/${memory.id}/provenance`)
+    ).json();
+    assert.equal(after.notes.length, 0);
+  });
+});
+
+test('路由：统一检索排除待审核记忆', async () => {
+  await withChat(async ({ call, conversation, messageId }) => {
+    await call('/api/notes', {
+      method: 'POST',
+      body: JSON.stringify({ title: '注意力机制笔记' }),
+    });
+    // 显式给出记忆内容：默认取的是助手消息正文，而模拟服务的回答是固定文案，
+    // 不含查询词 —— 不指定的话测的是「搜不到」，不是「被排除」。
+    const { memory } = await (
+      await call(`/api/conversations/${conversation.id}/memories`, {
+        method: 'POST',
+        body: JSON.stringify({
+          messageId,
+          content: '注意力机制要先看几何直觉',
+        }),
+      })
+    ).json();
+
+    // 未审核：不出现在检索里
+    const before = await (
+      await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
+    ).json();
+    assert.equal(before.notes.length, 1);
+    assert.equal(before.memories.length, 0, '待审核记忆不得进入检索');
+
+    // 审核通过后才出现
+    await call(`/api/memories/${memory.id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ decision: 'approved' }),
+    });
+    const after = await (
+      await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
+    ).json();
+    assert.equal(after.memories.length, 1);
+  });
+});

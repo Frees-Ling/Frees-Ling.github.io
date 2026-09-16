@@ -19,6 +19,11 @@ import {
   deleteConversation,
   searchNotes,
   saveAnswerAsDraft,
+  proposeMemoryFromMessage,
+  linkMemoryToNote,
+  unlinkMemoryFromNote,
+  getMemoryProvenance,
+  searchEverything,
 } from '../db/store.mjs';
 
 /** 每次注入的最大引用条数。太多会把上下文挤满，也会稀释重点。 */
@@ -185,9 +190,26 @@ async function route(req, res, deps, { path, method, readBody, send, url }) {
   // ── 从某条回答提取待审核记忆 ──
   const extract = path.match(/^\/api\/conversations\/([^/]+)\/memories$/);
   if (extract && method === 'POST') {
+    const id = decodeURIComponent(extract[1]);
     const body = await readBody(req);
+    const messageId = String(body.messageId || '');
+
+    // URL 里的对话 id 必须与消息实际所属的对话一致。
+    //
+    // 这不是权限检查（本服务是单用户本地服务，没有第二个主体可供越权，
+    // 见 docs/knowledge-base.md 与 ADR-002），而是**语义正确性**：
+    // 路径声明「从这段对话提取记忆」，那么来源就必须真在这段对话里。
+    // 不校验的话，来源链会记下一个与服务端事实不符的出处 ——
+    // 而来源错了比没有来源更糟，追溯功能正建立在它可信的前提上。
+    const message = db
+      .prepare('SELECT conversation_id, role FROM messages WHERE id = ?')
+      .get(messageId);
+    if (!message || message.conversation_id !== id) {
+      return send(res, 404, { error: '消息不存在于该对话中' });
+    }
+
     const memory = proposeMemoryFromMessage(db, {
-      messageId: String(body.messageId || ''),
+      messageId,
       content: body.content,
       confidence: Number(body.confidence ?? 0.5),
     });
