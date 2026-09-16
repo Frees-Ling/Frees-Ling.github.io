@@ -25,9 +25,22 @@
 
 set -eu
 
-SERVICE='frees-blog-deepseek'
-ACCOUNT='automation'
+# 条目可由调用方指定（SEC-001 的 secret reference 需要按引用取不同条目）。
+# 不传时保持原来的默认值 —— 已有调用方的行为一字不变。
+SERVICE="${CREDENTIAL_SERVICE:-frees-blog-deepseek}"
+ACCOUNT="${CREDENTIAL_ACCOUNT:-automation}"
 MODE="${1:-read}"
+
+# ── 退出码即状态 ──
+#
+# 原先「条目不存在」与「钥匙串锁定」都是 exit 1，只靠 stderr 文字区分。
+# 调用方要分支就得去匹配人类可读的消息 —— 那种耦合迟早会因为改一句
+# 提示语而静默失效，而这里失效的后果是把「钥匙串锁了」报成「没配过」，
+# 正是指引人去错地方。现在状态由退出码承载，消息只负责给人看。
+EX_MISSING=2    # 钥匙串里没有这个条目
+EX_LOCKED=3     # 读取超时 —— 钥匙串很可能已锁定
+EX_DENIED=4     # 条目在，但访问控制拒绝了本次读取
+EX_EMPTY=5      # 条目存在，内容为空
 
 # 看门狗上限（秒）。钥匙串解锁时读取是毫秒级的，这个值只用来兜住「锁定」的情况。
 READ_TIMEOUT="${CREDENTIAL_READ_TIMEOUT:-5}"
@@ -73,6 +86,27 @@ entry_exists() {
 # 注意：这里用 `if cmd; then :; else rc=$?; fi` 而不是 `if ! cmd; then rc=$?; fi`。
 # 后者的 $? 是取反运算符的状态（恒为 0），超时会被误报成「没有条目」——
 # 一个把「钥匙串锁了」说成「没配过」的错误提示，比没有提示更耽误事。
+# ── --state：只判断条目在不在，**到此为止，绝不读值** ──
+#
+# 这一段必须在读取之前。原先 --state 写在最后的 case 里，于是它虽然
+# 不打印值，却**已经把值读进了这个进程** —— 注释说「不读值」而代码在读，
+# 两者不一致本身就是缺陷：描述一个密钥的状态，不该需要把它取出来。
+if [ "$MODE" = '--state' ]; then
+  if entry_exists; then
+    printf 'ok\n'
+    exit 0
+  else
+    # 必须写在 else 分支里：`if ...; fi` 之后 $? 已经是 if 语句本身的状态
+    # （没有 else 时为 0），超时会被读成 0 而报成「没有条目」。
+    # 这与下面那段用的是同一个写法，原因见那段上面的注释 ——
+    # 我在这里第一次写成了 if 之后取 $?，实测把「钥匙串锁定」报成了
+    # 「没配过」，正好踩中它警告的那个错误。
+    rc=$?
+    [ "$rc" -eq 124 ] && exit $EX_LOCKED
+    exit $EX_MISSING
+  fi
+fi
+
 if entry_exists; then
   :
 else
@@ -80,11 +114,12 @@ else
   if [ "$rc" -eq 124 ]; then
     printf '✗ 读取钥匙串超时（%s 秒）—— 钥匙串很可能已锁定。\n' "$READ_TIMEOUT" >&2
     printf '  解锁：security unlock-keychain ~/Library/Keychains/login.keychain-db\n' >&2
+    exit $EX_LOCKED
   else
     printf '✗ 钥匙串中没有 %s / %s 条目\n' "$SERVICE" "$ACCOUNT" >&2
     printf '  存入：sh scripts/automation/store-credential.sh\n' >&2
+    exit $EX_MISSING
   fi
-  exit 1
 fi
 
 if KEY=$(read_key); then
@@ -94,15 +129,16 @@ else
   if [ "$rc" -eq 124 ]; then
     printf '✗ 读取钥匙串超时（%s 秒）—— 钥匙串很可能已锁定。\n' "$READ_TIMEOUT" >&2
     printf '  解锁：security unlock-keychain ~/Library/Keychains/login.keychain-db\n' >&2
+    exit $EX_LOCKED
   else
     printf '✗ 读取钥匙串条目失败（可能被访问控制拒绝）\n' >&2
+    exit $EX_DENIED
   fi
-  exit 1
 fi
 
 if [ -z "$KEY" ]; then
   printf '✗ 条目存在但内容为空\n' >&2
-  exit 1
+  exit $EX_EMPTY
 fi
 
 case "$MODE" in

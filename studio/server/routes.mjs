@@ -179,7 +179,7 @@ export async function handleRequest(req, res, deps) {
     // 列表走 listSettings：敏感项在里面**只有引用，没有值**。
     // 这是值不外流的唯一出口，所以不要图省事在这里「顺便」把值带上。
     if (path === '/api/settings' && method === 'GET') {
-      send(res, 200, { settings: listSettings(db) });
+      send(res, 200, { settings: await listSettings(db) });
       return;
     }
 
@@ -199,7 +199,7 @@ export async function handleRequest(req, res, deps) {
         return;
       }
       // 回读取整份配置，让界面拿到权威状态，而不是自己猜
-      send(res, 200, { settings: listSettings(db) });
+      send(res, 200, { settings: await listSettings(db) });
       return;
     }
 

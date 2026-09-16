@@ -33,14 +33,14 @@ const fresh = () => openDatabase(':memory:');
 
 // ── 普通配置 ──
 
-test('普通配置写入后读回', () => {
+test('普通配置写入后读回', async () => {
   const db = fresh();
   setSetting(db, 'model.name', 'qwen2.5-7b-instruct');
   assert.equal(getSetting(db, 'model.name'), 'qwen2.5-7b-instruct');
   db.close();
 });
 
-test('未设置时回落：设置 > 环境变量 > 默认值，并且标明来源', () => {
+test('未设置时回落：设置 > 环境变量 > 默认值，并且标明来源', async () => {
   const db = fresh();
   const env = { FREES_STUDIO_MODEL: '来自环境变量' };
 
@@ -54,7 +54,9 @@ test('未设置时回落：设置 > 环境变量 > 默认值，并且标明来�
   setSetting(db, 'model.name', '来自设置');
   assert.equal(getSetting(db, 'model.name', env), '来自设置');
 
-  const listed = listSettings(db, env).find((s) => s.key === 'model.name');
+  const listed = (await listSettings(db, env)).find(
+    (s) => s.key === 'model.name',
+  );
   assert.equal(
     listed.source,
     '设置',
@@ -63,7 +65,7 @@ test('未设置时回落：设置 > 环境变量 > 默认值，并且标明来�
   db.close();
 });
 
-test('未知配置键被拒绝，而不是照样写进去', () => {
+test('未知配置键被拒绝，而不是照样写进去', async () => {
   const db = fresh();
   assert.throws(() => setSetting(db, 'model.ur1', 'x'), /未知的配置项/);
   db.close();
@@ -158,13 +160,15 @@ test('敏感项不能用 getSetting 读', () => {
 
 // ── 值不许从读取接口出去 ──
 
-test('listSettings 的返回里没有敏感值，结构上就没有那个字段', () => {
+test('listSettings 的返回里没有敏感值，结构上就没有那个字段', async () => {
   const db = fresh();
   setSetting(db, 'webdav.password', {
     kind: 'env',
     name: 'FREES_TEST_WEBDAV_PW',
   });
-  const listed = listSettings(db, { FREES_TEST_WEBDAV_PW: 'SENTINEL-VALUE' });
+  const listed = await listSettings(db, {
+    FREES_TEST_WEBDAV_PW: 'SENTINEL-VALUE',
+  });
 
   for (const item of listed.filter((s) => s.kind === 'secret')) {
     assert.equal(
@@ -193,13 +197,15 @@ test('listSettings 的返回里没有敏感值，结构上就没有那个字段'
   db.close();
 });
 
-test('引用取不到时 available 为 false，但不抛错', () => {
+test('引用取不到时 available 为 false，但不抛错', async () => {
   const db = fresh();
   setSetting(db, 'webdav.password', {
     kind: 'env',
     name: 'FREES_DEFINITELY_NOT_SET',
   });
-  const item = listSettings(db, {}).find((s) => s.key === 'webdav.password');
+  const item = (await listSettings(db, {})).find(
+    (s) => s.key === 'webdav.password',
+  );
   assert.equal(item.available, false);
   assert.equal(item.source, '设置');
   db.close();
@@ -207,7 +213,7 @@ test('引用取不到时 available 为 false，但不抛错', () => {
 
 // ── 解析 ──
 
-test('resolveSecret 解析环境变量引用', () => {
+test('resolveSecret 解析环境变量引用', async () => {
   assert.equal(resolveSecret({ kind: 'env', name: 'X' }, { X: 'v' }), 'v');
   assert.equal(
     resolveSecret({ kind: 'env', name: 'X' }, {}),
@@ -283,7 +289,7 @@ function readAllFiles(dir) {
   return blob;
 }
 
-test('哨兵密钥不会落进库文件或数据目录', () => {
+test('哨兵密钥不会落进库文件或数据目录', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'leak-'));
   try {
     // 哨兵：随机串，不可能碰巧出现
@@ -306,7 +312,7 @@ test('哨兵密钥不会落进库文件或数据目录', () => {
     });
     createNote(db, { title: '一篇笔记', body: '正文', tags: ['标签'] });
 
-    const listed = listSettings(db, env);
+    const listed = await listSettings(db, env);
     assert.ok(!JSON.stringify(listed).includes(sentinel), '配置列表泄漏了密钥');
 
     const resolved = resolveSecret(

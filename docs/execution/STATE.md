@@ -52,6 +52,7 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 - 三层关联（KB-005 DONE）：记忆可追溯到来源消息/档案并关联知识库条目；
   删除来源不销毁结论；统一检索排除待审核记忆。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/024）。
+  读取脚本的退出码即状态（SEC-001）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio 技术选型已定并记录（STUDIO-001 DONE，ADR-025）：localhost Web +
   Node 内置能力，**运行时第三方依赖为 0**。
@@ -60,12 +61,16 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 - 配置与 secret reference（STUDIO-003 DONE，ADR-026）：普通配置在界面里改，
   敏感项**库里只存引用**（环境变量或钥匙串），界面里没有密码输入框。
   实测库文件、数据目录、浏览器存储、DOM 均无明文。
+- 凭据引用解析与泄漏扫描（SEC-001 DONE）：钥匙串读取有七个明确状态
+  （ok/missing/locked/denied/empty/unavailable/unset），每条都说明下一步做什么；
+  描述状态**不读值**。三面扫描 `npm run verify:secrets` 覆盖磁盘/浏览器/仓库，
+  且敏感性经过植入验证。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
   Collection 与灾备恢复 UI 尚未实现。
 
 ## Current objective
 
-STUDIO-003 已完成。下一项见 Next READY task。
+SEC-001 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

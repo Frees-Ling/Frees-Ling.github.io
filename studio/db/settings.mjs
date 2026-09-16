@@ -23,6 +23,7 @@
 export { SETTINGS_SCHEMA, SETTING_BY_KEY } from './settings-schema.mjs';
 
 import { SETTINGS_SCHEMA, SETTING_BY_KEY } from './settings-schema.mjs';
+import { describeKeychainRef } from '../secrets/keychain.mjs';
 
 const SETTING_VALUE_MAX = 2048;
 
@@ -144,10 +145,11 @@ function readRaw(db) {
  * 敏感项**只回引用与可解析状态，绝不回值** —— 这是这一层唯一的对外出口，
  * 让它成为「值出不去」的保证点，而不是靠每个调用方自觉。
  */
-export function listSettings(db, env = process.env) {
+export async function listSettings(db, env = process.env, describers = {}) {
   const stored = readRaw(db);
+  const out = [];
 
-  return SETTINGS_SCHEMA.map((def) => {
+  for (const def of SETTINGS_SCHEMA) {
     const raw = stored.get(def.key);
     const base = {
       key: def.key,
@@ -158,24 +160,65 @@ export function listSettings(db, env = process.env) {
     };
 
     if (def.kind === 'secret') {
-      return {
+      const ref = raw ?? (def.env ? { kind: 'env', name: def.env } : null);
+      // 「取不到」不是一件事：锁定了要人去解锁，没配过要人去配，
+      // 访问被拒又是另一种。只给一个 available 布尔值，
+      // 用户看到的永远是「不可用」，然后只能猜是哪一种。
+      const { status, reason } = await describeSecret(ref, env, describers);
+      out.push({
         ...base,
         // 只有引用（或 null）。**没有 value 字段** —— 不是留空，是不存在。
-        ref: raw ?? (def.env ? { kind: 'env', name: def.env } : null),
+        ref,
         source: raw ? '设置' : def.env && env[def.env] ? '环境变量' : '未配置',
-        available:
-          resolveSecret(raw ?? { kind: 'env', name: def.env }, env) !== null,
-      };
+        status,
+        reason,
+        available: status === 'ok',
+      });
+      continue;
     }
 
     if (raw !== undefined) {
-      return { ...base, value: raw, source: '设置' };
+      out.push({ ...base, value: raw, source: '设置' });
+      continue;
     }
     if (def.env && env[def.env] !== undefined) {
-      return { ...base, value: env[def.env], source: '环境变量' };
+      out.push({ ...base, value: env[def.env], source: '环境变量' });
+      continue;
     }
-    return { ...base, value: def.default ?? '', source: '默认值' };
-  });
+    out.push({ ...base, value: def.default ?? '', source: '默认值' });
+  }
+
+  return out;
+}
+
+/**
+ * 描述一个敏感项能不能取到 —— **绝不读值**。
+ *
+ * 与 resolveSecret 的分工：那个负责取，这个负责说。界面、诊断、日志
+ * 一律走这条，于是「显示一个密钥的状态」这条路径上不存在明文。
+ */
+export async function describeSecret(ref, env = process.env, describers = {}) {
+  if (!ref) {
+    return { status: 'unset', reason: '尚未配置来源 —— 需要先指定去哪里取' };
+  }
+
+  if (ref.kind === 'env') {
+    const value = env[ref.name];
+    if (typeof value !== 'string' || value === '') {
+      return {
+        status: 'missing',
+        reason: `环境变量 ${ref.name} 没有设置或为空`,
+      };
+    }
+    return { status: 'ok', reason: '可读取' };
+  }
+
+  if (ref.kind === 'keychain') {
+    const describe = describers.keychain ?? describeKeychainRef;
+    return describe(ref);
+  }
+
+  return { status: 'unavailable', reason: `未知的引用类型 ${ref.kind}` };
 }
 
 /** 取单项普通配置的生效值（普通项才走这里）。 */

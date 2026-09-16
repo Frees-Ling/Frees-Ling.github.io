@@ -387,3 +387,7 @@ body {
   color: var(--ink-soft);
   font-size: 12px;
 }
+/* 取不到值时给出可见的提醒 —— 照着「不可用」去猜原因是最耗时间的 */
+.setting-warn {
+  color: var(--signal-text);
+}

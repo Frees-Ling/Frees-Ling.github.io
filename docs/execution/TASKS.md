@@ -1269,12 +1269,65 @@ Acceptance：稳定 anchor、公开/本地状态、合理编辑后的迁移策�
 
 ### SEC-001 — 1Password 集成与密钥扫描
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: R1
 - Priority: P0
 - Depends-On: STUDIO-003
 
 Acceptance：reference resolve、不可用/锁定状态、最小泄露日志、仓库/DB/浏览器存储扫描测试。
+
+注：本项目实际用的是 **macOS 钥匙串**（ADR-020/024 已定），
+不是 1Password —— 个人版不支持 Service Account，本机钥匙串是当时选定的替代。
+本任务按「凭据引用解析 + 泄漏扫描」的实质交付，集成对象以 ADR-024 为准。
+
+Delivered：
+
+- `scripts/automation/read-credential.sh` —— **退出码即状态**，并新增 `--state`
+- `studio/secrets/keychain.mjs` —— `describeKeychainRef`（不读值）/ `readKeychainRef`（读值）
+- `studio/db/settings.mjs` —— `describeSecret`，`listSettings` 返回具体状态
+- `studio/verify/secret-scan.mjs` —— 三面扫描（`npm run verify:secrets`）
+
+Evidence：
+
+- **状态不再混为一谈**。原先「取不到」只有一种表现（null）：钥匙串锁定、
+  条目不存在、访问被拒、变量没设全都不分。而它们的下一步动作完全不同 ——
+  解锁、去配、查权限、设变量。现在退出码承载状态，每条都给出**怎么办**：
+  `locked` →「需要先解锁」，`missing` →「需要先存入」。
+  七个状态：ok / missing / locked / denied / empty / unavailable / unset。
+- **描述一个密钥不需要把它取出来**。`describe` 走 `--state`，
+  实测**一次都没有用 `-w` 形式问过 security**（用假 security 记录调用参数断言）。
+  界面、诊断、日志都走这条，于是「显示状态」这条路径上不存在明文。
+- **最小泄露日志**：子进程跑完整流程，断言 stdout/stderr 里不含哨兵。
+- **三面扫描**（`npm run verify:secrets`）：磁盘（库文件字节 + 整个数据目录）、
+  浏览器（localStorage / sessionStorage / cookie / DOM / 配置接口响应体）、
+  仓库（复用 `check:secrets`）。用**随机哨兵**而不是固定串 ——
+  固定串可能碰巧出现，那时断言「含」就分不清是泄漏还是巧合。
+- 扫描的**敏感性经过验证**，不是「跑通了就算」：故意让配置接口回传敏感值 →
+  扫描准确报出「浏览器/配置接口响应体」这一处且不误报；故意把明文写进 settings 表 →
+  扫描报出磁盘两处。两次植入都被抓到，移除后恢复通过。
+- 213 项测试通过（新增 10 项），十一项闸门全绿。
+
+过程中修掉三个真问题：
+
+1. **`--state` 说是不读值，其实读了。** 它写在最后的 `case` 里，
+   于是虽然不打印值，却**已经把值读进了进程**。注释与代码不一致本身就是缺陷。
+   改为在读取之前就返回。
+2. **我自己在 `--state` 里重犯了脚本警告过的 `$?` 陷阱。**
+   `if cond; then …; fi` 之后取 `$?` 拿到的是 if 语句本身的状态（无 else 时为 0），
+   于是「钥匙串锁定」被报成「没配过」—— 正好是那段注释警告的错误。
+   实测暴露：锁定用例返回 `missing`。改为在 `else` 分支里取。
+3. **夹具的 `finally` 在 Promise 结算前还原了环境。**
+   假 `security` 通过 PATH 注入，而 `try { return fn() } finally { 还原 }`
+   会在异步回调完成**之前**就还原，导致被测代码用回真的 security。
+   三个用例因此静默走成同一条路径，其中一个还「通过」了 ——
+   通过的原因与它想验的事情毫无关系。已改为 async + await，
+   并加「假 security 确实被调用过」的断言堵住这类假通过。
+
+另外把看门狗超时从 1 秒放宽到 3 秒：机器忙时假 security 的启动可能接近 1 秒，
+卡在边界上会让「可读」偶发变成「锁定」—— 一条时好时坏的用例比没有更糟。
+改后连跑 8 次全绿。
+
+Commit：本文件所在提交。
 
 ### SEC-002 — Owner 认证 threat model
 

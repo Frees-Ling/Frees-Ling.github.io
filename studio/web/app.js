@@ -291,7 +291,10 @@ function renderSettings() {
 
         const meta = document.createElement('span');
         meta.className = 'setting-meta';
-        meta.textContent = `只保存引用 · ${item.available ? '当前可读取' : '当前取不到值'}`;
+        // 显示具体状态而不是「取不到」四个字：锁定了要人去解锁，
+        // 没配过要人去配，这两件事的下一步动作完全不同
+        meta.textContent = `只保存引用 · ${item.reason ?? '状态未知'}`;
+        if (!item.available) meta.classList.add('setting-warn');
 
         row.append(kind, name, meta);
       } else {
