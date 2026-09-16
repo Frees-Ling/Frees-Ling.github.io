@@ -256,3 +256,105 @@ export function listPendingMemories(db, { limit = 100 } = {}) {
     )
     .all(limit);
 }
+
+// ──────────────────────────── 对话 ────────────────────────────
+
+export function createConversation(db, { title = '', model = '' } = {}) {
+  const id = randomUUID();
+  const ts = now();
+  db.prepare(
+    `INSERT INTO conversations (id, title, model, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(id, title, model, ts, ts);
+  return db.prepare('SELECT * FROM conversations WHERE id = ?').get(id);
+}
+
+export function listConversations(db, { limit = 50 } = {}) {
+  return db
+    .prepare('SELECT * FROM conversations ORDER BY updated_at DESC LIMIT ?')
+    .all(limit);
+}
+
+export function getConversation(db, id) {
+  const conversation = db
+    .prepare('SELECT * FROM conversations WHERE id = ?')
+    .get(id);
+  if (!conversation) return null;
+  const messages = db
+    .prepare(
+      'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at, rowid',
+    )
+    .all(id)
+    .map((m) => ({ ...m, citations: JSON.parse(m.citations) }));
+  return { ...conversation, messages };
+}
+
+export function addMessage(
+  db,
+  conversationId,
+  { role, content, citations = [] },
+) {
+  if (!['system', 'user', 'assistant'].includes(role)) {
+    throw new Error(`未知的 role: ${role}`);
+  }
+  const exists = db
+    .prepare('SELECT 1 AS ok FROM conversations WHERE id = ?')
+    .get(conversationId);
+  if (!exists) throw new Error(`对话不存在: ${conversationId}`);
+
+  const id = randomUUID();
+  const ts = now();
+  db.exec('BEGIN');
+  try {
+    db.prepare(
+      `INSERT INTO messages (id, conversation_id, role, content, citations, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(id, conversationId, role, content, JSON.stringify(citations), ts);
+    // 首条用户消息用作标题，省得每条对话都叫「未命名」
+    db.prepare(
+      `UPDATE conversations
+          SET updated_at = ?,
+              title = CASE WHEN title = '' AND ? = 'user' THEN ? ELSE title END
+        WHERE id = ?`,
+    ).run(ts, role, content.slice(0, 40), conversationId);
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+  return db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
+}
+
+export function deleteConversation(db, id) {
+  return (
+    db.prepare('DELETE FROM conversations WHERE id = ?').run(id).changes > 0
+  );
+}
+
+/**
+ * 把一条 AI 回答存成知识库**草稿**。
+ *
+ * 关键约束：一律以 origin='ai_draft' 落库。**不提供把回答直接存成
+ * 已确认内容的接口** —— 「AI 生成的推测不得自动成为事实」在数据层的落点。
+ * 用户后续在编辑器里改动它，updateNote 才会把它转为 human。
+ */
+export function saveAnswerAsDraft(db, { conversationId, messageId, title }) {
+  const message = db
+    .prepare('SELECT * FROM messages WHERE id = ? AND conversation_id = ?')
+    .get(messageId, conversationId);
+  if (!message) throw new Error('消息不存在');
+  if (message.role !== 'assistant')
+    throw new Error('只有 AI 的回答可以存为草稿');
+
+  const citations = JSON.parse(message.citations);
+  const body = citations.length
+    ? `${message.content}\n\n---\n\n引用自：\n${citations.map((c) => `- ${c}`).join('\n')}`
+    : message.content;
+
+  return createNote(db, {
+    title: title || message.content.slice(0, 40) || '未命名草稿',
+    body,
+    kind: 'note',
+    origin: 'ai_draft',
+  });
+}

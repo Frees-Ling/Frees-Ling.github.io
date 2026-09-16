@@ -140,6 +140,48 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 2,
+    name: 'conversations',
+    up: (db) => {
+      // ── 对话与消息（AI Studio 的基础）──
+      //
+      // 归属：conversations 属于「知识库」这一层的**工作记录**，
+      // 不是原始档案也不是长期记忆。它与两者都不混淆：
+      //   · 原始档案（archive_entries）是导入的历史，只增不改
+      //   · 长期记忆（memories）必须经人工审核
+      //   · 对话是「我在这里问过什么」的运行痕迹，可删可清
+      db.exec(`
+        CREATE TABLE conversations (
+          id         TEXT PRIMARY KEY,
+          title      TEXT NOT NULL DEFAULT '',
+          model      TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      db.exec(
+        `CREATE INDEX idx_conv_updated ON conversations (updated_at DESC);`,
+      );
+
+      db.exec(`
+        CREATE TABLE messages (
+          id              TEXT PRIMARY KEY,
+          conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+          role            TEXT NOT NULL,
+          content         TEXT NOT NULL,
+          -- 引用的知识库条目 id 列表（JSON 数组）。存下来是为了可追溯：
+          -- 「这句回答是基于哪几条笔记」必须能事后查证
+          citations       TEXT NOT NULL DEFAULT '[]',
+          created_at      TEXT NOT NULL,
+          CHECK (role IN ('system', 'user', 'assistant'))
+        );
+      `);
+      db.exec(
+        `CREATE INDEX idx_msg_conv ON messages (conversation_id, created_at);`,
+      );
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

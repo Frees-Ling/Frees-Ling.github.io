@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-003 — 模型适配层与模拟推理服务（K3）
+KB-004 — 对话路由与 Studio 界面接入
 
 ## Last known implementation state
 
@@ -27,6 +27,8 @@ KB-003 — 模型适配层与模拟推理服务（K3）
   服务只绑 127.0.0.1、令牌鉴权、无任何发布到公网的路由。
 - 本地编辑界面（KB-002 DONE）可用：登录、列表、阅读、编辑、新建、删除、检索、双主题。
   界面复用 tokens.css，未引入前端框架；有真实浏览器验收脚本。
+- 模型适配层与模拟推理服务（KB-003 DONE）已就绪：默认只允许本机端点，
+  非本机必须显式 allowRemote；AI 回答只能存为 ai_draft 草稿。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。

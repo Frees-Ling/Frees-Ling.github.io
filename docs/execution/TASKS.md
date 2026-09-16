@@ -362,7 +362,7 @@ Commit：本文件所在提交。
 
 ### KB-003 — 模型适配层与模拟推理服务（K3）
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: K3
 - Priority: P1
 - Depends-On: KB-001
@@ -378,6 +378,50 @@ Acceptance：
 - 知识库检索结果可作为引用进入对话
 - AI 回答可存为**草稿**（`origin='ai_draft'`），不直接成为已确认内容
 - 不向任何未授权的外部服务发送私人资料
+
+Evidence：
+
+- `studio/ai/provider.mjs`：面向 OpenAI 兼容的 `/chat/completions` 协议 ——
+  这是事实标准（LM Studio、Ollama、llama.cpp、vLLM 都提供），
+  因此适配层无需为每个供应商写分支，只需能改 base URL 与模型名
+- **隐私边界是本模块最重要的约束**：默认**只允许连本机端点**，
+  非本机地址必须显式传 `allowRemote: true` 才放行。
+  理由是「某次调试顺手把 base URL 改成公网地址」不该是一个静默可行的操作
+- `studio/ai/mock.mjs`：模拟推理服务，实现同一套协议。
+  本机没装 LM Studio 不构成阻塞 —— 与模型无关的部分（对话历史、引用注入、
+  草稿保存）可以先做完并测透，真实联调时只换 base URL
+- schema v2：`conversations` + `messages`，引用以 JSON 持久化，**可事后追溯**
+  「这句回答基于哪几条笔记」
+- **AI 回答只能变成草稿**：`saveAnswerAsDraft` 一律写 `origin='ai_draft'`，
+  且**不提供把回答直接存成已确认内容的接口**；用户编辑后 `updateNote` 才转为 human
+
+测试：**70 项全部通过**（AI 层 22 项）。覆盖端点隐私判定、拒绝外部端点、
+协议校验、模型列举、补全、超时与不可达的可读错误、非 200 不泄露响应体、
+结构缺字段时报错而非静默返回 undefined、对话 CRUD、引用追溯、
+草稿标记与「只有 assistant 消息能存草稿」。
+
+遗留：
+- 对话的 HTTP 路由与界面尚未接入（本任务只做适配层与存储）
+- 真实模型联调未做（本机无 LM Studio）
+
+Commit：本文件所在提交。
+
+### KB-004 — 对话路由与 Studio 界面接入
+
+- Status: READY
+- Phase: K3
+- Priority: P1
+- Depends-On: KB-003、KB-002
+
+Objective：把 KB-003 的适配层与对话存储接到 HTTP 路由与界面上，让 AI Studio 可用。
+
+Acceptance：
+
+- 对话的增删查路由；消息追加触发一次模型调用
+- 知识库检索结果可作为引用注入对话，且引用被持久化
+- 界面上有对话区：模型配置、连接状态、消息列表、发送、存为草稿
+- 端点不可达时界面显示可操作的提示，而非静默失败
+- 真实浏览器验证
 
 Evidence：（待填）
 
