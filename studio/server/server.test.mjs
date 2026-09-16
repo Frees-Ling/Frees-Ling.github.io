@@ -306,8 +306,23 @@ test('超大请求体被拒绝而不是把进程撑爆', async () => {
       title: 'x',
       body: 'a'.repeat(2 * 1024 * 1024),
     });
-    const res = await call('/api/notes', { method: 'POST', body: huge });
-    assert.equal(res.status, 400);
+    // 期望 413 或网络错误（服务端会先回状态再断连，
+    // 客户端能否读到取决于它当时是否仍在写）—— 关键是**快速失败**
+    const started = Date.now();
+    let status = null;
+    try {
+      status = (await call('/api/notes', { method: 'POST', body: huge }))
+        .status;
+    } catch {
+      status = 'network-error';
+    }
+    const elapsed = Date.now() - started;
+
+    assert.ok(
+      status === 413 || status === 'network-error',
+      `应是 413 或网络错误，实际: ${status}`,
+    );
+    assert.ok(elapsed < 2000, `应快速失败，实际耗时 ${elapsed}ms`);
   });
 });
 

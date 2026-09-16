@@ -30,16 +30,11 @@ function send(res, status, body) {
 
 /** 读取请求体，带大小上限 —— 防止一个超大 body 把进程撑爆。 */
 async function readBody(req, limit = 1024 * 1024) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) throw new Error('请求体过大');
-    chunks.push(chunk);
-  }
-  if (chunks.length === 0) return {};
+  // 复用 readRawBody，避免两套读取实现各自漂移出不同的上限行为
+  const raw = await readRawBody(req, limit);
+  if (!raw) return {};
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return JSON.parse(raw);
   } catch {
     throw new Error('请求体不是合法 JSON');
   }
@@ -51,7 +46,24 @@ async function readRawBody(req, limit = 1024 * 1024) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > limit) throw new Error('请求体过大');
+    if (size > limit) {
+      // 光 throw 是不够的。
+      //
+      // 抛出后本函数不再读取请求体，但**客户端仍在往里写** ——
+      // socket 的接收缓冲满了以后，对端会一直阻塞等待，直到它自己超时。
+      // 实测：一个 2MB 的请求要 6 秒才失败，看起来像服务卡住。
+      //
+      // 直接销毁连接，接受「客户端看到的是连接错误而不是 413」这个代价。
+      //
+      // 试过「先回 413 再断连」，实测无效：fetch 这类客户端在写完整个请求体
+      // 之前不会去读响应，状态码卡在 socket 缓冲里送不到它手上，
+      // 于是仍然要等 6 秒。而直接断连是 5 毫秒。
+      //
+      // 权衡：一个「慢但状态码清晰」的失败，不如一个「快但没有状态码」的失败 ——
+      // 尤其在本地工具里，卡住 6 秒看起来像服务死了，而连接被重置能立刻看出是请求太大。
+      req.destroy();
+      throw new Error('请求体过大');
+    }
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString('utf8');
