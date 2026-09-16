@@ -195,3 +195,45 @@
 - 风险与边界: 钥匙串条目以 `-T /usr/bin/security` 授权，
   任何以本人身份运行且能调用 security 的进程都可读取 —— 这是无人值守的必要代价，
   已在脚本注释中写明授权范围与撤销方式。条目内只有这一个开发用密钥。
+
+## ADR-021 — 文件路径权限规则只认 Edit(path)
+
+- Status: Accepted
+- Date: 2026-09-17
+- Decision: 文件路径权限规则一律写成 `Edit(path)` / `Read(path)`。
+  不再使用 `Write(path)`、`NotebookEdit(path)`、`MultiEdit(path)`、`Glob(path)`。
+  归档只读（ADR-011）由 `Edit(/archives/**)` 与 `protect-paths.sh` 两层保障。
+- Reason: 官方文档明确 —— 「Claude Code checks file permissions against `Edit(path)`
+  and `Read(path)` rules only. If you write a path rule for `Write`, `NotebookEdit`,
+  `Glob`, or the legacy `MultiEdit` tool instead, Claude Code accepts the rule but never
+  consults it, and warns at startup.」同页另有「`Edit` rules apply to all built-in tools
+  that edit files.」
+  （来源：code.claude.com/docs/en/permissions）
+  这意味着 `Write(/archives/**)` **从未生效**。之所以要固化成 ADR：
+  这类空操作**不会在任何闸门里失败** —— 配置被接受、无报错、只多一条启动警告，
+  却给人一种「又加固了一层」的错觉。靠检查脚本发现不了，只能靠记录。
+- 验证: 移除两条死规则后，用伪造的 PreToolUse 载荷直接喂 `protect-paths.sh`：
+  `archives/new.md`、`public/history/x.html`、`./archives/../archives/y.md`（穿越）、
+  `ARCHIVES/z.md`（macOS 大小写不敏感）全部退出码 2 拦截，`src/pages/index.astro` 放行。
+  仓库内已无 `Write(` 路径规则残留。
+
+## ADR-022 — 取凭证必须有时限
+
+- Status: Accepted
+- Date: 2026-09-17
+- Decision: 任何读取钥匙串的路径都必须带超时，超时要有独立于其他失败的退出码；
+  `api-key-helper.sh` 只做薄封装，不重复实现读取逻辑。
+- Reason: 2026-09-16 实测，钥匙串**锁定**时 `security find-generic-password`
+  不立即失败，而是挂起约 108 秒等一个 GUI 解锁弹窗才返回 128；
+  `security show-keychain-info` 同样会挂起（17 秒），
+  所以「先探测是否锁定、再决定要不要读」这条路走不通。
+  无人值守时没人能点那个弹窗，于是它表现为**卡住**而不是报错 —— 比直接失败更难诊断。
+  且 Claude Code 对 `apiKeyHelper` 有 10 秒慢速告警、失败在 3 次尝试内报错，
+  近两分钟的阻塞会让整条凭证链路失效。
+- 关键约束: 实现选纯 POSIX sh 看门狗 —— macOS 不保证有 `timeout(1)`，也没有 perl 保证。
+  必须用 `if cmd; then :; else rc=$?; fi` 取返回码，
+  不能写 `if ! cmd; then rc=$?; fi`：后者的 `$?` 是取反运算符的状态（恒为 0），
+  会把「钥匙串锁了」误报成「没配过条目」。
+- 验证: 用桩替换 `security` 重放锁定行为，红绿对照 ——
+  旧版等满桩的时长并报「钥匙串中没有该条目」（原因说反），
+  新版 3 秒看门狗触发、4 秒返回并报「读取钥匙串超时 —— 钥匙串很可能已锁定」。

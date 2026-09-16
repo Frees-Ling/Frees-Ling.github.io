@@ -27,26 +27,24 @@
 
 set -eu
 
-SERVICE='frees-blog-deepseek'
-ACCOUNT='automation'
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-# 钥匙串条目不存在时给出可执行的指引，而不是静默失败
-if ! security find-generic-password -s "$SERVICE" -a "$ACCOUNT" >/dev/null 2>&1; then
-  printf 'api-key-helper: 钥匙串中没有 %s/%s 条目。\n' "$SERVICE" "$ACCOUNT" >&2
-  printf '  存入：sh scripts/automation/store-credential.sh\n' >&2
+# 读取逻辑集中在 read-credential.sh：它带看门狗，能在钥匙串锁定时快速失败，
+# 而不是挂起约两分钟等一个无人能点的 GUI 弹窗。这里只做一层薄封装。
+#
+# 不在本脚本里重复实现 —— 两处实现迟早会漂移，而其中一处会失去超时保护。
+if ! KEY=$(sh "$DIR/read-credential.sh" 2>/dev/null); then
+  # 把 read-credential.sh 的可读错误原样转出：新版本会在 3 次尝试内
+  # 显示脚本自身的错误，而不是被一个笼统的 401 掩盖。
+  sh "$DIR/read-credential.sh" --check >&2 2>&1 || true
   exit 1
 fi
 
-KEY=$(security find-generic-password -s "$SERVICE" -a "$ACCOUNT" -w 2>/dev/null) || {
-  printf 'api-key-helper: 读取钥匙串被拒绝（钥匙串可能已锁定）。\n' >&2
-  printf '  解锁：security unlock-keychain ~/Library/Keychains/login.keychain-db\n' >&2
-  exit 1
-}
-
 if [ -z "$KEY" ]; then
-  printf 'api-key-helper: 钥匙串条目为空。\n' >&2
+  printf 'api-key-helper: 读到的凭证为空。\n' >&2
   exit 1
 fi
 
 # printf 不加换行，避免把 \n 混进凭证；Claude Code 会自行处理
 printf '%s' "$KEY"
+unset KEY

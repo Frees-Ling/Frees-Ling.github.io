@@ -39,9 +39,7 @@
     ],
     "deny": [
       "Edit(/archives/**)",
-      "Write(/archives/**)",
       "Edit(/public/history/**)",
-      "Write(/public/history/**)",
       "Read(~/.ssh/id_*)",
       "Read(~/.ssh/frees_blog_automation_ed25519)",
       "Bash(git reset --hard *)",

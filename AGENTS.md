@@ -92,6 +92,10 @@ P3 已把原先的单体 `global.css` 拆为 `tokens.css` / `base.css` / `primit
 不要在其中做任何改动。`.claude/settings.json` 的 deny 规则与
 `.claude/hooks/protect-paths.sh` 会阻止写入，这是有意设计的。
 
+写这类路径规则时**只能写 `Edit(...)`**：`Write(/archives/**)` 会被接受、不报错，
+却**永远不会被读取**，只多一条启动警告 —— 一个不会在任何闸门里失败的空操作。
+原先那两条正是这种死规则，别再按「多一层保护」的直觉加回来。详见 ADR-021。
+
 ### 站点样式
 
 全站样式分两处：`src/styles/` 下的四个全局文件
