@@ -114,3 +114,35 @@
   二分定位到是 frontmatter 规模而非某个具体语法：截短接口体或截掉尾部推导
   任一者都能恢复解析。把推导移入 `buildListModel()` 后，hint 消失且属性检查恢复。
   这类失效没有错误信息，只能靠「故意传一个非法道具」来发现。
+
+## ADR-016 — 无人值守提交使用独立自动化身份
+
+- Status: Accepted
+- Decision: 无人值守提交走 `scripts/automation/commit.sh`，
+  使用专用密钥 `~/.ssh/frees_blog_automation_ed25519` 与身份
+  `Frees Blog Automation <automation@frees-ling.dev>`，签名器为系统 `ssh-keygen`。
+  全局 `~/.gitconfig`、`~/.claude/settings.json` 与本仓库 `.git/config` **均不修改**。
+- Reason: 2026-09-16 诊断确认，**只有提交签名依赖 1Password**
+  （`gpg.ssh.program = op-ssh-sign`）。GitHub 的 SSH 认证走的是 `~/.ssh/id_ed25519`
+  文件密钥，`SSH_AUTH_SOCK` 指向 launchd 且 agent 内无身份时 `git ls-remote` 仍然成功 ——
+  也就是说「1Password 导致无法访问 GitHub」这个前提不成立。
+  1Password 锁定时提交会以 `error: 1Password: failed to fill whole buffer` 中断，
+  且该失败是**状态相关**的：同日实测中，锁定时报错、解锁后同一命令成功。
+  无人值守不能依赖需要人解锁的进程，但也不应因此取消签名或冒用个人身份。
+- 边界: 不改变 push 策略（ADR-010）。该密钥未加入 GitHub，也不是 deploy key，
+  不能读写任何仓库。
+
+## ADR-017 — 视觉方向由 FIELD LOG 转为 Fuwari 式蓝色书房
+
+- Status: Accepted
+- Supersedes: P5a 配色基座与 P5c Site Chrome 的视觉部分（WEB-006/007/008 的结构成果保留）
+- Decision: 以 `archives/sites/Frees-Blog/`（Fuwari 派生）为视觉与交互参考，
+  采用**借鉴设计语言**而非迁移模板：保留 Astro 7、零框架、零 hydration、Pagefind、
+  内容集合与 WEB-008 的列表编排器，只替换视觉层。
+- Reason: 用户 2026-09-16 明确反馈现有视觉「夸张的字体、大量英文、过度装饰」，
+  并指定 Fuwari 为参考。这与刚完成的 FIELD LOG 方向（拉丁导航、118px 衬线首屏、
+  直角、单色 + signal red）直接冲突，以用户判断为准。
+  实测 Fuwari 的调色是单 `--hue` 驱动的 oklch 体系（旧配置 `hue: 250` 即蓝色），
+  与本站既有的 CSS 变量分层同构，因此可以只移植 token 与组件外观。
+  迁移模板则需要 Astro 7→5 降级并引入 Tailwind/Stylus/Svelte/swup，
+  会破坏现有 token 闸门、视觉门禁与零 JS 基线，代价远高于收益。

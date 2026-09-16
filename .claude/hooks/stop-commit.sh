@@ -79,8 +79,15 @@ git diff --cached --quiet 2>/dev/null && exit 0
 COUNT=$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')
 SHORTSTAT=$(git diff --cached --shortstat 2>/dev/null | sed 's/^ *//')
 
-# 只做一次 add + commit：没有 push，没有 amend，没有 reset
-git commit -q -F - >/dev/null 2>&1 <<EOF
+# 只做一次 add + commit：没有 push，没有 amend，没有 reset。
+#
+# 用自动化身份提交（scripts/automation/），不走 1Password ——
+# 本 hook 恰恰在没有人在场时触发，而 op-ssh-sign 需要应用解锁：
+# 锁定时会以 `error: 1Password: failed to fill whole buffer` 中断提交。
+# 自动化身份是独立的（Frees Blog Automation），不冒用个人签名。
+COMMIT_SH="$REPO_ROOT/scripts/automation/commit.sh"
+if [ -f "$COMMIT_SH" ]; then
+  sh "$COMMIT_SH" -q -F - >/dev/null 2>&1 <<EOF
 chore: 自动提交 ${COUNT} 个文件
 
 ${SHORTSTAT}
@@ -89,5 +96,17 @@ ${SHORTSTAT}
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>
 EOF
+else
+  # 自动化入口缺失时退回默认 git 配置（可能因 1Password 锁定时失败，属预期）
+  git commit -q -F - >/dev/null 2>&1 <<EOF
+chore: 自动提交 ${COUNT} 个文件
+
+${SHORTSTAT}
+
+由 Stop hook 兜底提交（本轮改动未经 Claude 主动提交）。
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+EOF
+fi
 
 exit 0
