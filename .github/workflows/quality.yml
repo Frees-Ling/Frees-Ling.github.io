@@ -50,6 +50,9 @@ jobs:
       - name: Check for secrets
         run: npm run check:secrets -- --all
 
+      - name: Test knowledge base storage
+        run: npm test
+
       - name: Type and Astro check
         run: npm run check
 
