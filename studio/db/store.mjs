@@ -8,6 +8,11 @@
 // 所有写操作都在事务里；出错即回滚。
 
 import { createHash, randomUUID } from 'node:crypto';
+import {
+  vectorToBlob,
+  blobToVector,
+  cosineSimilarity,
+} from '../ai/embeddings.mjs';
 
 const now = () => new Date().toISOString();
 
@@ -486,4 +491,76 @@ export function searchEverything(db, query, { limit = 10 } = {}) {
     .all(`%${q}%`, limit);
 
   return { notes, memories };
+}
+
+// ──────────────── 语义检索（KB-007）────────────────
+
+export function upsertEmbedding(db, { ownerKind, ownerId, model, vector }) {
+  if (!['note', 'memory'].includes(ownerKind)) {
+    throw new Error(`未知的 ownerKind: ${ownerKind}`);
+  }
+  if (!vector || vector.length === 0) throw new Error('向量不能为空');
+
+  db.prepare(
+    `INSERT INTO embeddings (owner_kind, owner_id, model, dim, vector, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (owner_kind, owner_id) DO UPDATE SET
+       model = excluded.model, dim = excluded.dim,
+       vector = excluded.vector, created_at = excluded.created_at`,
+  ).run(ownerKind, ownerId, model, vector.length, vectorToBlob(vector), now());
+}
+
+export function getEmbedding(db, ownerKind, ownerId) {
+  const row = db
+    .prepare('SELECT * FROM embeddings WHERE owner_kind = ? AND owner_id = ?')
+    .get(ownerKind, ownerId);
+  return row ? { ...row, vector: blobToVector(row.vector) } : null;
+}
+
+/**
+ * 语义检索：把所有向量取出来在 JS 里算余弦相似度。
+ *
+ * 个人知识库规模下这是毫秒级；换成向量数据库要为几千条数据引入一个服务，
+ * 不划算。规模真的大了再换。
+ *
+ * 待审核记忆**仍然被排除** —— 语义检索不改变「AI 推测不得冒充事实」这条约束。
+ */
+export function semanticSearch(
+  db,
+  queryVector,
+  { limit = 10, minScore = 0.1 } = {},
+) {
+  const rows = db
+    .prepare(
+      `SELECT e.owner_kind, e.owner_id, e.vector, e.dim
+         FROM embeddings e
+         LEFT JOIN notes n   ON e.owner_kind = 'note'   AND n.id = e.owner_id
+         LEFT JOIN memories m ON e.owner_kind = 'memory' AND m.id = e.owner_id
+        WHERE (e.owner_kind = 'note'   AND n.id IS NOT NULL)
+           OR (e.owner_kind = 'memory' AND m.id IS NOT NULL AND m.status = 'approved')`,
+    )
+    .all();
+
+  const scored = [];
+  for (const row of rows) {
+    const vec = blobToVector(row.vector);
+    let score;
+    try {
+      score = cosineSimilarity(queryVector, vec);
+    } catch {
+      continue; // 维度不一致（换过模型）—— 跳过而不是让整个检索失败
+    }
+    if (score < minScore) continue;
+    scored.push({ kind: row.owner_kind, id: row.owner_id, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+
+  const hits = scored.slice(0, limit).map((s) => {
+    const row =
+      s.kind === 'note'
+        ? db.prepare('SELECT * FROM notes WHERE id = ?').get(s.id)
+        : db.prepare('SELECT * FROM memories WHERE id = ?').get(s.id);
+    return { ...row, kind: s.kind, score: Number(s.score.toFixed(4)) };
+  });
+  return hits;
 }

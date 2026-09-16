@@ -73,12 +73,19 @@ export function tokenMatches(expected, provided) {
   return timingSafeEqual(a, b);
 }
 
-export function createServer({ db, token, home, provider = null }) {
+export function createServer({
+  db,
+  token,
+  home,
+  provider = null,
+  embedder = null,
+}) {
   const deps = {
     db,
     token,
     home,
     provider,
+    embedder,
     store: {
       createNote,
       getNote,

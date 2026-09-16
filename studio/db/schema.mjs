@@ -216,6 +216,35 @@ const MIGRATIONS = [
       db.exec(`CREATE INDEX idx_memory_notes_note ON memory_notes (note_id);`);
     },
   },
+  {
+    version: 4,
+    name: 'embeddings',
+    up: (db) => {
+      // ── 语义检索的向量存储（KB-007）──
+      //
+      // 刻意**不引入向量数据库**。个人知识库的规模是几百到几千条，
+      // 在 JS 里暴力算余弦相似度是毫秒级的事，而引入 Qdrant/Milvus 之类
+      // 意味着多一个服务、多一份备份负担、多一种会过期的格式。
+      // 规模真正变大（十万条以上）时再换，那时也知道该换什么。
+      //
+      // 向量存 BLOB（Float32 的字节表示），不是 JSON 文本 ——
+      // JSON 会大 3-5 倍且每次读写都要解析。
+      db.exec(`
+        CREATE TABLE embeddings (
+          owner_kind TEXT NOT NULL,
+          owner_id   TEXT NOT NULL,
+          model      TEXT NOT NULL,
+          dim        INTEGER NOT NULL,
+          vector     BLOB NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (owner_kind, owner_id),
+          CHECK (owner_kind IN ('note', 'memory'))
+        );
+      `);
+      // 换嵌入模型后旧向量不可用，按 model 区分便于重建
+      db.exec(`CREATE INDEX idx_emb_model ON embeddings (model);`);
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

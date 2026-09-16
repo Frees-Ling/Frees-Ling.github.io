@@ -64,12 +64,25 @@ function renderList() {
 }
 
 async function refresh() {
+  // 走统一检索：它会优先语义、端点不可用时降级为关键词，
+  // 并把实际用的模式告诉我们 —— 用户有权知道结果是怎么来的。
   const path = state.query
-    ? `/api/search?q=${encodeURIComponent(state.query)}`
+    ? `/api/search-all?q=${encodeURIComponent(state.query)}`
     : '/api/notes';
   const body = await api(path);
   state.notes = body.notes || body.hits || [];
   renderList();
+
+  if (state.query) {
+    $('list-mode').textContent =
+      body.mode === 'semantic'
+        ? '语义检索'
+        : body.mode === 'keyword'
+          ? '关键词检索（嵌入端点不可用）'
+          : '';
+  } else {
+    $('list-mode').textContent = '';
+  }
 }
 
 function showEditor(note) {

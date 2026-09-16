@@ -12,6 +12,8 @@ import { join } from 'node:path';
 
 import { openDatabase } from '../db/schema.mjs';
 import { createNote } from '../db/store.mjs';
+import { upsertEmbedding } from '../db/store.mjs';
+import { createMockEmbedder, createEmbedder } from '../ai/embeddings.mjs';
 import { createProvider } from '../ai/provider.mjs';
 import { startMockServer } from '../ai/mock.mjs';
 import {
@@ -874,5 +876,118 @@ test('路由：统一检索排除待审核记忆', async () => {
       await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
     ).json();
     assert.equal(after.memories.length, 1);
+  });
+});
+
+// ─────────────── KB-007 语义检索与降级 ───────────────
+
+test('检索路由：有嵌入端点时走语义模式', async () => {
+  const mock = await startMockServer();
+  const home = mkdtempSync(join(tmpdir(), 'studio-sem-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  const embedder = createMockEmbedder({ dim: 16 });
+  const server = createServer({ db, token, home, embedder });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    const { note } = await (
+      await call('/api/notes', {
+        method: 'POST',
+        body: JSON.stringify({ title: '注意力机制笔记' }),
+      })
+    ).json();
+    upsertEmbedding(db, {
+      ownerKind: 'note',
+      ownerId: note.id,
+      model: 'mock',
+      vector: await embedder.embed('注意力机制笔记'),
+    });
+
+    const res = await call(
+      '/api/search-all?q=' + encodeURIComponent('注意力机制笔记'),
+    );
+    const body = await res.json();
+    assert.equal(body.mode, 'semantic');
+    assert.equal(body.notes.length, 1);
+  } finally {
+    await new Promise((r) => server.close(r));
+    await mock.close();
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('检索路由：嵌入端点不可用时降级为关键词，而不是整个失败', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'studio-fb-'));
+  const token = loadOrCreateToken(home);
+  const db = openDatabase(':memory:');
+  // 指向一个必然连不上的端口 —— 模拟「模型没启动」
+  const embedder = createEmbedder({
+    baseUrl: 'http://127.0.0.1:9/v1',
+    timeoutMs: 1200,
+  });
+  const server = createServer({ db, token, home, embedder });
+  await new Promise((r) => server.listen(0, BIND_HOST, r));
+  const base = `http://${BIND_HOST}:${server.address().port}`;
+  const call = (p, init = {}) =>
+    fetch(base + p, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+    });
+
+  try {
+    await call('/api/notes', {
+      method: 'POST',
+      body: JSON.stringify({ title: '注意力机制笔记' }),
+    });
+
+    const res = await call(
+      '/api/search-all?q=' + encodeURIComponent('注意力机制'),
+    );
+    assert.equal(res.status, 200, '检索不应因为端点挂了而失败');
+    const body = await res.json();
+    assert.equal(body.mode, 'keyword', '必须明确标出降级了');
+    assert.match(body.reason, /嵌入端点不可用/);
+    assert.equal(body.notes.length, 1, '降级后关键词检索仍应能找到');
+  } finally {
+    await new Promise((r) => server.close(r));
+    db.close();
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('检索路由：未配置嵌入端点时用关键词并说明原因', async () => {
+  await withServer(async ({ call }) => {
+    await call('/api/notes', {
+      method: 'POST',
+      body: JSON.stringify({ title: '注意力机制笔记' }),
+    });
+    const body = await (
+      await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
+    ).json();
+    assert.equal(body.mode, 'keyword');
+    assert.match(body.reason, /未配置嵌入端点/);
+  });
+});
+
+test('检索路由：空查询返回空且标注模式', async () => {
+  await withServer(async ({ call }) => {
+    const body = await (await call('/api/search-all?q=')).json();
+    assert.equal(body.mode, 'empty');
+    assert.deepEqual(body.notes, []);
+    assert.deepEqual(body.memories, []);
   });
 });

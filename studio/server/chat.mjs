@@ -24,6 +24,7 @@ import {
   unlinkMemoryFromNote,
   getMemoryProvenance,
   searchEverything,
+  semanticSearch,
 } from '../db/store.mjs';
 
 /** 每次注入的最大引用条数。太多会把上下文挤满，也会稀释重点。 */
@@ -216,10 +217,13 @@ async function route(req, res, deps, { path, method, readBody, send, url }) {
     return send(res, 201, { memory });
   }
 
-  // ── 统一检索：笔记 + 已确认记忆 ──
+  // ── 统一检索：语义优先，端点不可用时降级为关键词 ──
   if (path === '/api/search-all' && method === 'GET') {
     const q = url.searchParams.get('q') || '';
-    return send(res, 200, { query: q, ...searchEverything(db, q) });
+    return send(res, 200, {
+      query: q,
+      ...(await searchWithFallback(db, q, deps)),
+    });
   }
 
   // ── 记忆的来源链 ──
@@ -264,4 +268,41 @@ async function route(req, res, deps, { path, method, readBody, send, url }) {
   }
 
   return null; // 未命中，交回主路由
+}
+
+/**
+ * 语义检索 + 降级（KB-007）。
+ *
+ * 检索是基础功能。嵌入端点没启动时**退回关键词检索**，而不是让整个检索不可用 ——
+ * 「因为没开 LM Studio 所以什么也搜不到」是不可接受的。
+ *
+ * 返回值里**必须带上实际用了哪种模式**：让调用方（和界面）能看出
+ * 「这次结果为什么不太对」，而不是让人以为语义检索生效了却得到空结果。
+ */
+export async function searchWithFallback(db, query, deps, { limit = 10 } = {}) {
+  const q = String(query ?? '').trim();
+  if (!q) return { mode: 'empty', notes: [], memories: [] };
+
+  const embedder = deps.embedder;
+  if (embedder) {
+    try {
+      const vector = await embedder.embed(q);
+      const hits = semanticSearch(db, vector, { limit });
+      return {
+        mode: 'semantic',
+        model: embedder.model,
+        notes: hits.filter((h) => h.kind === 'note'),
+        memories: hits.filter((h) => h.kind === 'memory'),
+      };
+    } catch {
+      // 落到关键词路径。**不把错误抛出去**，也不伪装成语义结果。
+    }
+  }
+
+  const fallback = searchEverything(db, q, { limit });
+  return {
+    mode: 'keyword',
+    reason: embedder ? '嵌入端点不可用，已退回关键词检索' : '未配置嵌入端点',
+    ...fallback,
+  };
 }

@@ -338,3 +338,15 @@ body {
   border-color: var(--primary);
   color: var(--accent-text);
 }
+
+.list-mode {
+  margin: 0;
+  padding: 8px var(--gutter-mobile);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.list-mode:empty {
+  display: none;
+}
