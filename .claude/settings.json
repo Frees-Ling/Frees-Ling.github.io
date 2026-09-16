@@ -39,15 +39,9 @@
     ],
     "deny": [
       "Edit(/archives/**)",
+      "Write(/archives/**)",
       "Edit(/public/history/**)",
-      "Read(~/.ssh/id_*)",
-      "Read(~/.ssh/frees_blog_automation_ed25519)",
-      "Bash(git reset --hard *)",
-      "Bash(git clean *)",
-      "Bash(git push --force *)",
-      "Bash(git push -f *)",
-      "Bash(git filter-branch *)",
-      "Bash(git rebase -i *)"
+      "Write(/public/history/**)"
     ]
   },
   "hooks": {
