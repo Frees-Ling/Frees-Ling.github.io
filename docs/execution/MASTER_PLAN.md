@@ -13,7 +13,7 @@
 - P2 语义、响应式断点和无障碍修复
 - P3 token 架构与静态闸门
 - P5a 配色基座
-- P5c Site Chrome 已提交，待最终回归验收
+- P5c Site Chrome 已提交并**通过最终回归**（WEB-006 DONE）
 
 证据见 `docs/redesign-progress.md`。总计划不把这些阶段重新打开，除非回归测试发现问题。
 
@@ -27,9 +27,9 @@
 | W3 Assets & Performance | 响应式图片、字体、CLS/LCP、资源预算 | W1/W2 | 真实构建体积和性能预算通过 |
 | W4 IA & Content Pipeline | 数据驱动栏目、URL 守护、内容生成/校验命令 | W1/W2 | 无硬编码白名单；旧 URL 通过 |
 | S1 Studio Discovery | 技术选型、威胁模型、原型和数据迁移策略 | G0，研究任务 | ADR 完成；可抛弃原型验证关键风险 |
-| S2 Studio Foundation | 本地 UI/服务、SQLite、配置、任务和恢复点 | S1 | 重启恢复状态；无秘密落盘 |
+| S2 Studio Foundation | 本地 UI/服务、SQLite、配置、任务和恢复点；**ARCH-001 原始档案层** | S1 | 重启恢复状态；无秘密落盘 |
 | S3 Unified Editor | ARTICLE/KNOWLEDGE/PROJECT 编辑与生产预览 | S2、W2 | 共享渲染器；diff 编辑；文件导入入口 |
-| S4 AI Gateway | 可替换供应商、模型能力、sidecar、用量与安全日志 | S2/S3 | 至少两个兼容适配器；无供应商耦合 |
+| S4 AI Gateway | 可替换供应商、模型能力、sidecar、用量与安全日志；**MEM-001 长期记忆服务** | S2/S3 | 至少两个兼容适配器；无供应商耦合；记忆引擎可替换且可导出 |
 | M1 Media Core | 本地媒体库、hash/ID、派生图、引用和 EXIF 策略 | S2、W3 | 导入/派生/复用/回收演练通过 |
 | M2 AI Image | 生图适配器、元数据、本地归档与可选上传 | S4/M1 | 生成资产可跨文档复用；密钥安全 |
 | I1 GitHub/Friends | 项目构建期同步、Friends 数据/RSS 健康检查 | W4/S2 | 人工覆盖优先；公开页无实时依赖 |
@@ -39,7 +39,7 @@
 | K1 Knowledge Core | 知识节点、来源、学习路径、搜索和公开渲染 | S3/W2 | 来源可追溯；公开构建与检索通过 |
 | K2 Research Pipeline | 查重、研究、冲突、主张校验和审查队列 | K1/S4 | 不支持主张被标记；不能自动越过审查 |
 | K3 Annotation & Discussion | 稳定锚点、公开批注、Giscus/讨论映射 | K1/S3 | 合理编辑后锚点策略可解释；评论可用 |
-| R1 Secret & Owner Security | 1Password 引用、Owner 认证设计、审计 | S2/I2 | threat model 和渗透负向用例通过 |
+| R1 Secret & Owner Security | 1Password 引用、Owner 认证设计、审计；**ACCESS-001 外部 AI 受限访问层** | S2/I2 | threat model 和渗透负向用例通过；外部身份最小权限且可撤销 |
 | R2 Backup & Restore | 加密快照、Security WebDAV、UI 恢复与演练 | R1/I2 | 干净环境端到端恢复成功 |
 | F1 Integration | 模块整合、迁移、可观察性、失败恢复 | 前述阶段 | 关键用户旅程端到端通过 |
 | F2 Production Hardening | 安全、性能、无障碍、内容和灾备总验收 | F1 | 发布清单全绿；维护者批准 push |

@@ -65,3 +65,26 @@
 
 - Status: Accepted
 - Decision: `archives/` 和 `public/history/` 不再修改；兼容性修补如确有必要必须先改变当前规则并获得授权。
+
+## ADR-012 — 新需求并入现有计划，不新建平行计划
+
+- Status: Accepted
+- Decision: 后续关于长期记忆、知识检索、1Password 密钥、WebDAV 备份与外部 AI 访问的
+  增量需求，一律并入 `MASTER_PLAN.md` / `TASKS.md` / `OPEN_QUESTIONS.md` / 本文件，
+  **不创建第二套计划文档**。
+- Reason: 项目已有 G0 建立的单一真相源体系，且上述领域在现有阶段表中已基本覆盖
+  （S1–S4、K1–K3、R1–R2、I2–I4、M1–M2）。新建平行计划会造成两份事实互相漂移，
+  正是 ADR-009 要避免的问题。
+- Consequence: 经比对后仅**三个真实缺口**被补为任务：
+  `MEM-001`（长期记忆服务与三层模型）、`ARCH-001`（原始档案层）、
+  `ACCESS-001`（外部 AI 受限访问层）。其余需求已由既有任务覆盖，不重复立项。
+
+## ADR-013 — Studio 是绿地开发，不是既有系统扩展
+
+- Status: Accepted
+- Decision: 按 S1（Studio Discovery）先做选型与 ADR，再进入 S2 实现。
+  **不得跳过 S1 直接写数据层或 UI。**
+- Reason: 2026-09-16 实测确认仓库中**没有任何 Studio 实现代码** ——
+  `studio` / `sqlite` / `webdav` 的检索命中全部来自规划文档。
+  需求中「在现有 Frees Studio 基础上扩展」的前提在当前代码库并不成立。
+  测试夹具与模拟实现不能替代真实系统验证。
