@@ -54,17 +54,53 @@ export async function handleChat(req, res, deps, ctx) {
 async function route(req, res, deps, { path, method, readBody, send }) {
   const { db, provider } = deps;
 
+  // ── 模型端点状态 ──
+  //
+  // 探活而不是只回配置：用户最需要知道的是「现在能不能用」，
+  // 而不是「配置里写的是什么」。不可用时给出可操作的提示。
+  if (path === '/api/model' && method === 'GET') {
+    if (!provider) {
+      return send(res, 200, {
+        ok: false,
+        model: '',
+        hint: '未配置模型端点。',
+      });
+    }
+    try {
+      const models = await provider.listModels();
+      return send(res, 200, {
+        ok: true,
+        model: provider.model,
+        available: models,
+        baseUrl: provider.baseUrl,
+      });
+    } catch (error) {
+      // 只回状态与提示，不回传底层错误详情（可能含主机路径）
+      return send(res, 200, {
+        ok: false,
+        model: provider.model,
+        baseUrl: provider.baseUrl,
+        hint: '模型端点不可用 —— 请先启动本地推理服务（如 LM Studio）。',
+      });
+    }
+  }
+
   // ── 对话列表 / 新建 ──
   if (path === '/api/conversations') {
     if (method === 'GET') {
+      // 列表刻意**不带** messages：几十条对话各带全部消息会很浪费，
+      // 列表只需要标题与时间。需要消息时再按 id 取。
       return send(res, 200, { conversations: listConversations(db) });
     }
     if (method === 'POST') {
       const body = await readBody(req).catch(() => ({}));
-      const conversation = createConversation(db, {
+      const created = createConversation(db, {
         model: body.model || provider?.model || '',
       });
-      return send(res, 201, { conversation });
+      // 回**完整形状**而不是刚插入的行：新建与读取返回的对象结构必须一致，
+      // 否则调用方要为「刚建的」和「读到的」写两套处理。
+      // 实测踩过：新建返回的对象没有 messages 字段，前端 push 时直接崩。
+      return send(res, 201, { conversation: getConversation(db, created.id) });
     }
   }
 

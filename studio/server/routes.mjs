@@ -88,6 +88,15 @@ export async function handleRequest(req, res, deps) {
     return;
   }
 
+  // 图标：浏览器每次加载都会自动请求它，而它不含任何私人信息。
+  // 不处理的话会走鉴权分支返回 401，在每次页面加载的控制台留下一条噪音 ——
+  // 噪音会训练人忽略控制台，那比缺一个图标糟糕得多。
+  if (path === '/favicon.ico' && method === 'GET') {
+    res.writeHead(204, { 'cache-control': 'max-age=86400' });
+    res.end();
+    return;
+  }
+
   // 建立会话：校验令牌后下发 HttpOnly Cookie
   if (path === '/api/session' && method === 'POST') {
     // 登录页是原生表单，提交的是 application/x-www-form-urlencoded，

@@ -11,6 +11,14 @@
   <body>
     <header class="bar">
       <span class="mark">书房</span>
+      <nav class="tabs" aria-label="视图">
+        <button type="button" id="tab-notes" class="tab" aria-current="true">
+          笔记
+        </button>
+        <button type="button" id="tab-chat" class="tab" aria-current="false">
+          对话
+        </button>
+      </nav>
       <!-- 用语义元素 <search> 而不是给 form 加 role="search" -->
       <search class="search">
         <form id="search-form">
@@ -29,7 +37,7 @@
       </button>
     </header>
 
-    <main class="layout">
+    <main class="layout" id="view-notes">
       <nav class="list" aria-label="笔记列表">
         <ol id="notes"></ol>
         <p id="empty" class="empty" hidden>这里还没有笔记。点「新建」开始。</p>
@@ -71,6 +79,41 @@
         </form>
       </section>
     </main>
+
+    <section class="layout chat" id="view-chat" hidden>
+      <nav class="list" aria-label="对话列表">
+        <div class="chat-new">
+          <button type="button" id="new-conv" class="btn primary">
+            新对话
+          </button>
+        </div>
+        <ol id="conversations"></ol>
+        <p id="no-conv" class="empty">还没有对话。</p>
+      </nav>
+
+      <section class="pane">
+        <div class="chat-head">
+          <span id="model-status" class="status" role="status"
+            >正在检查模型端点…</span
+          >
+          <span id="model-name" class="model"></span>
+        </div>
+
+        <div id="messages" class="messages" aria-live="polite">
+          <p class="placeholder">选一个对话，或者新建一个来提问。</p>
+        </div>
+
+        <form id="composer" class="composer">
+          <label class="sr-only" for="prompt">提问</label>
+          <textarea
+            id="prompt"
+            rows="2"
+            placeholder="问点什么…（会在知识库里检索相关笔记作为引用）"
+          ></textarea>
+          <button type="submit" class="btn primary" id="send">发送</button>
+        </form>
+      </section>
+    </section>
 
     <script src="/static/app.js"></script>
   </body>

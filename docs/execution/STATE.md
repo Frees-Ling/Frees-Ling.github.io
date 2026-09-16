@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-004（进行中）— 对话路由已完成，界面待做
+KB-005 — 关联知识库、聊天历史与长期记忆
 
 ## Last known implementation state
 
@@ -29,6 +29,8 @@ KB-004（进行中）— 对话路由已完成，界面待做
   界面复用 tokens.css，未引入前端框架；有真实浏览器验收脚本。
 - 模型适配层与模拟推理服务（KB-003 DONE）已就绪：默认只允许本机端点，
   非本机必须显式 allowRemote；AI 回答只能存为 ai_draft 草稿。
+- AI Studio（KB-004 DONE）可用：对话、引用注入、存为草稿，
+  有真实浏览器验收脚本（模拟推理服务，不依赖本机是否装 LM Studio）。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。
