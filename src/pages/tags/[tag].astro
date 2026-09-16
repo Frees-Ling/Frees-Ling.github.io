@@ -1,10 +1,31 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
-import PostCard from '../../components/PostCard.astro';
-import { byNewest, normalizeTags } from '../../utils/posts';
-export async function getStaticPaths(){const posts=await getCollection('posts',({data})=>!data.draft);const tags=[...new Set(posts.flatMap((post)=>normalizeTags(post.data.tags)))];return tags.map((tag)=>({params:{tag},props:{tag,posts:posts.filter((post)=>normalizeTags(post.data.tags).includes(tag)).sort(byNewest)}}))}
-const {tag,posts}=Astro.props;
+import PostList from '../../components/PostList.astro';
+import { getAllPosts, getAllTags, getByTag } from '../../utils/posts-query';
+
+export async function getStaticPaths() {
+  const posts = await getAllPosts();
+  return getAllTags(posts).map(({ tag }) => ({
+    params: { tag },
+    props: { tag, posts: getByTag(posts, tag) },
+  }));
+}
+
+const { tag, posts } = Astro.props;
 ---
-<Layout title={`标签：${tag}`}><header class="page-hero container"><p class="eyebrow">TAG · {posts.length} ENTRIES</p><h1 class="page-title">#{tag}</h1><p class="lede">同一个关键词连接起来的文章。</p></header><section class="container tag-posts">{posts.map((post)=><PostCard post={post} headingLevel="h2"/>)}</section></Layout>
-<style>.tag-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding-bottom:120px}@media(max-width:900px){.tag-posts{grid-template-columns:1fr}}</style>
+<Layout title={`标签：${tag}`} description={`标签「${tag}」下的全部文章。`}>
+  <header class="page-hero container">
+    <p class="eyebrow">TAG · {posts.length} ENTRIES</p>
+    <h1 class="page-title">#{tag}</h1>
+    <p class="lede">同一个关键词连接起来的文章。</p>
+  </header>
+  <!-- 标签页是完整枚举，不做降权：读者点进来就是要看全部。 -->
+  <section class="container tag-posts">
+    <PostList posts={posts} headingLevel="h2" emptyText="这个标签下暂时还没有文章。" />
+  </section>
+</Layout>
+<style>
+  .tag-posts {
+    padding-bottom: 120px;
+  }
+</style>

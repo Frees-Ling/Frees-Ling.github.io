@@ -42,6 +42,10 @@ jobs:
       - name: Check design tokens
         run: npm run check:tokens
 
+      # frontmatter 人工字段的合法性：section / lang / category / updated
+      - name: Check content contract
+        run: npm run check:content
+
       - name: Type and Astro check
         run: npm run check
 

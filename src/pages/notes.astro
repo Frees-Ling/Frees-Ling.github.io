@@ -1,10 +1,45 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
-import PostCard from '../components/PostCard.astro';
-import { byNewest } from '../utils/posts';
-const personalIds=['lovev10','meeting','thinking','index'];
-const posts=(await getCollection('posts',({data})=>!data.draft)).filter((post)=>personalIds.includes(post.id.replace(/\.(md|mdx)$/i,''))).sort(byNewest);
+import PostList from '../components/PostList.astro';
+import { getAllPosts, getBySection } from '../utils/posts-query';
+
+// 归属由 src/data/sections.ts 决定，不再有一篇文章 id 的白名单：
+// 之前那份白名单（lovev10 / meeting / thinking / index）写错了一个 id
+// —— `LOVEv1.0` 经 glob loader 规范化后是 `lovev10`，能对上纯属巧合，
+// 而真正属于随笔的 competition-write 与 code-for-py3.10 反而进不来。
+const posts = getBySection(await getAllPosts(), 'notes');
 ---
-<Layout title="随笔" description="生活、相遇、思考与未被分类的私人记录。"><header class="page-hero container"><p class="eyebrow">PERSONAL NOTES</p><h1 class="page-title">无法归类的，<br />也值得被认真保存。</h1><p class="lede">这里离技术稍远一点，离真实的生活更近一点。</p></header><section class="container notes-grid">{posts.map((post,index)=><PostCard post={post} featured={index===0}/>)}</section><section class="container note-promise"><p>更多片段会在合适的时候出现。写作不是按时交付，而是对某个瞬间保持诚实。</p></section></Layout>
-<style>.notes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.note-promise{padding:80px 0 120px;text-align:center}.note-promise p{max-width:620px;margin:auto;color:var(--ink-soft);font-family:Georgia,"Songti SC",serif;font-size:clamp(24px,3vw,34px)}@media(max-width:900px){.notes-grid{grid-template-columns:1fr}}</style>
+<Layout title="随笔" description="生活、相遇、思考与未被分类的私人记录。">
+  <header class="page-hero container">
+    <p class="eyebrow">PERSONAL NOTES · {posts.length} ENTRIES</p>
+    <h1 class="page-title">无法归类的，<br />也值得被认真保存。</h1>
+    <p class="lede">这里离技术稍远一点，离真实的生活更近一点。</p>
+  </header>
+  <section class="container notes-grid">
+    <PostList
+      posts={posts}
+      splitSubstance
+      thinLabel="短记录"
+      emptyText="这个栏目还没有文章。"
+    />
+  </section>
+  <section class="container note-promise">
+    <p>更多片段会在合适的时候出现。写作不是按时交付，而是对某个瞬间保持诚实。</p>
+  </section>
+</Layout>
+<style>
+  .notes-grid {
+    padding-bottom: 20px;
+  }
+  .note-promise {
+    padding: 80px 0 120px;
+    text-align: center;
+  }
+  .note-promise p {
+    max-width: 620px;
+    margin: auto;
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3vw, 34px);
+  }
+</style>

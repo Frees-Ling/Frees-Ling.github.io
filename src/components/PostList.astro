@@ -1,0 +1,349 @@
+---
+/**
+ * 文章列表编排器 —— 全站唯一的列表渲染实现。
+ *
+ * 此前 6 个页面各写一份列表（首页 / /blog/ / /archive/ / /tags/ / /notes/ / /research/），
+ * 同一个「两列网格 + 首篇跨列」的规则复制了 5 遍，
+ * 每份都带一个自己的 900px 媒体查询 —— 改一处不会影响其余五处。
+ *
+ * 差异用**正交**的三个维度表达，而不是六个页面：
+ *   variant   card / row / index   —— 呈现形态：卡片、发丝线表格行、编号索引
+ *   density   comfortable / compact —— 同一形态下的疏密
+ *   lead      首篇是否放大
+ *
+ * 「短记录」的处理见 utils/posts-query.ts 的 SUBSTANCE_MIN 说明：
+ * 降权到列表末尾并标注，不隐藏。
+ */
+import PostCard from './PostCard.astro';
+import { buildListModel, isThin } from '../utils/posts-query';
+import {
+  formatDate,
+  formatShortDate,
+  normalizeCategory,
+  postHref,
+  type Post,
+} from '../utils/posts';
+
+interface Props {
+  posts: Post[];
+  /** 呈现形态 */
+  variant?: 'card' | 'row' | 'index';
+  density?: 'comfortable' | 'compact';
+  /** 首篇放大（仅 card 形态） */
+  lead?: boolean;
+  /** 卡片标题层级：列表页在 h1 之下用 h2，首页在 section 的 h2 之下用 h3 */
+  headingLevel?: 'h2' | 'h3';
+  /** 按年份分组（仅 row 形态），组内保持传入顺序 */
+  groupBy?: 'none' | 'year';
+  /** 把短记录降权到末尾并标注 */
+  splitSubstance?: boolean;
+  /** 短记录分组的标题；留空则只降权不标注 */
+  thinLabel?: string;
+  /** 空内容时的诚实文案。留空则整段不渲染 */
+  emptyText?: string;
+  /** 为每项加 data-category，供页面上的筛选岛读取 */
+  filterable?: boolean;
+  /** index 形态的起始编号（例如首页从第 4 条开始，编号接着前面的卡片走） */
+  numberFrom?: number;
+  /**
+   * index 形态的编号计算方式。默认从 numberFrom 递减。
+   * 需要「条目在完整日志里的序号」时由页面传入 ——
+   * 那种编号不该随列表被筛选或重排而变化。
+   */
+  numberFor?: (post: Post) => string;
+}
+
+const {
+  posts,
+  variant = 'card',
+  density = 'comfortable',
+  lead = false,
+  headingLevel = 'h3',
+  groupBy = 'none',
+  splitSubstance = false,
+  thinLabel = '',
+  emptyText = '',
+  filterable = false,
+  numberFrom,
+  numberFor,
+} = Astro.props;
+
+// 分组与降权的推导在查询层（buildListModel），组件只负责呈现。
+const { groups, thin: thinPosts } = buildListModel(posts, {
+  groupBy,
+  splitSubstance,
+});
+const mainPosts = groups.flatMap((group) => group.posts);
+const firstNumber = numberFrom ?? mainPosts.length;
+const categoryOf = (post: Post) => normalizeCategory(post.data.category);
+---
+
+{
+  mainPosts.length === 0 && emptyText ? (
+    <p class="list-empty">{emptyText}</p>
+  ) : (
+    groups.map((group) => (
+      <div class:list={['list-group', { 'list-group-split': Boolean(group.label) }]}>
+        {group.label && <h2 class="group-year">{group.label}</h2>}
+        {variant === 'card' ? (
+          <div class:list={['grid', `grid-${density}`, { lead }]}>
+            {group.posts.map((post, index) => (
+              <div
+                class="grid-item"
+                data-category={filterable ? categoryOf(post) : undefined}
+              >
+                <PostCard
+                  post={post}
+                  featured={lead && index === 0}
+                  headingLevel={headingLevel}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ol class:list={['rows', `rows-${density}`, `rows-${variant}`]}>
+            {group.posts.map((post, index) => (
+              <li data-category={filterable ? categoryOf(post) : undefined}>
+                <a href={postHref(post)}>
+                  {variant === 'index' && (
+                    <span class="row-no">
+                      {numberFor
+                        ? numberFor(post)
+                        : String(firstNumber - index).padStart(3, '0')}
+                    </span>
+                  )}
+                  <time datetime={post.data.published.toISOString()}>
+                    {group.label
+                      ? formatShortDate(post.data.published)
+                      : formatDate(post.data.published)}
+                  </time>
+                  <span class="row-title">
+                    {post.data.title}
+                    {isThin(post) && <em class="row-thin">短记录</em>}
+                  </span>
+                  {variant === 'row' && (
+                    <span class="row-category">{categoryOf(post)}</span>
+                  )}
+                  <span class="row-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    ))
+  )
+}
+
+{
+  thinPosts.length > 0 && (
+    <div class="list-thin">
+      {thinLabel && <p class="eyebrow">{thinLabel}</p>}
+      <ol class:list={['rows', 'rows-compact', 'rows-plain']}>
+        {thinPosts.map((post) => (
+          <li data-category={filterable ? categoryOf(post) : undefined}>
+            <a href={postHref(post)}>
+              <time datetime={post.data.published.toISOString()}>
+                {formatDate(post.data.published)}
+              </time>
+              <span class="row-title">{post.data.title}</span>
+              <span class="row-arrow" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+<style>
+  /* ── card ────────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  /* 首篇跨满整行。取 2 篇时右侧会留半格空白，所以调用方需要按 3 的倍数给。 */
+  .grid.lead .grid-item:first-child {
+    grid-column: span 2;
+  }
+  .grid-item > :global(article) {
+    height: 100%;
+  }
+  .grid-item[hidden] {
+    display: none;
+  }
+  .grid-compact {
+    gap: 12px;
+  }
+
+  /* ── row / index（发丝线表格行，全站列表的基本单位）── */
+  /* 有年份标签时用「左栏年份 + 右栏行」的双栏结构，年份随滚动吸附。
+     吸附位置必须避开固定 masthead，否则年份会被压到 header 下面。 */
+  .list-group-split {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 40px;
+    padding: 42px 0;
+    border-top: 1px solid var(--line);
+  }
+  .list-group-split .rows {
+    border-top: none;
+  }
+  .group-year {
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+    align-self: start;
+    margin: 0;
+    color: var(--signal-text);
+    font-family: var(--font-display);
+    font-size: 50px;
+    font-weight: 500;
+  }
+  .rows {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .rows li {
+    border-bottom: 1px solid var(--line);
+  }
+  .rows li[hidden] {
+    display: none;
+  }
+  .rows a {
+    display: grid;
+    align-items: baseline;
+    gap: 20px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .rows-comfortable a {
+    padding: 15px 0;
+  }
+  .rows-compact a {
+    padding: 10px 0;
+  }
+
+  /* index：编号 + 日期 + 标题 */
+  .rows-index a {
+    grid-template-columns: 48px 128px minmax(0, 1fr) 24px;
+  }
+  .row-no {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  /* row：日期 + 标题 + 分类 */
+  .rows-row a {
+    grid-template-columns: 110px minmax(0, 1fr) 80px 24px;
+    padding: 18px 0;
+  }
+
+  /* plain：短记录分组用 —— 只有日期、标题、箭头，没有编号列。
+     必须单独定义栅格：直接套用 .rows-index 的四列会让日期落进 48px 那一列，
+     折成三行，标题也被挤进 128px 的编号列。 */
+  .rows-plain a {
+    grid-template-columns: 128px minmax(0, 1fr) 24px;
+  }
+  .row-category {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .rows time {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .row-title {
+    color: var(--ink);
+    font-size: 16px;
+  }
+  .row-thin {
+    margin-left: 10px;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-style: normal;
+    letter-spacing: 0.08em;
+  }
+  .row-arrow {
+    justify-self: end;
+    color: var(--signal-text);
+    transition: transform 140ms ease;
+  }
+  .rows a:hover .row-arrow {
+    transform: translate(3px, -3px);
+  }
+  .rows a:hover .row-title {
+    color: var(--accent-text);
+  }
+
+  /* ── 短记录分组 ───────────────────────────────────────── */
+  .list-thin {
+    margin-top: 44px;
+  }
+  .list-thin .eyebrow {
+    margin: 0 0 12px;
+  }
+
+  .list-empty {
+    margin: 0;
+    padding: 64px 0;
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  /* ── 移动端：独立构图，不是桌面压缩 ── */
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .grid.lead .grid-item:first-child {
+      grid-column: auto;
+    }
+    .list-group-split {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+      padding: 32px 0;
+    }
+    .group-year {
+      position: static;
+      font-size: 38px;
+    }
+    .rows-index a {
+      grid-template-columns: 42px minmax(0, 1fr) 20px;
+      gap: 8px 14px;
+      align-items: start;
+    }
+    .rows-index time {
+      grid-row: 2;
+      grid-column: 2;
+    }
+    .rows-index .row-title {
+      grid-column: 2;
+    }
+    .rows-index .row-arrow {
+      grid-row: 1 / span 2;
+    }
+    .rows-row a {
+      grid-template-columns: 80px minmax(0, 1fr) 20px;
+    }
+    .rows-row .row-category {
+      display: none;
+    }
+    .rows-plain a {
+      grid-template-columns: 84px minmax(0, 1fr) 20px;
+      gap: 12px;
+    }
+  }
+</style>

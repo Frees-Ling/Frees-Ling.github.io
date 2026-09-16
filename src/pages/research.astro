@@ -1,10 +1,95 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
-import PostCard from '../components/PostCard.astro';
+import PostList from '../components/PostList.astro';
 import { researchTracks } from '../data/site';
-import { byNewest, normalizeTags } from '../utils/posts';
-const posts=(await getCollection('posts',({data})=>!data.draft)).filter((post)=>normalizeTags(post.data.tags).some((tag)=>['AI','Transformer','机器学习','YOLO','计算机视觉','Unitree Go2','机器人'].includes(tag))).sort(byNewest).slice(0,4);
+import { getAllPosts, getBySection } from '../utils/posts-query';
+
+// 归属由 src/data/sections.ts 决定，不再有标签白名单，也不再 .slice(0, 4) ——
+// 硬截断会让第 5 篇之后的研究记录在栏目页上永远不可见，而它们本来就在那里。
+const posts = getBySection(await getAllPosts(), 'research');
 ---
-<Layout title="研究" description="AI、决策系统、机器学习与机器人研究记录。"><header class="page-hero container"><p class="eyebrow">RESEARCH NOTEBOOK</p><h1 class="page-title">先寻找证据，<br />再给出结论。</h1><p class="lede">这是研究过程的公开部分：问题、实验、失败和仍未验证的想法会被明确地区分。</p></header><section class="container tracks">{researchTracks.map((track)=><article><span>{track.index}</span><div><p>{track.state}</p><h2>{track.title}</h2><p>{track.text}</p></div></article>)}</section><section class="section container"><div class="section-header"><div><p class="eyebrow">RELATED WRITING</p><h2 class="section-title">研究相关记录</h2></div><p>从入门实践到长篇推演，保留理解发生变化的全过程。</p></div><div class="research-posts">{posts.map((post)=><PostCard post={post}/>)}</div></section></Layout>
-<style>.tracks{padding-bottom:100px}.tracks article{display:grid;grid-template-columns:80px 1fr;gap:30px;padding:36px 0;border-top:1px solid var(--line)}.tracks>article>span{color:var(--signal-text);font-family:Georgia,serif;font-size:42px}.tracks article div>p:first-child{margin:0;color:var(--accent-text);font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase}.tracks h2{margin:12px 0 8px;font-family:Georgia,"Songti SC",serif;font-size:clamp(30px,4vw,48px);font-weight:500}.tracks h2+ p{max-width:680px;margin:0;color:var(--ink-soft)}.research-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}@media(max-width:900px){.research-posts{grid-template-columns:1fr}.tracks article{grid-template-columns:48px 1fr}}</style>
+<Layout title="研究" description="AI、决策系统、机器学习与机器人研究记录。">
+  <header class="page-hero container">
+    <p class="eyebrow">RESEARCH NOTEBOOK · {posts.length} ENTRIES</p>
+    <h1 class="page-title">先寻找证据，<br />再给出结论。</h1>
+    <p class="lede">这是研究过程的公开部分：问题、实验、失败和仍未验证的想法会被明确地区分。</p>
+  </header>
+  <section class="container tracks">
+    {
+      researchTracks.map((track) => (
+        <article>
+          <span>{track.index}</span>
+          <div>
+            <p>{track.state}</p>
+            <h2>{track.title}</h2>
+            <p>{track.text}</p>
+          </div>
+        </article>
+      ))
+    }
+  </section>
+  <section class="section container">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">RELATED WRITING</p>
+        <h2 class="section-title">研究相关记录</h2>
+      </div>
+      <p>从入门实践到长篇推演，保留理解发生变化的全过程。</p>
+    </div>
+    <PostList
+      posts={posts}
+      headingLevel="h2"
+      splitSubstance
+      thinLabel="短记录"
+      emptyText="这个栏目还没有文章。"
+    />
+    <p class="research-more">
+      <a class="text-link" href="/archive/">在归档里看全部记录</a>
+    </p>
+  </section>
+</Layout>
+<style>
+  .tracks {
+    padding-bottom: 100px;
+  }
+  .tracks article {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 30px;
+    padding: 36px 0;
+    border-top: 1px solid var(--line);
+  }
+  .tracks > article > span {
+    color: var(--signal-text);
+    font-family: var(--font-display);
+    font-size: 42px;
+  }
+  .tracks article div > p:first-child {
+    margin: 0;
+    color: var(--accent-text);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .tracks h2 {
+    margin: 12px 0 8px;
+    font-family: var(--font-display);
+    font-size: clamp(30px, 4vw, 48px);
+    font-weight: 500;
+  }
+  .tracks h2 + p {
+    max-width: 680px;
+    margin: 0;
+    color: var(--ink-soft);
+  }
+  .research-more {
+    margin: 40px 0 0;
+    text-align: right;
+  }
+  @media (max-width: 900px) {
+    .tracks article {
+      grid-template-columns: 48px minmax(0, 1fr);
+    }
+  }
+</style>

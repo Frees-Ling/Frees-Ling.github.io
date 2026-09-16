@@ -131,12 +131,73 @@ Commit：本文件所在提交。
 
 ### WEB-008 — 列表与栏目数据化
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: W1/W4
 - Priority: P1
 - Depends-On: WEB-007
 
 Acceptance：Work/Notes/Archive 使用统一编排器；无文章标题白名单；人工内容字段可验证；空内容诚实降权。
+
+Objective：收敛 6 处各自实现的文章列表，让栏目由数据驱动，短内容诚实降权而非隐藏。
+
+Evidence：
+
+**① 统一编排器** —— 新增 `src/components/PostList.astro`，差异由三个正交维度表达
+（`variant` card/row/index × `density` × `lead` + `groupBy`），替代了此前分散在
+首页、`/blog/`、`/archive/`、`/tags/`、`/notes/`、`/research/` 的 6 份实现。
+其中「两列网格 + 首篇跨列」这条规则此前被复制 5 遍，每份带一个自己的 900px 媒体查询。
+
+**② 取数层** —— 新增 `src/utils/posts-query.ts`（`getAllPosts` / `getLatest` /
+`getByYear` / `getByTag` / `getAllTags` / `getBySection` / `splitBySubstance` /
+`buildListModel`），页面不再各自 `getCollection` + 各自排序。
+
+**③ 栏目数据化** —— 新增 `src/data/sections.ts`，删掉两处硬编码白名单：
+
+- `notes.astro` 的文章 id 白名单 `['lovev10','meeting','thinking','index']`
+- `research.astro` 的标签白名单 + `.slice(0, 4)`
+
+后者让第 5 篇之后的研究记录**在任何栏目页都不可见**，而它们本来就在内容集合里。
+现在栏目为 8 / 5 篇，全部来自真实数据。
+
+**④ 人工内容字段可验证** —— schema 新增可选 `section`（人工覆盖归属，优先级高于标签推断）；
+新增 `scripts/check-content.mjs`，接入 `npm run check:content`、`quality.yml`
+与 `stop-commit.sh` 的 CHECKS。它拦下三类**原本完全静默**的错误：
+`section` 拼写错误、`updated` 早于 `published`、`sections.ts` 里声明了不存在的标签。
+未归入任何栏目的文章会以警告列出（当前 4 篇），不隐藏。
+
+**⑤ 空内容诚实降权** —— `SUBSTANCE_MIN = 600`，取自 17 篇去代码块后的真实断层
+（555 与 751 之间）。降权到列表末尾并标注「短记录」，**不隐藏** ——
+URL、SEO 与外链都保留。归档页不重排（年份是它的契约），只在行内标注。
+
+本任务中发现并修复的缺陷：
+
+1. **`thinking.md` 从所有栏目页消失** —— 它的 `category` 是显式空串 `''`，
+   而 `normalizeCategory` 把空串与 `daily` 一起映射成「生活」。
+   一篇 3800 字的文章因此不在任何栏目里，且没有任何提示。
+   已改为空串与「缺失」同义（schema 默认即随笔），只有 `thinking` 一篇受影响。
+2. **短记录分组栅格列错位** —— 该分组没有编号列，却沿用了四列的 `rows-index` 定义，
+   日期被挤进 48px 列折成三行、标题被压进 128px 列。第一轮视觉 QA 发现，已单独定义 `rows-plain`。
+3. **`PostList` 的属性类型检查完全失效** —— 组件 frontmatter 过长时，
+   Astro 静默放弃 `Props` 解析，`Astro.props` 退化为 `Record<string, any>`，
+   于是页面传入非法道具不会被发现。已把派生逻辑移入查询层修复，见 ADR-015。
+
+附带修正（WEB-007 记录的遗留项）：`about` 头像、文章页许可徽章与上下篇导航、
+SoundLab 面板的卡片式圆角改为 `var(--radius)` / `var(--radius-sm)`。
+保留两处**具象**圆形：SoundLab 的唱片封面与 `history` 里浏览器 mock 的交通灯 ——
+它们是所描绘的对象本身，不是圆角卡片语言。
+
+验证：
+
+- 8 项命令全部通过：`format:check`、`lint`、`lint:md`、`check:tokens`、
+  `check:content`、`check`、`build`、`check:html`。
+- 浏览器门禁：16 路由 × 7 视口，对比度 0 失败、横向溢出 0、键盘干净、控制台 0 错误。
+- `npm run a11y`：axe-core 0 违规；键盘走查无不可见元素获得焦点。
+- 三轮视觉 QA：结构（短记录列错位）、层级/模板感（移动端独立构图）、
+  一致性（浅色主题卡片、直角语言）。
+- 首页 CWV 7 视口：LCP 48–72ms、CLS 0.0000、TBT 0ms。
+- 截图存于 `_backups/shots/web008-r1/` 与 `web008-r2/`。
+
+Commit：本文件所在提交。
 
 ### RENDER-001 — 文章渲染器审计与契约
 

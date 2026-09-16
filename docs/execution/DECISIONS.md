@@ -88,3 +88,29 @@
   `studio` / `sqlite` / `webdav` 的检索命中全部来自规划文档。
   需求中「在现有 Frees Studio 基础上扩展」的前提在当前代码库并不成立。
   测试夹具与模拟实现不能替代真实系统验证。
+
+## ADR-014 — 栏目归属由数据决定，空分类与缺失同义
+
+- Status: Accepted
+- Decision: 栏目归属（`src/data/sections.ts` + `src/utils/posts-query.ts`）按
+  「人工字段 `section` > 归一化分类 > 标签」的优先级推断；
+  分类为空串时归一为「随笔」，与「未填写」同义。
+- Reason: 原先 `/notes/` 用文章 id 白名单、`/research/` 用标签白名单，
+  新增文章不会出现在任何栏目页；`research.astro` 的 `.slice(0,4)` 更让第 5 篇
+  之后永久不可见。而 `normalizeCategory` 曾把空串与 `daily` 一起映射为「生活」，
+  导致 `thinking.md`（3800 字，category 为空串）同时从两个栏目页消失且无任何提示。
+  白名单里的 id 与实际 id 不一致（`lovev10` 对 `LOVEv1.0`）也不会有提示。
+
+## ADR-015 — 组件 frontmatter 保持薄，派生逻辑放查询层
+
+- Status: Accepted
+- Decision: `.astro` 组件的 frontmatter 只做「取 props + 调一个模型函数 + 渲染」。
+  分组、降权、排序一类推导一律放进 `src/utils/`。
+- Reason: 2026-09-16 实测 —— 当 `PostList.astro` 的 frontmatter 同时含有较长的
+  `interface Props` 与较长的派生逻辑时，Astro **静默放弃** `Props` 解析：
+  `Astro.props` 退化为 `Record<string, any>`，`Props` 被报为未使用，
+  并且**调用点传入非法道具不再被 `astro check` 捕获**
+  （实测 `variant="bogus"` 与未知道具均通过检查）。
+  二分定位到是 frontmatter 规模而非某个具体语法：截短接口体或截掉尾部推导
+  任一者都能恢复解析。把推导移入 `buildListModel()` 后，hint 消失且属性检查恢复。
+  这类失效没有错误信息，只能靠「故意传一个非法道具」来发现。

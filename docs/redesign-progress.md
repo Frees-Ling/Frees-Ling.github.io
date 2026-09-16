@@ -43,7 +43,6 @@
 | **P7** | 五区导航与栏目落地 | 🟡 Chrome 已落地，数据化栏目待完成 |
 | **P8** | 放宽 `.prettierignore` | ⬜ 最后执行，前置条件未满足 |
 | **WEB-007** | 首页编辑化重构 | ✅ 完成 |
-| 下一步 | WEB-008 列表与栏目数据化 | READY |
 
 ---
 
@@ -467,3 +466,23 @@ Protocol error (Page.captureScreenshot): Page is too large.
 | 2026-09-16 | 截图用 `puppeteer-core` 而非纯 CLI | CLI 的整页方案会被 `100svh` 破坏 |
 | 2026-09-16 | 不用 `astro preview` 作截图服务 | 守护进程化，kill 不干净 |
 | 2026-09-16 | 不装 `prettier-plugin-astro` 之类的额外格式化依赖 | 新样式改用正常多行格式后，Prettier 原生即可覆盖 |
+
+### WEB-008 列表与栏目数据化（完成）
+
+详见 `docs/execution/TASKS.md` 的 WEB-008 Evidence。要点：
+
+- 6 处列表实现收敛为 `PostList.astro` 单一编排器，差异由
+  `variant`(card/row/index) × `density` × `lead` 三个正交维度表达。
+- 新增 `src/utils/posts-query.ts` 取数层与 `src/data/sections.ts` 栏目定义；
+  删除 `notes.astro` 的文章 id 白名单与 `research.astro` 的标签白名单 + `.slice(0,4)`。
+- 新增 `scripts/check-content.mjs`（`npm run check:content`），
+  校验人工 frontmatter 字段：`section` 合法性、`updated >= published`、
+  `sections.ts` 中标签的真实存在性。
+- `SUBSTANCE_MIN = 600` 实现空内容诚实降权：排到末尾并标注「短记录」，不隐藏。
+- 三轮视觉 QA 发现并修复短记录分组栅格列错位；
+  ADR-014 记录空分类归一的修正，ADR-015 记录 Astro 静默放弃 `Props` 解析的陷阱。
+
+| 项 | 状态 |
+| --- | --- |
+| **WEB-008** | 列表与栏目数据化 | ✅ 完成 |
+| 下一步 | RENDER-001 文章渲染器审计与契约 | READY |

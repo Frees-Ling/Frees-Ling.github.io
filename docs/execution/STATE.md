@@ -4,15 +4,15 @@ Updated: 2026-09-16
 
 Branch: `main`
 
-Verified starting HEAD: `a21c093` (`docs: 建立长期计划真相源避免需求漂移`)
+Verified starting HEAD: `b120946`（`首页编辑化重构：首屏改为身份区，建立编辑物结构`）
 
 ## Current phase
 
-W1 — FIELD LOG public-site completion
+W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-WEB-008 — 列表与栏目数据化
+RENDER-001 — 文章渲染器审计与契约
 
 ## Last known implementation state
 
@@ -21,17 +21,18 @@ WEB-008 — 列表与栏目数据化
 - 记忆与密钥的增量需求已并入现有计划（`a21c093`），三个缺口补为 MEM-001 / ARCH-001 / ACCESS-001。
 - 站点 chrome 已是 FIELD LOG 语言：masthead + colophon，无圆形徽章 / 光晕 / 胶囊。
 - 首页已按 Identity → Work → Writing → Notes → Signal 重构（WEB-007 DONE），首屏可答 Who/What/Why。
+- 列表已收敛为单一编排器 PostList，栏目由 `src/data/sections.ts` 驱动，无硬编码白名单（WEB-008 DONE）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。
 
 ## Current objective
 
-收敛四套文章列表实现，使 Work / Notes / Archive 共用统一编排器，
-并让栏目数据驱动、空内容诚实降权。
+确定文章渲染器的语义节点、样式责任与 Studio 复用边界，
+产出 fixture 集与兼容策略，为 Transformer 分章迁移做准备。
 
 ## Next READY task
 
-RENDER-001 — 文章渲染器审计与契约（依赖 WEB-006，已满足）。
+RENDER-002 — Transformer 枢纽/分章迁移设计（依赖 RENDER-001）。
 
 ## Blockers / human decisions
 
@@ -46,3 +47,5 @@ RENDER-001 — 文章渲染器审计与契约（依赖 WEB-006，已满足）。
 - 三类 WebDAV：Public / Collection / Security。
 - R2/Cloudflare Images 不是必需依赖，先做供应商能力研究。
 - 公开批注允许发布；OTP 只认证、不加密。
+- 栏目归属以数据决定，人工 `section` 字段优先于标签推断（ADR-014）。
+- 组件 frontmatter 保持薄，派生逻辑放 `src/utils/`（ADR-015）。
