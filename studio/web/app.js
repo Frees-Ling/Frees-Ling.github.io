@@ -186,14 +186,14 @@ refresh()
 const chat = { conversations: [], current: null, status: 'unknown' };
 
 function setTab(which) {
-  const isChat = which === 'chat';
-  $('view-notes').hidden = isChat;
-  $('view-chat').hidden = !isChat;
-  $('tab-notes').setAttribute('aria-current', String(!isChat));
-  $('tab-chat').setAttribute('aria-current', String(isChat));
-  $('search-form').closest('search').hidden = isChat;
-  $('new').hidden = isChat;
-  if (isChat) checkModel();
+  for (const name of ['notes', 'chat', 'memory']) {
+    $(`view-${name}`).hidden = name !== which;
+    $(`tab-${name}`).setAttribute('aria-current', String(name === which));
+  }
+  const isNotes = which === 'notes';
+  $('search-form').closest('search').hidden = !isNotes;
+  $('new').hidden = !isNotes;
+  if (which === 'chat') checkModel();
 }
 
 async function checkModel() {
@@ -376,3 +376,128 @@ $('prompt').addEventListener('keydown', (e) => {
 });
 
 refreshConversations().catch(() => {});
+
+// ─────────────────────────── 记忆审核 ───────────────────────────
+//
+// 三层模型的要点是「AI 提取的结论必须经人工确认」。
+// 这个界面就是那个确认动作的落点 —— 没有它，pending 记忆只能通过
+// API 批准，等于核心约束在实践中被绕过。
+
+const memory = { list: [], status: 'pending' };
+
+function renderMemories() {
+  const box = $('memories');
+  box.replaceChildren();
+  $('mem-status').textContent =
+    memory.status === 'pending'
+      ? `${memory.list.length} 条待审核 —— 确认后才会进入检索`
+      : `${memory.list.length} 条已确认`;
+
+  if (memory.list.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'placeholder';
+    p.textContent =
+      memory.status === 'pending'
+        ? '没有待审核的记忆。'
+        : '还没有已确认的记忆。';
+    box.append(p);
+    return;
+  }
+
+  for (const m of memory.list) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg';
+
+    const body = document.createElement('p');
+    body.className = 'msg-body';
+    body.textContent = m.content;
+
+    const meta = document.createElement('span');
+    meta.className = 'msg-role';
+    meta.textContent = [
+      `置信度 ${Math.round((m.confidence ?? 0) * 100)}%`,
+      m.reviewed_at ? `审核于 ${fmt(m.reviewed_at)}` : null,
+    ]
+      .filter(Boolean)
+      .join('　');
+
+    wrap.append(meta, body);
+
+    if (memory.status === 'pending') {
+      const actions = document.createElement('div');
+      actions.className = 'msg-actions';
+
+      for (const [label, decision, cls] of [
+        ['确认', 'approved', 'btn primary'],
+        ['驳回', 'rejected', 'btn'],
+      ]) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = cls;
+        btn.textContent = label;
+        btn.addEventListener('click', () => reviewMemory(m.id, decision));
+        actions.append(btn);
+      }
+      // 来源链：这条结论是从哪来的
+      const src = document.createElement('button');
+      src.type = 'button';
+      src.className = 'btn';
+      src.textContent = '查看来源';
+      src.addEventListener('click', () => showProvenance(m.id, wrap));
+      actions.append(src);
+
+      wrap.append(actions);
+    }
+
+    box.append(wrap);
+  }
+}
+
+async function loadMemories(status = memory.status) {
+  memory.status = status;
+  $('mem-pending').setAttribute('aria-current', String(status === 'pending'));
+  $('mem-approved').setAttribute('aria-current', String(status === 'approved'));
+  const { memories } = await api(`/api/memories?status=${status}`);
+  memory.list = memories;
+  renderMemories();
+}
+
+async function reviewMemory(id, decision) {
+  try {
+    await api(`/api/memories/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ decision }),
+    });
+    await loadMemories();
+  } catch (error) {
+    $('mem-status').textContent = `操作失败：${error.message}`;
+  }
+}
+
+async function showProvenance(id, container) {
+  const prov = await api(`/api/memories/${id}/provenance`);
+  const box = document.createElement('div');
+  box.className = 'provenance';
+
+  const lines = [];
+  if (prov.message) {
+    lines.push(`来自对话「${prov.message.conversation_title || '未命名'}」`);
+  }
+  if (prov.archive) lines.push(`来自档案 ${prov.archive.source}`);
+  if (prov.notes.length) {
+    lines.push(`关联笔记：${prov.notes.map((n) => n.title).join('、')}`);
+  }
+  if (lines.length === 0) lines.push('这条记忆没有记录来源。');
+
+  box.textContent = lines.join('　·　');
+  container.append(box);
+}
+
+$('tab-memory').addEventListener('click', () => {
+  setTab('memory');
+  loadMemories().catch((e) => {
+    $('mem-status').textContent = e.message;
+  });
+});
+$('mem-pending').addEventListener('click', () => loadMemories('pending'));
+$('mem-approved').addEventListener('click', () => loadMemories('approved'));

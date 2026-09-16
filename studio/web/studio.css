@@ -321,3 +321,20 @@ body {
   font: inherit;
   resize: vertical;
 }
+
+.provenance {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.chat-new {
+  display: flex;
+  gap: 8px;
+}
+.chat-new .btn[aria-current='true'] {
+  border-color: var(--primary);
+  color: var(--accent-text);
+}

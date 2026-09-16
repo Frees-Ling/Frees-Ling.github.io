@@ -18,6 +18,9 @@
         <button type="button" id="tab-chat" class="tab" aria-current="false">
           对话
         </button>
+        <button type="button" id="tab-memory" class="tab" aria-current="false">
+          记忆
+        </button>
       </nav>
       <!-- 用语义元素 <search> 而不是给 form 加 role="search" -->
       <search class="search">
@@ -112,6 +115,28 @@
           ></textarea>
           <button type="submit" class="btn primary" id="send">发送</button>
         </form>
+      </section>
+    </section>
+
+    <section class="layout memory" id="view-memory" hidden>
+      <nav class="list" aria-label="记忆筛选">
+        <div class="chat-new">
+          <button type="button" id="mem-pending" class="btn" aria-current="true">
+            待审核
+          </button>
+          <button type="button" id="mem-approved" class="btn">已确认</button>
+        </div>
+        <p class="empty">
+          待审核的记忆是 AI 从对话里提取的结论。<br />
+          它们<strong>不会</strong>进入检索，直到你确认。
+        </p>
+      </nav>
+
+      <section class="pane">
+        <div class="chat-head">
+          <span id="mem-status" class="status" role="status"></span>
+        </div>
+        <div id="memories" class="messages" aria-live="polite"></div>
       </section>
     </section>
 
