@@ -56,7 +56,6 @@ export const projects = [
     year: '2026',
     description: '围绕日麻决策、RankEV 与统计证据构建可复查的研究流程。',
     tags: ['AI', 'Decision Making', 'Mahjong'],
-    accent: 'cyan',
   },
   {
     name: 'Frees Blog',
@@ -65,7 +64,6 @@ export const projects = [
     year: '2026',
     description: '一座收纳技术文章、项目、音乐和生活片段的私人数字花园。',
     tags: ['Astro', 'Design', 'Writing'],
-    accent: 'coral',
   },
   {
     name: 'Computer Vision Notes',
@@ -74,7 +72,6 @@ export const projects = [
     year: '2025—2026',
     description: '从 YOLO 训练、数据标注到反馈图表分析的一组实践笔记。',
     tags: ['YOLO', 'Python', 'Vision'],
-    accent: 'violet',
   },
   {
     name: 'Robotics Playground',
@@ -83,7 +80,6 @@ export const projects = [
     year: '2026',
     description: '关于 Unitree Go2、控制系统与真实设备交互的实验记录。',
     tags: ['Robotics', 'Linux', 'Control'],
-    accent: 'lime',
   },
 ];
 
