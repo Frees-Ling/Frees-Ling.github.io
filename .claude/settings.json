@@ -6,6 +6,10 @@
       "Bash(npm run build *)",
       "Bash(npm run preview *)",
       "Bash(npm run check *)",
+      "Bash(npm run check:content *)",
+      "Bash(npm run check:tokens *)",
+      "Bash(npm run check:html *)",
+      "Bash(npm run check:secrets *)",
       "Bash(npm run lint *)",
       "Bash(npm run lint:fix *)",
       "Bash(npm run lint:md *)",
@@ -14,10 +18,39 @@
       "Bash(astro dev *)",
       "Bash(astro check *)",
       "Bash(astro build *)",
-      "Bash(astro preview *)"
+      "Bash(astro preview *)",
+      "Bash(node scripts/*)",
+      "Bash(git status *)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git rev-parse *)",
+      "Bash(git cat-file *)",
+      "Bash(git ls-files *)",
+      "Bash(sh scripts/automation/commit.sh *)",
+      "Bash(sips *)"
     ],
-    "ask": ["Bash(git push *)"],
-    "deny": ["Edit(/archives/**)", "Edit(/public/history/**)"]
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh pr create *)",
+      "Bash(gh release *)",
+      "Bash(gh workflow *)",
+      "Bash(npm publish *)"
+    ],
+    "deny": [
+      "Edit(/archives/**)",
+      "Write(/archives/**)",
+      "Edit(/public/history/**)",
+      "Write(/public/history/**)",
+      "Read(~/.ssh/id_*)",
+      "Read(~/.ssh/frees_blog_automation_ed25519)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git filter-branch *)",
+      "Bash(git rebase -i *)"
+    ]
   },
   "hooks": {
     "PreToolUse": [

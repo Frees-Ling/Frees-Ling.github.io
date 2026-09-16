@@ -14,6 +14,7 @@
     "check:html": "node scripts/check-html.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:content": "node scripts/check-content.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "lint:md": "markdownlint-cli2 --config .markdownlint.json 'src/content/posts/*.md'",

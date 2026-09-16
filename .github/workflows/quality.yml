@@ -46,6 +46,10 @@ jobs:
       - name: Check content contract
         run: npm run check:content
 
+      # 密钥形态与敏感路径（在提交之前拦住，历史里删除是没用的）
+      - name: Check for secrets
+        run: npm run check:secrets -- --all
+
       - name: Type and Astro check
         run: npm run check
 

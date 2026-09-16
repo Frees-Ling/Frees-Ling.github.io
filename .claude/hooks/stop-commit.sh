@@ -18,7 +18,7 @@ set -uo pipefail
 
 # 提交前必须全部通过的校验。若其中某个脚本不存在，提交同样会被跳过
 # （宁可漏提交，也不把未校验的改动写进历史）。
-CHECKS="format:check lint lint:md check check:tokens check:content"
+CHECKS="format:check lint lint:md check check:tokens check:content check:secrets"
 
 # 残留锁超过这个秒数即认为持有者已死
 LOCK_STALE_SECS=300
@@ -85,9 +85,12 @@ SHORTSTAT=$(git diff --cached --shortstat 2>/dev/null | sed 's/^ *//')
 # 本 hook 恰恰在没有人在场时触发，而 op-ssh-sign 需要应用解锁：
 # 锁定时会以 `error: 1Password: failed to fill whole buffer` 中断提交。
 # 自动化身份是独立的（Frees Blog Automation），不冒用个人签名。
+# 异常处理：自动化入口若失败（密钥校验拦下、密钥缺失、脚本被改坏），
+# 回退到默认 git 配置再试一次 —— 而不是让本轮改动悄悄留在工作区。
 COMMIT_SH="$REPO_ROOT/scripts/automation/commit.sh"
+COMMITTED=0
 if [ -f "$COMMIT_SH" ]; then
-  sh "$COMMIT_SH" -q -F - >/dev/null 2>&1 <<EOF
+  if sh "$COMMIT_SH" -q -F - >/dev/null 2>&1 <<EOF
 chore: 自动提交 ${COUNT} 个文件
 
 ${SHORTSTAT}
@@ -96,8 +99,13 @@ ${SHORTSTAT}
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>
 EOF
-else
-  # 自动化入口缺失时退回默认 git 配置（可能因 1Password 锁定时失败，属预期）
+  then
+    COMMITTED=1
+  fi
+fi
+
+if [ "$COMMITTED" -eq 0 ]; then
+  # 退路：默认 git 配置。1Password 锁定时这里会失败，属预期 —— 不重试、不报错。
   git commit -q -F - >/dev/null 2>&1 <<EOF
 chore: 自动提交 ${COUNT} 个文件
 

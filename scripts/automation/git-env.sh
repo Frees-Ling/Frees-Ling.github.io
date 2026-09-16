@@ -29,6 +29,23 @@ if [ ! -f "$AUTOMATION_KEY" ]; then
   return 1 2>/dev/null || exit 1
 fi
 
+# 私钥必须在仓库之外。放进仓库意味着它可能被 git add 进来 ——
+# check-secrets 会拦下，但这里再挡一层：签名脚本不该读仓库内的密钥。
+case "$(cd "$(dirname "$AUTOMATION_KEY")" && pwd)" in
+  "$(git rev-parse --show-toplevel 2>/dev/null)"*)
+    echo "✗ 拒绝使用位于仓库内的签名私钥" >&2
+    return 1 2>/dev/null || exit 1
+    ;;
+esac
+
+# 权限必须是 600。组或其他用户可读的私钥等于已经泄露。
+PERM=$(stat -f '%Lp' "$AUTOMATION_KEY" 2>/dev/null || stat -c '%a' "$AUTOMATION_KEY" 2>/dev/null)
+if [ "$PERM" != "600" ]; then
+  echo "✗ 签名私钥权限为 ${PERM}，应为 600" >&2
+  echo "  修正：chmod 600 $AUTOMATION_KEY" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
 # signingkey 必须是**私钥路径**，不能是公钥字符串。
 #
 # 实测：传公钥字符串（`ssh-ed25519 AAAA...`）会让 ssh-keygen 去 SSH agent 里找对应私钥，
