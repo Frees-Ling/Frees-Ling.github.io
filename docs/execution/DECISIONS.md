@@ -237,3 +237,23 @@
 - 验证: 用桩替换 `security` 重放锁定行为，红绿对照 ——
   旧版等满桩的时长并报「钥匙串中没有该条目」（原因说反），
   新版 3 秒看门狗触发、4 秒返回并报「读取钥匙串超时 —— 钥匙串很可能已锁定」。
+
+## ADR-021 — 凭证读取加看门狗；移除两条无效的 deny 规则
+
+- Status: Accepted
+- Decision:
+  ① `read-credential.sh` 对钥匙串读取加纯 POSIX 看门狗（默认 5 秒上限）；
+  ② 移除 `.claude/settings.json` 中 `Write(/archives/**)` 与 `Write(/public/history/**)`。
+- Reason ①: 实测钥匙串**锁定**时 `security find-generic-password` 会挂起约 **108 秒**
+  等待一个 GUI 弹窗，`security show-keychain-info` 同样挂起（17 秒，不能用作前置探测）。
+  无人值守下没有人能点弹窗，于是每次取凭证阻塞近两分钟 ——
+  表现为「卡住」而非「报错」，比直接失败更难诊断。
+  看门狗不依赖 macOS 上并不存在的 `timeout(1)`，用桩程序模拟挂起 30 秒验证：
+  2 秒内失败并明确提示「钥匙串很可能已锁定」与解锁命令。
+- Reason ②: 这两条规则是**空操作** —— Claude Code 启动时明确警告
+  「只有 Edit(path) 规则会被文件权限检查匹配，Edit 规则已覆盖所有文件编辑工具」。
+  移除前已验证保护边界不变：`Edit(/archives/**)` 与 `Edit(/public/history/**)` 仍在，
+  且 `protect-paths.sh` 钩子独立拦截两个目录（含路径穿越、大小写折叠、符号链接）。
+  两层保护都在，启动警告消失，差异仅限这两条。
+- 未声称: 完全无人值守。睡眠/重启后登录钥匙串会锁定且无法自行解锁；
+  屏幕锁定状态未验证。
