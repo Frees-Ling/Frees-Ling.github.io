@@ -42,5 +42,8 @@
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "overrides": {
+    "smol-toml": "^1.7.1"
   }
 }

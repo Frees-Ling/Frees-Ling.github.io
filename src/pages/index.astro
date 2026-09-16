@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import PostCard from '../components/PostCard.astro';
 import { nowItems, projects, site } from '../data/site';
-import { byNewest } from '../utils/posts';
+import { byNewest, formatDate } from '../utils/posts';
 
 const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(byNewest);
 const latest = posts.slice(0, 3);
@@ -18,11 +18,14 @@ const latest = posts.slice(0, 3);
         <p class="hero-intro">{site.description}<br />这里是凛风的个人空间，也是一个不会停止更新的实验场。</p>
         <div class="hero-actions"><a class="button primary" href="/blog/">开始阅读</a><a class="button" href="/about/">认识我</a></div>
       </div>
-      <div class="hero-orbit" aria-label="我的兴趣坐标">
-        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
-        <div class="core"><span>F</span><small>LING / 2026</small></div>
-        <span class="satellite sat-ai">AI</span><span class="satellite sat-code">CODE</span><span class="satellite sat-music">MUSIC</span><span class="satellite sat-life">LIFE</span>
-      </div>
+      <!-- 原先这里是 .hero-orbit：一个圆环 + 核心 + AI/CODE/MUSIC/LIFE 四卫星。
+           它是简报明令禁止的「发光球体 / 漂浮装饰」类元素 —— 信息量为零，
+           且占掉 hero 的整个右半。移除而非改造。 -->
+      <dl class="hero-facts">
+        <div><dt>RECORDING SINCE</dt><dd>2025</dd></div>
+        <div><dt>ENTRIES</dt><dd>{posts.length}</dd></div>
+        <div><dt>LAST LOGGED</dt><dd>{latest[0] ? formatDate(latest[0].data.published) : '—'}</dd></div>
+      </dl>
     </div>
     <div class="container hero-foot"><span>向下探索</span><span class="hero-line"></span><span>31.23° N · 121.47° E</span></div>
   </section>
@@ -70,19 +73,20 @@ const latest = posts.slice(0, 3);
   .display-title em { color:var(--signal-text); font-weight:500; }
   .hero-intro { max-width:660px; margin:34px 0 0; color:var(--ink-soft); font-size:clamp(18px,2vw,22px); }
   .hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:36px; }
-  .hero-orbit { position:relative; width:min(36vw,430px); aspect-ratio:1; justify-self:end; }
-  .orbit { position:absolute; inset:9%; border:1px solid var(--line); border-radius:50%; } .orbit-two { inset:24%; border-style:dashed; transform:rotate(23deg); }
-  .core { position:absolute; inset:37%; display:grid; place-items:center; border-radius:50%; background:var(--paper); color:var(--paper-ink); box-shadow:var(--shadow); } .core span{font-family:Georgia,serif;font-size:clamp(36px,5vw,64px);line-height:1}.core small{font-family:ui-monospace,monospace;font-size:8px;letter-spacing:.12em}
-  .satellite { position:absolute; padding:6px 10px; border:1px solid var(--line-strong); border-radius:999px; background:var(--canvas); color:var(--ink-soft); font-family:ui-monospace,monospace; font-size:10px; letter-spacing:.1em; }
-  .sat-ai{top:4%;left:45%}.sat-code{top:49%;right:-2%}.sat-music{bottom:7%;left:40%}.sat-life{top:45%;left:-2%}
+  /* 用真实数据取代装饰：记录起始年份、条目数、最后记录日期。
+     这些是真实的、可核对的元信息，而不是 AI/CODE/MUSIC/LIFE 这类标签云。 */
+  .hero-facts { display:grid; gap:0; align-self:end; margin:0; border-top:1px solid var(--line); }
+  .hero-facts > div { display:flex; align-items:baseline; justify-content:space-between; gap:20px; padding:16px 0; border-bottom:1px solid var(--line); }
+  .hero-facts dt { color:var(--ink-soft); font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; }
+  .hero-facts dd { margin:0; color:var(--ink); font-family:var(--font-mono); font-size:13px; letter-spacing:.04em; }
   .hero-foot { display:flex; align-items:center; gap:16px; color: var(--ink-soft); font-family:ui-monospace,monospace; font-size:10px; letter-spacing:.1em; } .hero-line{height:1px;flex:1;background:var(--line)}
   .post-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; } .section-action{margin-top:34px;text-align:right}
   .practice-section { background:var(--paper); color:var(--paper-ink); } .practice-section .eyebrow{color:var(--paper-ink)}.practice-section .section-header>p{color:var(--paper-ink)}
   .practice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:1px solid color-mix(in oklab, var(--paper-ink) 18%, transparent); }
   .practice-grid a { position:relative; min-height:240px; padding:32px 60px 32px 0; border-bottom:1px solid color-mix(in oklab, var(--paper-ink) 18%, transparent); color:inherit; text-decoration:none; } .practice-grid a:nth-child(odd){border-right:1px solid color-mix(in oklab, var(--paper-ink) 18%, transparent)}.practice-grid a:nth-child(even){padding-left:34px}
   .practice-grid span{font-family:ui-monospace,monospace;font-size:11px;color:var(--paper-ink)}.practice-grid h3{margin:40px 0 8px;font-family:Georgia,"Songti SC",serif;font-size:clamp(28px,4vw,44px);font-weight:500}.practice-grid p{margin:0;color:var(--paper-ink)}.practice-grid b{position:absolute;right:20px;bottom:32px;color:var(--paper-ink);font-size:24px;transition:180ms}.practice-grid a:hover b{transform:translate(4px,-4px)}
-  .project-list { border-top:1px solid var(--line); }.project-row { display:grid; grid-template-columns:54px 1fr 1.2fr 100px; align-items:center; gap:24px; padding:30px 0; border-bottom:1px solid var(--line); }.project-row p{margin:0;color:var(--ink-soft);font-size:14px}.project-row h3{margin:4px 0 0;font-family:Georgia,"Songti SC",serif;font-size:28px;font-weight:500}.project-no{font-family:ui-monospace,monospace;color: var(--ink-soft);font-size:11px}.project-state{justify-self:end;padding:5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink-soft);font-size:11px}.project-row.cyan h3{color:var(--accent-text)}.project-row.coral h3{color:var(--signal-text)}.project-row.violet h3{color:var(--ink)}
+  .project-list { border-top:1px solid var(--line); }.project-row { display:grid; grid-template-columns:54px 1fr 1.2fr 100px; align-items:center; gap:24px; padding:30px 0; border-bottom:1px solid var(--line); }.project-row p{margin:0;color:var(--ink-soft);font-size:14px}.project-row h3{margin:4px 0 0;font-family:Georgia,"Songti SC",serif;font-size:28px;font-weight:500}.project-no{font-family:ui-monospace,monospace;color: var(--ink-soft);font-size:11px}.project-state{justify-self:end;padding:5px 10px;border:1px solid var(--line);border-radius: var(--radius-sm);color:var(--ink-soft);font-size:11px}.project-row.cyan h3{color:var(--accent-text)}.project-row.coral h3{color:var(--signal-text)}.project-row.violet h3{color:var(--ink)}
   .now-section { background:var(--surface); }.now-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(50px,10vw,140px)}.now-grid .text-link{margin-top:38px}.now-list{border-top:1px solid var(--line)}.now-list>div{display:grid;grid-template-columns:120px 1fr;gap:20px;padding:24px 0;border-bottom:1px solid var(--line)}.now-list span{color: var(--ink-soft);font-family:ui-monospace,monospace;font-size:11px}.now-list p{margin:0;color:var(--ink);font-size:18px}
   .quote-section { padding:clamp(90px,14vw,180px) 0;text-align:center }.quote-section p{margin:0 auto 28px;font-family:Georgia,"Songti SC",serif;font-size:clamp(34px,6vw,72px);font-weight:500;letter-spacing:-.04em;line-height:1.25}.quote-section span{color: var(--ink-soft);font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em}
-  @media(max-width:900px){.hero-grid{grid-template-columns:1fr}.hero-orbit{display:none}.post-grid{grid-template-columns:1fr}.practice-grid{grid-template-columns:1fr}.practice-grid a,.practice-grid a:nth-child(odd){border-right:0}.practice-grid a:nth-child(even){padding-left:0}.project-row{grid-template-columns:40px 1fr auto}.project-description{display:none}.now-grid{grid-template-columns:1fr}.now-list>div{grid-template-columns:100px 1fr}}
+  @media(max-width:900px){.post-grid{grid-template-columns:1fr}.practice-grid{grid-template-columns:1fr}.practice-grid a,.practice-grid a:nth-child(odd){border-right:0}.practice-grid a:nth-child(even){padding-left:0}.project-row{grid-template-columns:40px 1fr auto}.project-description{display:none}.now-grid{grid-template-columns:1fr}.now-list>div{grid-template-columns:100px 1fr}}
 </style>

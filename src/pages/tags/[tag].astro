@@ -6,5 +6,5 @@ import { byNewest, normalizeTags } from '../../utils/posts';
 export async function getStaticPaths(){const posts=await getCollection('posts',({data})=>!data.draft);const tags=[...new Set(posts.flatMap((post)=>normalizeTags(post.data.tags)))];return tags.map((tag)=>({params:{tag},props:{tag,posts:posts.filter((post)=>normalizeTags(post.data.tags).includes(tag)).sort(byNewest)}}))}
 const {tag,posts}=Astro.props;
 ---
-<Layout title={`标签：${tag}`}><header class="page-hero container"><p class="eyebrow">TAG · {posts.length} ENTRIES</p><h1 class="page-title">#{tag}</h1><p class="lede">同一个关键词连接起来的文章。</p></header><section class="container tag-posts">{posts.map((post)=><PostCard post={post}/>)}</section></Layout>
+<Layout title={`标签：${tag}`}><header class="page-hero container"><p class="eyebrow">TAG · {posts.length} ENTRIES</p><h1 class="page-title">#{tag}</h1><p class="lede">同一个关键词连接起来的文章。</p></header><section class="container tag-posts">{posts.map((post)=><PostCard post={post} headingLevel="h2"/>)}</section></Layout>
 <style>.tag-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding-bottom:120px}@media(max-width:900px){.tag-posts{grid-template-columns:1fr}}</style>

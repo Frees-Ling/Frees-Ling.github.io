@@ -14,29 +14,12 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(
-      circle at 82% 4%,
-      rgba(100, 216, 202, 0.08),
-      transparent 28rem
-    ),
-    radial-gradient(
-      circle at 12% 28%,
-      rgba(255, 128, 102, 0.06),
-      transparent 24rem
-    ),
-    var(--canvas);
+  /* 平铺纸面。此前这里叠了两层 radial-gradient 光晕（旧青色 #64d8ca 与
+     旧珊瑚色 #ff8066）—— 属于「发光装饰」，与 FIELD LOG 的克制语言相悖，
+     且是纯装饰性绘制成本。改为单一底色。 */
+  background: var(--canvas);
   color: var(--ink);
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    'PingFang SC',
-    'Microsoft YaHei',
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.7;
   text-rendering: optimizeLegibility;

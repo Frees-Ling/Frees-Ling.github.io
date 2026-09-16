@@ -9,14 +9,31 @@ export const site = {
   repo: 'Frees-Ling/Frees-Ling.github.io',
 };
 
+/**
+ * 一级导航。标签用拉丁大写是有意的编辑/技术语域选择 ——
+ * 它把站点的「档案 / 索引」气质直接写进框架，且与 FIELD LOG 的命名一致。
+ * 中文标题放在 title 上，兼顾可理解性。
+ *
+ * URL 一律保持现有路径（见 docs/information-architecture.md）：
+ * WORK 指向 /projects/、NOTES 指向 /blog/，不新增 /work/ 或 /notes/ 路由 ——
+ * GitHub Pages 不支持服务端重定向，新增路由会产生 404 或重定向页。
+ */
 export const nav = [
-  { href: '/', label: '首页' },
-  { href: '/blog/', label: '文章' },
-  { href: '/projects/', label: '项目' },
-  { href: '/research/', label: '研究' },
-  { href: '/music/', label: '音乐' },
-  { href: '/notes/', label: '随笔' },
-  { href: '/about/', label: '关于' },
+  { href: '/', label: 'INDEX', title: '首页' },
+  { href: '/projects/', label: 'WORK', title: '项目' },
+  { href: '/blog/', label: 'NOTES', title: '文章' },
+  { href: '/archive/', label: 'ARCHIVE', title: '归档' },
+  { href: '/about/', label: 'ABOUT', title: '关于' },
+];
+
+/** 页脚承载的低频页面 —— 与一级导航互补，两者合计覆盖全站，不留孤岛。 */
+export const secondaryNav = [
+  { href: '/friends/', label: '朋友们', latin: 'FRIENDS' },
+  { href: '/now/', label: '此刻', latin: 'NOW' },
+  { href: '/music/', label: '声音', latin: 'MUSIC' },
+  { href: '/gallery/', label: '相册', latin: 'GALLERY' },
+  { href: '/guestbook/', label: '留言板', latin: 'GUESTBOOK' },
+  { href: '/history/', label: '历史', latin: 'HISTORY' },
 ];
 
 export const socials = [

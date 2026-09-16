@@ -1,87 +1,301 @@
 ---
 import { nav, site } from '../data/site';
+
 const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path.startsWith(href);
 ---
 
-<header class="site-header">
-  <div class="header-inner">
+<header class="masthead">
+  <div class="masthead-inner">
     <a class="brand" href="/" aria-label={`${site.name} 首页`}>
-      <span class="brand-mark" aria-hidden="true">F</span><span>{site.name}</span>
+      <span class="brand-mark" aria-hidden="true">F/L</span>
+      <span class="brand-name">{site.owner}</span>
     </a>
-    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
-      <span>菜单</span><span class="menu-icon" aria-hidden="true"></span>
-    </button>
-    <nav id="site-nav" class="site-nav" aria-label="主导航">
-      {nav.map((item) => {
-        const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
-        return <a href={item.href} aria-current={active ? 'page' : undefined}>{item.label}</a>;
-      })}
-      <a class="search-link" href="/search/" aria-label="搜索" title="搜索">⌕</a>
-      <button class="theme-toggle" type="button" aria-label="切换明暗主题" title="切换明暗主题" aria-pressed="false">
-        <span class="theme-sun" aria-hidden="true">☀</span><span class="theme-moon" aria-hidden="true">◐</span>
-      </button>
+
+    <nav id="site-nav" class="nav" aria-label="主导航">
+      {
+        nav.map((item) => (
+          <a
+            href={item.href}
+            title={item.title}
+            aria-current={isActive(item.href) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+      <a
+        class="nav-external"
+        href={`https://github.com/${site.repo.split('/')[0]}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        GITHUB<span aria-hidden="true">↗</span>
+      </a>
     </nav>
+
+    <div class="tools">
+      <button class="theme-toggle" type="button" aria-pressed="false">
+        <span class="theme-label">DARK</span>
+      </button>
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="site-nav"
+        aria-label="打开导航菜单"
+      >
+        <span class="menu-label">MENU</span>
+        <span class="menu-icon" aria-hidden="true"></span>
+      </button>
+    </div>
   </div>
 </header>
 
 <script>
   const menuButton = document.querySelector<HTMLButtonElement>('.menu-toggle');
-  const navElement = document.querySelector<HTMLElement>('.site-nav');
+  const navElement = document.querySelector<HTMLElement>('.nav');
+
+  const setMenu = (open: boolean) => {
+    menuButton?.setAttribute('aria-expanded', String(open));
+    menuButton?.setAttribute(
+      'aria-label',
+      open ? '关闭导航菜单' : '打开导航菜单',
+    );
+    navElement?.classList.toggle('is-open', open);
+  };
+
   menuButton?.addEventListener('click', () => {
-    const open = menuButton.getAttribute('aria-expanded') === 'true';
-    menuButton.setAttribute('aria-expanded', String(!open));
-    navElement?.classList.toggle('is-open', !open);
+    setMenu(menuButton.getAttribute('aria-expanded') !== 'true');
+  });
+
+  // Escape 关闭移动端菜单，并把焦点还给触发按钮
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (menuButton?.getAttribute('aria-expanded') !== 'true') return;
+    setMenu(false);
+    menuButton.focus();
   });
 
   const themeToggle = document.querySelector<HTMLButtonElement>('.theme-toggle');
-  // aria-pressed 表达「浅色模式是否为当前状态」。
+  const themeLabel = themeToggle?.querySelector<HTMLElement>('.theme-label');
+
+  // aria-pressed 表达「浅色模式是否为当前状态」；标签显示**当前**主题。
   // 初始值必须在这里同步 —— Layout 的防闪烁脚本运行在 <head>，
-  // 此时按钮还不存在，无法在那里设置。
-  const syncPressed = () => {
-    themeToggle?.setAttribute(
-      'aria-pressed',
-      String(document.documentElement.dataset.theme === 'light'),
-    );
+  // 那时按钮还不存在，无法在那里设置。
+  const syncTheme = () => {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    themeToggle?.setAttribute('aria-pressed', String(isLight));
+    if (themeLabel) themeLabel.textContent = isLight ? 'LIGHT' : 'DARK';
   };
+
   themeToggle?.addEventListener('click', () => {
     const root = document.documentElement;
     const next = root.dataset.theme === 'light' ? 'dark' : 'light';
     root.dataset.theme = next;
     localStorage.setItem('frees-theme', next);
-    syncPressed();
+    syncTheme();
   });
-  syncPressed();
+
+  syncTheme();
 </script>
 
 <style>
-  .site-header { position: relative; z-index: 20; border-bottom: 1px solid var(--line); }
-  .header-inner { width: min(calc(100% - 48px), var(--content)); min-height: 78px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
-  .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); font-weight: 750; letter-spacing: -0.02em; text-decoration: none; }
-  .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--signal-text); font-family: Georgia, serif; font-size: 20px; }
-  .site-nav { display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); }
-  .site-nav a { position: relative; color: var(--ink-soft); font-size: 14px; font-weight: 650; text-decoration: none; }
-  .site-nav a:hover, .site-nav a[aria-current='page'] { color: var(--ink); }
-  .site-nav a[aria-current='page']::after { position: absolute; right: 0; bottom: -13px; left: 0; height: 2px; border-radius: 2px; background: var(--signal); content: ''; }
-  .search-link { font-size: 23px !important; font-weight: 400 !important; line-height: 1; }
-  .theme-toggle, .menu-toggle { border: 0; background: transparent; color: var(--ink); cursor: pointer; }
-  .theme-toggle { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 50%; }
-  .theme-toggle:hover { border-color: var(--accent-text); }
-  .theme-sun, :root[data-theme='light'] .theme-moon { display: none; }
-  :root[data-theme='light'] .theme-sun { display: inline; }
-  .menu-toggle { display: none; align-items: center; gap: 10px; padding: 10px 0; font-size: 14px; font-weight: 700; }
-  .menu-icon, .menu-icon::after { display: block; width: 18px; height: 1px; background: currentColor; content: ''; }
-  .menu-icon::after { transform: translateY(6px); }
+  /* masthead —— 编辑刊头，不是 SaaS navbar。
+     视觉语法：mono 元信息 + 发丝线 + 排版层级。
+     不用卡片、不用胶囊、不用圆形控件。 */
+  .masthead {
+    position: relative;
+    z-index: 20;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .masthead-inner {
+    width: min(calc(100% - var(--gutter) * 2), var(--content));
+    min-height: var(--header-h);
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+
+  /* 品牌：排版标记，不是圆形徽章 */
+  .brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 12px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .brand-mark {
+    padding-right: 12px;
+    border-right: 1px solid var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+  }
+  .brand-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    letter-spacing: -0.01em;
+  }
+
+  /* 一级导航：mono 大写；当前项用发丝线标记，不用胶囊 */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(18px, 2.4vw, 34px);
+  }
+  .nav a {
+    position: relative;
+    padding: 4px 0;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-decoration: none;
+    transition: color 140ms ease;
+  }
+  .nav a:hover {
+    color: var(--ink);
+  }
+  .nav a[aria-current='page'] {
+    color: var(--ink);
+  }
+  .nav a[aria-current='page']::after {
+    position: absolute;
+    right: 0;
+    bottom: -2px;
+    left: 0;
+    height: 1px;
+    background: var(--signal);
+    content: '';
+  }
+  .nav-external {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .nav-external:hover {
+    color: var(--accent-text);
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  /* 主题开关与菜单触发都是文字控件，不是圆形按钮 */
+  .theme-toggle,
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    cursor: pointer;
+    transition: color 140ms ease;
+  }
+  .theme-toggle:hover,
+  .menu-toggle:hover {
+    color: var(--ink);
+  }
+
+  .menu-toggle {
+    display: none;
+  }
+  .menu-icon,
+  .menu-icon::after {
+    display: block;
+    width: 16px;
+    height: 1px;
+    background: currentColor;
+    content: '';
+  }
+  .menu-icon::after {
+    transform: translateY(5px);
+  }
+
+  /* 移动端：独立设计，不是把桌面导航压扁。
+     收起时用 visibility 移出 Tab 序列 —— 仅 max-height + opacity 挡不住键盘。 */
   @media (max-width: 900px) {
-    .header-inner { width: calc(100% - 32px); min-height: 70px; flex-wrap: wrap; }
-    .menu-toggle { display: flex; }
-    /* visibility:hidden 会让收起的导航移出 Tab 序列与无障碍树。
-       仅靠 max-height:0 + opacity:0 时，键盘仍能聚焦到 7 个不可见链接。
-       transition 上给 visibility 加 220ms 延迟，保证收起动画播完再隐藏；
-       展开时不延迟，立即可见。 */
-    .site-nav { width: 100%; max-height: 0; align-items: flex-start; flex-direction: column; gap: 0; overflow: hidden; opacity: 0; visibility: hidden; transition: max-height 220ms ease, opacity 180ms ease, visibility 0s linear 220ms; }
-    .site-nav.is-open { max-height: 520px; padding: 8px 0 24px; opacity: 1; visibility: visible; transition: max-height 220ms ease, opacity 180ms ease, visibility 0s; }
-    .site-nav a { width: 100%; padding: 10px 0; font-size: 16px; }
-    .site-nav a[aria-current='page']::after { display: none; }
-    .theme-toggle { margin-top: 8px; }
+    .masthead-inner {
+      width: min(calc(100% - var(--gutter-mobile) * 2), var(--content));
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    /* DOM 顺序是 brand → nav → tools（语义顺序），但移动端 nav 要占满一整行，
+       若不加 order 会把 tools 挤到第三行。用 order 让 brand 与 tools 同行，
+       nav 落到下一行，DOM 语义不受影响。 */
+    .brand {
+      order: 1;
+    }
+    .tools {
+      order: 2;
+    }
+    .nav {
+      order: 3;
+    }
+    .menu-toggle {
+      display: inline-flex;
+      min-height: 44px;
+    }
+    .theme-toggle {
+      min-height: 44px;
+    }
+    .nav {
+      width: 100%;
+      max-height: 0;
+      align-items: stretch;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        max-height 200ms ease,
+        opacity 160ms ease,
+        visibility 0s linear 200ms;
+    }
+    .nav.is-open {
+      max-height: 60vh;
+      padding: 4px 0 20px;
+      opacity: 1;
+      visibility: visible;
+      transition:
+        max-height 200ms ease,
+        opacity 160ms ease,
+        visibility 0s;
+    }
+    .nav a {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .nav a[aria-current='page']::after {
+      display: none;
+    }
+    .nav a[aria-current='page'] {
+      border-bottom-color: var(--signal);
+    }
+    .nav-external {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
   }
 </style>

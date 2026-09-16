@@ -2,8 +2,27 @@
 
 > 每完成一个阶段更新本文件。完整方案见 `docs/redesign-plan.md`。
 
-**当前阶段：P4 — 组件抽取**
-**P0–P3 已完成**
+**当前阶段：P5c — Site Chrome（已实施，待最终验收）**
+**P0–P3、P5a 已完成**
+
+---
+
+## 生产环境（本轮确认）
+
+| 项 | 值 |
+| --- | --- |
+| 生产域名 | `https://frees-ling.dev` |
+| `www` 子域 | `https://www.frees-ling.dev` → 301 → `https://frees-ling.dev/` ✅ |
+| 托管 | **GitHub Pages**，`build_type: workflow` |
+| 自定义域名 | `frees-ling.dev`（由仓库设置管理，**无 `public/CNAME`**） |
+| 构建 | `.github/workflows/deploy.yml`：`withastro/action@v5` + `actions/deploy-pages@v4` |
+| 质量门禁 | `.github/workflows/quality.yml` |
+| **`frees-ling.github.io`** | 301 → **`http://frees-ling.dev/`**（明文 HTTP 中间跳）⚠️ |
+
+⚠️ **待人工确认（未擅自修改）**：GitHub Pages 的 `https_enforced: false`，
+导致 `http://frees-ling.dev/` 以明文返回 200 且不跳转 HTTPS，形成降级路径。
+这属于 SSL/TLS 相关设置，且 Cloudflare 在前端可能存在重定向循环风险，
+按指令列入需人工决策项。
 
 ---
 
@@ -14,8 +33,10 @@
 | **P0** | 冻结基线：截图能力 + 基线测量 | ✅ 完成（`ab4cb12`） |
 | **P1** | HTML 正确性与 head 架构 | ✅ 完成（`02c0220`） |
 | **P2** | 语义与无障碍 | ✅ 完成（`6bc15c7`） |
-| **P3** | token 层落地 | ✅ 完成 |
-| P4 | 组件抽取 | 🔄 进行中 |
+| **P3** | token 层落地 | ✅ 完成（`46826be`） |
+| **P5a** | 新配色基座 | ✅ 完成（`279dd95`） |
+| **P5c** | Site Chrome | 🔄 已实施，待验收 |
+| 下一步 | Homepage 结构重做 | ⬜ |
 | P2 | 语义与无障碍 | ⬜ 未开始 |
 | P3 | token 层落地 + 上闸门脚本 | ⬜ 未开始 |
 | P4 | 组件抽取（视觉等价） | ⬜ 未开始 |
@@ -23,6 +44,108 @@
 | P6 | 资产与图片管线 | ⬜ 未开始 |
 | P7 | 五区导航与栏目落地 | ⬜ 未开始 |
 | P8 | 放宽 `.prettierignore` + 重写 AGENTS.md | ⬜ 未开始 |
+
+---
+
+## P5c — Site Chrome（已实施）
+
+目标不是「美化导航栏」，而是第一次建立 **FREES / FIELD LOG 的全站框架语言** ——
+后续 Homepage / Work / Notes / Article 都会继承这套语法。
+
+### 移除的退班视觉语言
+
+| 移除项 | 原因 |
+| --- | --- |
+| **圆形 F 徽章** | 模板式 logo 药丸；改为排版标记 `F/L` + 发丝竖线 |
+| **`body` 的两层 radial-gradient 光晕**（旧青 `#64d8ca` / 旧珊瑚 `#ff8066`） | 简报明令禁止的「发光装饰」；且是纯装饰性绘制成本 |
+| **圆形主题按钮** | 改为 mono 文字控件，显示当前主题 `DARK` / `LIGHT` |
+| **导航当前项的药丸/背景块** | 改为发丝下划线 + `--signal` 1px 标记 |
+| **页脚品牌大标题与 slogan 复述** | 改为 colophon 形态 |
+| **页脚两列链接堆叠** | 收敛为单行全路由索引 |
+| **不蒜子访客统计** | 第三方 CDN + 隐私问题 + 显示已损坏（渲染成「累计访问 一次」） |
+| **`.hero-orbit` 圆环装饰** | 圆环 + 核心 + AI/CODE/MUSIC/LIFE 四卫星 —— 全页最刺眼的模板元素，信息量为零。**用真实数据表取代**：`RECORDING SINCE 2025` / `ENTRIES 17` / `LAST LOGGED`，取自 `site.ts` 与内容集合，可核对 |
+| **全部 `999px` 胶囊** | 7 处（按钮、标签、项目状态）；`--radius-sm`（2px）取代。残留 0 处 |
+
+### 三轮视觉迭代记录
+
+**Round 1 — 结构与布局**
+- 发现问题：移动端换行错误，`DARK MENU` 被挤到第二行（DOM 顺序 brand→nav→tools，nav 占满一行导致 tools 被换下）
+- 修法：用 CSS `order` 让 brand 与 tools 同行、nav 落到下一行，不动 DOM 语义顺序
+
+**Round 2 — 视觉层级与模板感**
+- 做对的：masthead / colophon 已是 FIELD LOG 语言；项目列表的发丝线表格行
+- 仍像模板的：`.hero-orbit` 圆环、7 处 `999px` 胶囊、`.future{opacity:.55}` 用透明度制造文字层级
+- 全部清理
+
+**Round 3 — 细节、responsive 与一致性**
+- orbit 已被真实数据表取代；按钮直角化；masthead 在 1440/390 均成立
+- 遗留（属 Homepage 范围，不在 P5c）：`Frees Blog.` 作为 hero 标题回答不了 Who/What/Why；卡片与区块仍是旧语言；全红 `Blog.` 的强调用量偏大
+
+### 发现的部署架构（未改动）
+
+| 服务 | 角色 |
+| --- | --- |
+| **GitHub Pages** | **生产权威** —— `server: GitHub.com` + Fastly CDN，无 `cf-ray` |
+| **Cloudflare Pages** | 项目 `frees-ling-github-io`，在 PR 上跑检查（预览构建） |
+
+两者均已配置，**未做任何改动**。
+
+### 新的结构
+
+**Masthead（编辑刊头）**
+- 左：`F/L`（mono）+ `Frees Ling`（衬线）—— 排版标记，非徽章
+- 中：`INDEX WORK NOTES ARCHIVE ABOUT`（mono 大写）+ `GITHUB ↗`
+- 右：`DARK` / `LIGHT` 文字开关 + `MENU` 触发
+- 底部一条发丝线；高度 64px（原 78px）
+- 当前项用 `--signal` 1px 下划线标记
+
+**Colophon（档案页尾）**
+- `F/L | Frees Ling` 小标记
+- 单行全路由索引：一级 5 项 + 低频 6 项 + `GITHUB↗` + `RSS↗`
+  —— **导航与页脚合计覆盖全站所有路由**，修掉「14 个页面被切成两个互不相通的簇」
+- 元信息行：`© 2026 · UTC+8 · BUILT WITH ASTRO · ↑ TOP`
+
+**移动端（独立设计，非桌面压缩）**
+- 单行：`F/L | Frees Ling` + `DARK MENU ≡`
+- 用 CSS `order` 让 brand 与 tools 同行、nav 落到下一行（不动 DOM 语义顺序）
+- 展开后全宽行 + 发丝线，触摸目标 ≥44px，无横向溢出
+- `Escape` 关闭并把焦点交还触发按钮
+- 收起时 `visibility: hidden` —— 移出 Tab 序列与无障碍树
+
+### 全局框架 token
+
+```
+--gutter: 48px          --gutter-mobile: 20px
+--header-h: 64px        --section-y: clamp(64px, 9vw, 120px)
+--font-display / --font-sans / --font-mono
+```
+
+替换掉散落各页的 `calc(100% - 48px)` 等硬编码留白（残留 0 处）。
+
+### STEP 7 — 编号体系的数据接口
+
+新增 `src/utils/reference.ts`，实现 `FL-YYMM-NNN` 的**确定性推导**：
+
+1. frontmatter 显式声明的 `reference` 优先（最终稳定来源）
+2. 未声明时按 `(发布日期, id)` 排序推导 —— 给定同一批文章结果完全确定
+
+**本阶段只建接口，不批量改文章 frontmatter**（按简报要求）。
+待编号正式启用时，可跑一次性脚本把推导结果固化进 frontmatter。
+
+### 过程中发现并修掉的问题
+
+| 问题 | 处理 |
+| --- | --- |
+| `.future{opacity:.55}` 把文字压到 **2.46** 对比度 | 移除 opacity —— 用透明度制造文字层级是 P5a 规则明令禁止的做法；语义已由 `NEXT` 标签承载 |
+| `/history/` 的 v1 iframe 用 `loading="eager"` | 改为 `lazy` —— 此前强制在页面加载时拉取整个归档旧站，是真实性能问题 |
+| 归档 iframe 缺 `allow-modals`，旧站 `alert()` 被沙箱拦截产生控制台错误 | 补上（展览本就该可交互） |
+| Dependabot 仍在为归档目录开 PR | 见下方「已知问题」 |
+| `smol-toml` 1.7.0（**high**，TOML 解析 DoS） | `markdownlint-cli2` 精确锁死该版本；用 `overrides` 强制 `^1.7.1`，已解 |
+
+### 新增工具
+
+`scripts/visual/gate.mjs` —— 浏览器质量门禁：对比度 / 控制台错误 / 横向溢出 / 键盘可达性。
+`npm run gate` 未接入（需手动调用）。这是后续每次提交前的硬性关卡。
 
 ---
 

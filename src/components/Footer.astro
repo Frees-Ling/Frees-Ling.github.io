@@ -1,20 +1,142 @@
 ---
-import { site, socials } from '../data/site';
+import { nav, secondaryNav, site } from '../data/site';
+
+const year = new Date().getFullYear();
+
+// 一级导航 + 低频页面，两者合计覆盖全站所有路由。
+// 此前的问题正是：导航与页脚零重叠，14 个页面被切成两个互不相通的簇。
+const links = [
+  ...nav.map((item) => ({ href: item.href, label: item.label })),
+  ...secondaryNav.map((item) => ({ href: item.href, label: item.latin })),
+];
+
+const github = `https://github.com/${site.repo.split('/')[0]}`;
 ---
-<footer class="footer">
-  <div class="container footer-grid">
-    <div><p class="footer-name">{site.name}</p><p class="footer-note">在代码、智能与生活之间，<br />留下一些真实的痕迹。</p></div>
-    <div><p class="footer-label">漫游</p><nav class="footer-links" aria-label="页脚导航"><a href="/archive/">文章归档</a><a href="/history/">历史个人博客</a><a href="/now/">此刻</a><a href="/gallery/">照片墙</a><a href="/friends/">朋友们</a><a href="/guestbook/">留言板</a></nav></div>
-    <div><p class="footer-label">连接</p><div class="footer-links">{socials.map((item) => <a href={item.href} target="_blank" rel="noreferrer">{item.label}</a>)}<a href="/rss.xml">RSS Feed</a></div></div>
+
+<footer class="colophon">
+  <div class="colophon-inner">
+    <div class="colophon-mark">
+      <span class="mark">F/L</span>
+      <span class="owner">{site.owner}</span>
+    </div>
+
+    <nav class="colophon-nav" aria-label="页脚导航">
+      {
+        links.map((item) => (
+          <a href={item.href} title={item.label}>
+            {item.label}
+          </a>
+        ))
+      }
+      <a class="external" href={github} target="_blank" rel="noreferrer">
+        GITHUB<span aria-hidden="true">↗</span>
+      </a>
+      <a class="external" href="/rss.xml">
+        RSS<span aria-hidden="true">↗</span>
+      </a>
+    </nav>
+
+    <div class="colophon-meta">
+      <span>© {year}</span>
+      <span>UTC+8</span>
+      <span>BUILT WITH ASTRO</span>
+      <a class="to-top" href="#top">↑ TOP</a>
+    </div>
   </div>
-  <div class="container footer-bottom"><p>© {new Date().getFullYear()} {site.owner}. 用好奇心持续构建。</p><p id="busuanzi_container_site_pv" class="visits">累计访问 <span id="busuanzi_value_site_pv">—</span> 次</p></div>
 </footer>
+
 <style>
-  .footer { padding: 76px 0 24px; border-top: 1px solid var(--line); background: rgba(2,12,16,.18); }
-  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 48px; padding-bottom: 64px; }
-  .footer-name { margin: 0 0 14px; font-family: Georgia,serif; font-size: 32px; } .footer-note { margin: 0; color: var(--ink-soft); }
-  .footer-label { margin: 0 0 16px; color: var(--ink-soft); font-family: ui-monospace,monospace; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-  .footer-links { display: flex; align-items: flex-start; flex-direction: column; gap: 9px; } .footer-links a { color: var(--ink-soft); font-size: 14px; text-decoration: none; } .footer-links a:hover { color: var(--accent-text); }
-  .footer-bottom { display: flex; justify-content: space-between; gap: 24px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12px; } .footer-bottom p { margin: 0; }
-  @media (max-width:900px) { .footer-grid { grid-template-columns: 1fr 1fr; } .footer-grid>div:first-child { grid-column: 1/-1; } .footer-bottom { align-items:flex-start; flex-direction:column; } }
+  /* archive colophon —— 档案页尾，不是传统博客页脚。
+     没有品牌大标题、没有 slogan 复述、没有链接卡片。 */
+  .colophon {
+    border-top: 1px solid var(--line);
+  }
+
+  .colophon-inner {
+    width: min(calc(100% - var(--gutter) * 2), var(--content));
+    margin-inline: auto;
+    padding: 40px 0 28px;
+  }
+
+  .colophon-mark {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 28px;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+  }
+  .colophon-mark .mark {
+    padding-right: 12px;
+    border-right: 1px solid var(--line-strong);
+  }
+  .colophon-mark .owner {
+    color: var(--ink-soft);
+  }
+
+  .colophon-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    padding-bottom: 26px;
+    border-bottom: 1px solid var(--line);
+  }
+  .colophon-nav a {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    transition: color 140ms ease;
+  }
+  .colophon-nav a:hover {
+    color: var(--ink);
+  }
+  .colophon-nav .external {
+    display: inline-flex;
+    gap: 3px;
+  }
+
+  .colophon-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 20px;
+    padding-top: 20px;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+  .colophon-meta .to-top {
+    margin-left: auto;
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .colophon-meta .to-top:hover {
+    color: var(--accent-text);
+  }
+
+  @media (max-width: 900px) {
+    .colophon-inner {
+      width: min(calc(100% - var(--gutter-mobile) * 2), var(--content));
+    }
+    .colophon-nav {
+      flex-direction: column;
+      gap: 0;
+    }
+    /* 触摸目标 ≥44px */
+    .colophon-nav a {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .colophon-meta .to-top {
+      margin-left: 0;
+    }
+  }
 </style>

@@ -79,6 +79,20 @@
   --content: 1180px;
   --reading: 720px;
 
+  /* 全局框架 —— 页面不再各自设置留白 */
+  --gutter: 48px;
+  --gutter-mobile: 20px;
+  --header-h: 64px;
+  --section-y: clamp(64px, 9vw, 120px);
+
+  /* 字体分工：display 衬线 / 界面无衬线 / 元信息 mono */
+  --font-display: Georgia, 'Times New Roman', 'Songti SC', serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
   color-scheme: dark;
 }
 
