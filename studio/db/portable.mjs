@@ -19,25 +19,53 @@ import { currentVersion } from './schema.mjs';
 export const EXPORT_FORMAT = 'frees-studio-export';
 export const EXPORT_VERSION = 1;
 
-/** 导出全部语义数据。不含向量。 */
+/**
+ * 导出全部语义数据。不含向量。
+ *
+ * **整段读取必须在一个事务里**，否则会导出一份「撕裂的快照」。
+ *
+ * 单进程内看不太出来（Node 是单线程，同步读之间插不进别的请求），
+ * 但 CLI 与服务端是**两个进程**：一边 `cli.mjs export`，一边在界面上写，
+ * 两次 `SELECT` 之间就可能插进一次提交 —— 于是导出里出现「有笔记没有标签」
+ * 这类不自洽的组合，而它看起来完全正常，直到有人拿它恢复。
+ *
+ * SQLite 的读事务给的是**整个库在某一个时刻**的一致视图，
+ * 代价只有一次 BEGIN/COMMIT。备份的意义就在于能恢复，
+ * 一份撕裂的备份比没有备份更糟 —— 它会让人以为数据还在。
+ */
 export function exportAll(db) {
-  const rows = (sql) => db.prepare(sql).all();
+  // BEGIN 是 deferred 的：真正的读快照在第一次读时建立，
+  // 因此这里不会阻塞其他写者，只是不再让它们插进本事务中间
+  db.exec('BEGIN');
+  try {
+    const rows = (sql) => db.prepare(sql).all();
 
-  return {
-    format: EXPORT_FORMAT,
-    version: EXPORT_VERSION,
-    schemaVersion: currentVersion(db),
-    exportedAt: new Date().toISOString(),
-    notes: rows('SELECT * FROM notes ORDER BY created_at, id'),
-    tags: rows('SELECT * FROM tags ORDER BY id'),
-    noteTags: rows('SELECT * FROM note_tags ORDER BY note_id, tag_id'),
-    links: rows('SELECT * FROM links ORDER BY from_id, to_id, kind'),
-    memoryNotes: rows('SELECT * FROM memory_notes ORDER BY memory_id, note_id'),
-    archive: rows('SELECT * FROM archive_entries ORDER BY created_at, id'),
-    memories: rows('SELECT * FROM memories ORDER BY created_at, id'),
-    conversations: rows('SELECT * FROM conversations ORDER BY created_at, id'),
-    messages: rows('SELECT * FROM messages ORDER BY created_at, id'),
-  };
+    const data = {
+      format: EXPORT_FORMAT,
+      version: EXPORT_VERSION,
+      schemaVersion: currentVersion(db),
+      exportedAt: new Date().toISOString(),
+      notes: rows('SELECT * FROM notes ORDER BY created_at, id'),
+      tags: rows('SELECT * FROM tags ORDER BY id'),
+      noteTags: rows('SELECT * FROM note_tags ORDER BY note_id, tag_id'),
+      links: rows('SELECT * FROM links ORDER BY from_id, to_id, kind'),
+      memoryNotes: rows(
+        'SELECT * FROM memory_notes ORDER BY memory_id, note_id',
+      ),
+      archive: rows('SELECT * FROM archive_entries ORDER BY created_at, id'),
+      memories: rows('SELECT * FROM memories ORDER BY created_at, id'),
+      conversations: rows(
+        'SELECT * FROM conversations ORDER BY created_at, id',
+      ),
+      messages: rows('SELECT * FROM messages ORDER BY created_at, id'),
+    };
+
+    db.exec('COMMIT');
+    return data;
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw new Error(`导出失败，已回滚（未产出任何文件）：${error.message}`);
+  }
 }
 
 export function exportToFile(db, path) {

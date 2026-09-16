@@ -40,12 +40,12 @@ test('schema 建立并到达最新版本', () => {
   db.close();
 });
 
-test('重复打开同一个库不会重复应用迁移', () => {
-  const db = fresh();
-  const before = currentVersion(db);
-  assert.equal(before, SCHEMA_VERSION);
-  db.close();
-});
+// 「重复打开不会重复应用迁移」「重启后数据还在」这类断言**不在这里**。
+//
+// 这个文件全程用 `:memory:`，而 `:memory:` 每次打开都是全新的库 ——
+// 在它上面测「重新打开」永远不会失败，等于没有测。
+// 那条路径搬到 studio/db/schema.test.mjs，用真实文件库跑。
+// 这里原先有一条同名用例，实际只开了一次库，是假的覆盖。
 
 test('创建笔记并读回', () => {
   const db = fresh();

@@ -238,7 +238,10 @@
   旧版等满桩的时长并报「钥匙串中没有该条目」（原因说反），
   新版 3 秒看门狗触发、4 秒返回并报「读取钥匙串超时 —— 钥匙串很可能已锁定」。
 
-## ADR-021 — 凭证读取加看门狗；移除两条无效的 deny 规则
+## ADR-024 — 凭证读取加看门狗；移除两条无效的 deny 规则
+
+> 编号说明：本条原先误编为 ADR-021，与「文件路径权限规则只认 Edit(path)」重号。
+> 现改为 ADR-024，正文一字未动。引用它请用 ADR-024。
 
 - Status: Accepted
 - Decision:
@@ -280,3 +283,52 @@
   ADD-only + 互链（比让 LLM 决定 UPDATE/DELETE 可审计得多，后者判错即静默篡改历史）；
   相对时间必须锚定成绝对日期（「上周去了巴黎」六个月后毫无用处）。
   详见 `docs/research/memory-engines.md` 第四节。
+
+## ADR-025 — Studio 采用 localhost Web + Node 内置能力，不引入桌面壳
+
+- Status: Accepted
+- 背景: STUDIO-001 的验收原文假设技术栈**尚未选定**（「比较 localhost Web、
+  Tauri/Electron 等候选」）。实际情况相反：KB-001～KB-011 已经按 localhost Web
+  把 Studio 建成并验证了。因此本 ADR 记录的是**已建成系统的事实与理由**，
+  不是选型前的预测 —— 预测会被后来的实现推翻，事实不会。
+
+- Decision: Studio 是只绑 `127.0.0.1` 的本地 Web 应用。
+  后端 `node:http`，存储 `node:sqlite`，前端无框架、无构建步骤。
+  **不引入 Electron / Tauri，也不引入 Web 框架或 ORM。**
+
+- 实测证据（可复核，非推断）:
+
+  | 项 | 实测 |
+  | --- | --- |
+  | Studio 运行时第三方依赖 | **0**（`package.json` 的 6 个 dependencies 全属于 Astro 公共站） |
+  | studio/ 里的 import | 只有 `node:` 内置与相对路径 |
+  | 前端规模 | 1019 行（index.html 151 + app.js 516 + studio.css 352） |
+  | 存储 | `node:sqlite`（Node 26 内置），WAL + FTS5 trigram，4 个迁移版本 |
+  | 测试 | 183 项；另有 CLI / HTTP / 真实浏览器三层验收脚本 |
+
+- 为什么不用 Tauri / Electron:
+  · 它们解决的是「**打包成桌面应用分发**」，而本项目的需求是
+    「只在本机跑、数据不出本机」。绑定 127.0.0.1 + 随机令牌已经满足，
+    而且**根本不存在把服务暴露到公网的代码路径**（不是默认关闭，是没有那条路）
+  · 二者的体积与供应链代价是实打实的：Electron 带一个 Chromium 运行时
+    与自动更新通道，Tauri 带 Rust 工具链。为零依赖的项目引入它们，
+    换来的是「能双击启动」这一项收益
+  · 教训已经付过一次：公共站因为 fontsource provider 而**构建期必须联网**。
+    运行时的依赖面同理 —— 每多一个依赖，就多一个将来构建不出来的理由
+
+- 为什么不用 Web 框架:
+  · 端点约 20 个，`routes.mjs` 的手写分发比引入框架更短，且没有隐式行为
+    （中间件顺序、body 解析、错误兜底这些都得自己写，但也就几十行）
+
+- 代价与未决（不掩饰）:
+  · **没有桌面壳 = 没有托盘图标、文件关联、开机自启**。需要用户自己起服务；
+    已提供 `npm run studio start` 与 launchd 方案
+  · **浏览器成了运行时依赖**，而跨浏览器行为未逐一验证 ——
+    真实浏览器验收只在 Chromium 上做过
+  · 1Password 集成是**引用式**的（apiKeyHelper + macOS 钥匙串），
+    不走桌面壳的 keychain API；这也意味着钥匙串锁定或系统睡眠后
+    无人值守会话无法自行解锁（见 ADR-024）
+
+- 关联任务: 本 ADR 结清 STUDIO-001。
+  STUDIO-002 要求的 schema 版本、事务、重启恢复、迁移回滚、备份一致性
+  已在 `studio/db/schema.test.mjs` 与 `studio/db/portable.test.mjs` 中验证。

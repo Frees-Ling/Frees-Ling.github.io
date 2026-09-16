@@ -253,9 +253,13 @@ export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
  * 打开数据库并升级到最新 schema。
  *
  * @param {string} path 数据库路径，或 ':memory:'（测试用）
+ * @param {object} [options]
+ * @param {number} [options.upTo] 只迁移到这个版本。
+ *   **仅供测试构造「旧版本的库」**，正常运行不要传 ——
+ *   传了就会拿到一个结构不完整的库，后续读写会以奇怪的方式失败。
  * @returns {DatabaseSync}
  */
-export function openDatabase(path) {
+export function openDatabase(path, { upTo = SCHEMA_VERSION } = {}) {
   const db = new DatabaseSync(path);
 
   // WAL 让读写不互相阻塞；外键约束默认是关的，必须显式打开，
@@ -278,7 +282,24 @@ export function openDatabase(path) {
       .map((row) => row.version),
   );
 
+  // 库比程序新时**必须拒绝打开**。
+  //
+  // 这是版本错配里最危险的一种：降级运行（切回旧提交、跑一份旧副本）时，
+  // 旧程序面对的是一张它不认识的表结构，而它**不会报错** ——
+  // 它会照自己的理解去读写，把数据写坏，而且当场看不出来。
+  // 宁可打不开，也不要「能打开但写坏」。
+  const dbVersion = applied.size === 0 ? 0 : Math.max(...applied);
+  if (dbVersion > SCHEMA_VERSION) {
+    db.close();
+    throw new Error(
+      `这个库的 schema 版本是 ${dbVersion}，当前程序只支持到 ${SCHEMA_VERSION}。` +
+        '请用较新版本的程序打开它，或从备份恢复。' +
+        '不要用旧程序继续写 —— 旧程序不认识新结构，会静默写坏数据。',
+    );
+  }
+
   for (const migration of MIGRATIONS) {
+    if (migration.version > upTo) break;
     if (applied.has(migration.version)) continue;
 
     db.exec('BEGIN');

@@ -51,14 +51,18 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   **尚无真实凭证**，托管服务的认证/配额/限流等失败模式未验证。
 - 三层关联（KB-005 DONE）：记忆可追溯到来源消息/档案并关联知识库条目；
   删除来源不销毁结论；统一检索排除待审核记忆。
-- 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
+- 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/024）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
+- Studio 技术选型已定并记录（STUDIO-001 DONE，ADR-025）：localhost Web +
+  Node 内置能力，**运行时第三方依赖为 0**。
+- 本地数据层已验证（STUDIO-002 DONE）：schema 版本与迁移、事务、重启恢复、
+  备份一致性，全部在**真实文件库 + 跨进程**下测过。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
   Collection 与灾备恢复 UI 尚未实现。
 
 ## Current objective
 
-RENDER-003 已完成。下一项见 Next READY task。
+STUDIO-001 与 STUDIO-002 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

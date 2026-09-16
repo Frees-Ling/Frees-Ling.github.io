@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -267,4 +268,103 @@ test('空库重建返回 0 而不是报错', async () => {
   const r = await rebuildEmbeddings(db, createMockEmbedder());
   assert.equal(r.rebuilt, 0);
   db.close();
+});
+
+// ── 备份一致性（STUDIO-002）──
+//
+// 这一段必须用**真实文件库 + 另一个进程**才测得出东西。
+// 单进程内 Node 是单线程的，两次 SELECT 之间插不进任何东西，
+// 于是无论有没有事务，结果都一样 —— 那样的测试永远绿，也永远没有信息量。
+//
+// 场景是真实存在的：CLI 与服务端是两个进程，一边 backup 一边在界面上写。
+
+test('导出是一次一致快照：并发写入不会导出「撕裂」的数据', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'snap-'));
+  const path = join(dir, 'live.db');
+  try {
+    const db = openDatabase(path);
+    db.close();
+
+    // 子进程持续写入。每篇笔记与它的标签关联是**同一个事务**里写的
+    // （见 store.mjs 的 createNote），因此任何一致快照都必须满足
+    // 「笔记数 == 标签关联数」。
+    const CHILD = `
+      import { openDatabase } from ${JSON.stringify(new URL('./schema.mjs', import.meta.url).pathname)};
+      import { createNote } from ${JSON.stringify(new URL('./store.mjs', import.meta.url).pathname)};
+      const db = openDatabase(process.argv[1]);
+      for (let i = 0; i < 120; i++) {
+        createNote(db, { title: '并发笔记 ' + i, body: 'x', tags: ['并发'] });
+      }
+      db.close();
+    `;
+
+    const child = new Promise((resolve, reject) => {
+      execFile(
+        process.execPath,
+        ['--input-type=module', '-e', CHILD, path],
+        (error) => (error ? reject(error) : resolve()),
+      );
+    });
+
+    const reader = openDatabase(path);
+    let torn = 0;
+    let samples = 0;
+    // 一直导出到子进程写完为止；每次都要自洽
+    let done = false;
+    child.then(
+      () => {
+        done = true;
+      },
+      () => {
+        done = true;
+      },
+    );
+    while (!done || samples < 30) {
+      const snap = exportAll(reader);
+      samples++;
+      if (snap.notes.length !== snap.noteTags.length) {
+        torn++;
+      }
+      if (done && samples >= 30) break;
+      // 让出事件循环，好让子进程继续跑
+      await new Promise((r) => setImmediate(r));
+    }
+
+    const final = exportAll(reader);
+    reader.close();
+    await child;
+
+    assert.ok(samples >= 30, `采样数太少（${samples}），说明循环没跑起来`);
+    assert.equal(
+      torn,
+      0,
+      `${samples} 次导出里有 ${torn} 次笔记数与标签关联数不符 —— 那是撕裂的快照`,
+    );
+    assert.equal(final.notes.length, 120, '子进程写的笔记应全部可见');
+    assert.equal(final.noteTags.length, 120, '每篇笔记都该有自己的标签关联');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('导出失败会回滚，且连接仍然可用', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'rollback-'));
+  const path = join(dir, 'rb.db');
+  try {
+    const db = openDatabase(path);
+    createNote(db, { title: '一篇', body: '', tags: ['x'] });
+
+    // 拆掉一张表，让导出中途失败
+    db.exec('DROP TABLE messages');
+    assert.throws(() => exportAll(db), /导出失败，已回滚/);
+
+    // 事务必须已经收干净：否则后续任何写入都会报「cannot start a transaction
+    // within a transaction」，而那种错误会一直跟着这个连接
+    assert.doesNotThrow(() =>
+      createNote(db, { title: '又一篇', body: '', tags: [] }),
+    );
+    db.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
