@@ -51,10 +51,18 @@ git 历史按 5 类密钥形态全量扫描（`sk-` / `ghp_` / `gho_` / `AKIA` /
 2. 进入 **API Keys**
 3. **先新建**一个 key 并复制（避免中间出现无可用 key 的窗口）
 4. 回到列表，**删除**旧 key —— 可用前缀 `sk-a08…` 辨认
-5. 用新 key 替换 `~/.claude/settings.json` 中的 `ANTHROPIC_AUTH_TOKEN`
-6. 替换完成后重启 Claude Code
+5. 回到本机，把新 key 存进钥匙串（**不要**写回 settings.json）：
+   ```sh
+   sh scripts/automation/store-credential.sh
+   ```
+6. 体检并切换，然后重启 Claude Code：
+   ```sh
+   sh scripts/automation/switch-to-keychain.sh --check
+   sh scripts/automation/switch-to-keychain.sh
+   ```
 
-> 顺序很重要：先建后删。反过来会让当前会话立刻失效。
+> 顺序很重要：先建后删，反过来会让当前会话立刻失效。
+> 第 5 步的输入是隐藏的，密钥不经过聊天、命令行参数或 shell 历史。
 > 本文件与任何记录都**不要**写入新 key 的值。
 
 ---
@@ -67,7 +75,48 @@ git 历史按 5 类密钥形态全量扫描（`sk-` / `ghp_` / `gho_` / `AKIA` /
 Claude Code 从该 `env` 块读取环境变量启动，**不支持 `op://` 引用语法**，
 因此不能只靠改这个文件实现「只存引用」。
 
-### 方案 A —— 交互式注入（推荐，日常使用）
+### 结论（2026-09-16 实测更新）
+
+**采用方案 C：`apiKeyHelper` + macOS 钥匙串**，磁盘上零明文。
+
+个人版 1Password **不支持 Service Account**（需 Business/Teams/Enterprise，
+且官方文档明确它不能访问内置 Personal / Private 保管库 —— 个人版只有这类库），
+因此转向钥匙串。实测细节见下一节。
+
+### 方案 C —— apiKeyHelper + 钥匙串（当前采用）
+
+```jsonc
+// ~/.claude/settings.json
+{
+  "apiKeyHelper": "/绝对路径/scripts/automation/api-key-helper.sh",
+  "env": { "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic" }
+  // 注意：ANTHROPIC_AUTH_TOKEN 必须删除
+}
+```
+
+- 密钥只存在于钥匙串条目与进程内存，**配置文件里只有脚本路径**
+- 不需要改变启动方式，正常 `claude` 即可
+- 由 `scripts/automation/` 下的四个脚本管理：存入 / 读取 / 体检 / 切换
+
+### 实测记录（本地回环探针，12 次真实请求）
+
+| 机制 | 填充的请求头 |
+| --- | --- |
+| `apiKeyHelper` 输出 | `X-Api-Key` |
+| `ANTHROPIC_AUTH_TOKEN` | `Authorization: Bearer` |
+
+两者**彼此独立**，同时存在时各填各的头。而 DeepSeek 的 Anthropic 兼容端点
+**两者都接受**（有效 key 用任一方式均非 401；无效 key 用任一方式均 401）。
+因此 `apiKeyHelper` 可以用于 DeepSeek —— 这一点与「DeepSeek 只认 Authorization」
+的常见说法不同，是实测结论。
+
+**另一个反直觉的实测结论**：`settings.json` 的 `env.ANTHROPIC_AUTH_TOKEN`
+**覆盖进程环境变量**。验证方式是把进程环境设成假值、不带 `--settings` 运行，
+模型仍正常回复 —— 说明用的是文件里的值。
+**只要明文还留在 settings.json 里，任何环境变量注入都不会生效。**
+这正是切换脚本必须先删除明文的原因。
+
+### 方案 A —— 交互式注入（备选）
 
 ```sh
 op run --env-file="$HOME/.claude/claude.env.op" -- claude
@@ -83,21 +132,13 @@ ANTHROPIC_AUTH_TOKEN=op://Private/DeepSeek/credential
 - 代价：必须用这条命令启动 Claude Code；1Password 需处于解锁状态
 - 与现在的 `op-ssh-sign` 前提相同 —— 你本来就依赖 1Password 解锁来签名
 
-### 方案 B —— 无人值守
+### 方案 B —— 1Password Service Account（已排除）
 
-`op` 在无人值守下**只有两条路**，都需要先验证：
+**个人版不支持。** 服务账户需要 Business / Teams / Enterprise 计划；
+且官方文档明确它不能访问内置 Personal、Private、Employee 保管库与默认 Shared 保管库 ——
+个人版只有 Personal/Private，即便功能存在也无库可用。
 
-| 途径 | 前提 | 状态 |
-| --- | --- | --- |
-| 服务账户（`OP_SERVICE_ACCOUNT_TOKEN`） | 需要 1Password **Business / Teams** 计划；个人与家庭版不支持 | **待你确认计划类型** |
-| 桌面应用集成 | 应用保持解锁 | 与 `op-ssh-sign` 同样的限制，不构成改进 |
-
-若计划不支持服务账户，则「用 1Password 支撑无人值守」在原理上不成立 ——
-此时诚实的结论是：无人值守要么退回到 600 权限的本地文件，
-要么使用一个**权限与额度受限的专用 key**，把风险限制在可接受范围。
-
-**当前版本尚未实施 A 或 B**，因为 A 会改变你的启动方式、
-B 取决于计划类型。等你决定后再落地。
+不擅自升级套餐，因此排除。
 
 ### 与提交签名的对照
 
@@ -115,9 +156,19 @@ B 取决于计划类型。等你决定后再落地。
 | 提交身份 | 自动化身份独立，不冒用个人签名（ADR-016） |
 | 不落盘清单 | API key、WebDAV 密码、Cloudflare/GitHub token、TOTP seed、备份密钥一律不得进入 Git、前端、SQLite 明文、浏览器存储、日志、截图或测试夹具 |
 
-## 四、待办
+## 四、凭证明文清除状态
 
-- [ ] 你：在 DeepSeek 控制台轮换密钥（第二节步骤）
-- [ ] 你：确认 1Password 计划类型，决定方案 A / B
-- [ ] 我：`check-secrets.mjs` 接入提交前校验（进行中）
-- [ ] 我：自动化提交路径的路径黑名单（禁止提交密钥、数据库、备份）
+| 位置 | 状态 |
+| --- | --- |
+| `~/.claude/settings.json` | **仍含明文** —— 待你轮换后由 `switch-to-keychain.sh` 移除 |
+| 项目工作区 / Git 历史 | 干净（已全量扫描） |
+| 会话记录 | 6 个文件含旧值，待轮换后失效 |
+
+## 五、待办
+
+- [ ] 你：在 DeepSeek 控制台**先建新 key，再删旧 key**
+- [ ] 你：`sh scripts/automation/store-credential.sh` 存入新 key（隐藏输入，不经聊天）
+- [ ] 你：`sh scripts/automation/switch-to-keychain.sh --check` 体检后执行切换
+- [x] `check-secrets.mjs` 已接入提交前校验
+- [x] 自动化提交路径的敏感路径黑名单已实现并实测
+- [x] Stop hook 已改为失败时不回退到个人身份

@@ -177,3 +177,21 @@
   只会诱使后来者真的去画它。重新启用关系图的条件写入 `docs/visual-direction.md`。
 - 附带修正: 「参见」曾用「同分类」作兜底信号（权重 0.05），
   实测导致每张卡片列出其余 12 篇 —— 「都是笔记」不是关联。已删除该信号。
+
+## ADR-020 — 凭证走 apiKeyHelper + macOS 钥匙串，不引入明文也不升级套餐
+
+- Status: Accepted
+- Decision: `~/.claude/settings.json` 以 `apiKeyHelper` 指向
+  `scripts/automation/api-key-helper.sh`，凭证存 macOS 登录钥匙串；删除 `env` 中的明文。
+- Reason: 1Password **个人版不支持 Service Account**（需 Business/Teams/Enterprise，
+  且服务账户不能访问个人版唯一具备的 Personal/Private 库），
+  按用户要求不擅自升级套餐，因此转向钥匙串。
+  实测确认 `apiKeyHelper` 的输出填 `X-Api-Key`、`ANTHROPIC_AUTH_TOKEN` 填
+  `Authorization: Bearer`，而 DeepSeek 的兼容端点**两者都接受** ——
+  所以 apiKeyHelper 可用于 DeepSeek，磁盘上可做到零明文。
+- 关键约束: 实测发现 `settings.json` 的 `env.ANTHROPIC_AUTH_TOKEN`
+  **覆盖进程环境变量**。因此「启动时注入环境变量」的方案不成立
+  （已实现后删除 run-claude.sh），且**必须先删除明文**，否则钥匙串永远不会被用到。
+- 风险与边界: 钥匙串条目以 `-T /usr/bin/security` 授权，
+  任何以本人身份运行且能调用 security 的进程都可读取 —— 这是无人值守的必要代价，
+  已在脚本注释中写明授权范围与撤销方式。条目内只有这一个开发用密钥。
