@@ -1,0 +1,104 @@
+---
+/**
+ * 「参见」—— 卡片目录式交叉引用。
+ *
+ * 这是知识关联**真正被用到的地方**：读到一半时想知道「还有哪篇讲过同一件事」。
+ * 数据来自 utils/relations.ts，与主题总览同源，因此两者不会互相矛盾。
+ *
+ * 只显示实际共享的标签，而不是「相关度 87%」这类无法核对的数字 ——
+ * 读者能自己判断这条引用成不成立。
+ */
+import type { Relation } from '../utils/relations';
+import { postHref } from '../utils/posts';
+
+interface Props {
+  relations: Relation[];
+  /** 紧凑模式：用于卡片内，只列标题与共享标签 */
+  compact?: boolean;
+  label?: string;
+}
+
+const { relations, compact = false, label = '参见' } = Astro.props;
+---
+
+{
+  relations.length > 0 && (
+    <div class:list={['see-also', { compact }]}>
+      <p class="see-also-label">{label}</p>
+      <ul>
+        {relations.map((rel) => (
+          <li>
+            <a href={postHref(rel.post)}>
+              <span class="see-also-title">{rel.post.data.title}</span>
+              {rel.sharedTags.length > 0 && (
+                <span class="see-also-tags">
+                  {rel.sharedTags.slice(0, 2).join(' · ')}
+                </span>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+<style>
+  .see-also-label {
+    margin: 0 0 10px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .see-also ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .see-also li + li {
+    border-top: 1px solid var(--line);
+  }
+  .see-also a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .see-also a:hover .see-also-title {
+    color: var(--accent-text);
+  }
+  .see-also-title {
+    color: var(--ink);
+    font-size: 14px;
+    transition: color 140ms ease;
+  }
+  .see-also-tags {
+    flex: 0 0 auto;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  /* 紧凑模式：卡片里空间有限，共享标签换到标题下方 */
+  .see-also.compact a {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 7px 0;
+  }
+  .see-also.compact .see-also-title {
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    .see-also a {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+    }
+  }
+</style>

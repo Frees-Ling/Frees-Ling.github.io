@@ -1,0 +1,196 @@
+---
+/**
+ * 主题总览 —— 知识地图在当前语料规模下的诚实形态。
+ *
+ * 这里原本要放一张关系网络图。用真实数据实测后放弃了：
+ * 文章层 17 个节点只有 7 条边、11 个孤立，唯一的簇是权重完全相同的完全图；
+ * 标签层 34 个标签里 31 个只出现一次。两种画法都只能靠编造关系填满画布。
+ * 详细数据与「何时才该画图」的判据见 docs/visual-direction.md。
+ *
+ * 保留的是真正成立的东西：语料覆盖了哪些主题、每个主题有几篇、哪些主题同现。
+ * 它是可用的导航（点主题进对应标签页），不需要假装存在一张网。
+ */
+import Layout from '../layouts/Layout.astro';
+import { getAllPosts } from '../utils/posts-query';
+import { formatDate, postHref } from '../utils/posts';
+import { buildTopicOverview } from '../utils/relations';
+
+const posts = await getAllPosts();
+const topics = buildTopicOverview(posts);
+
+// 只有一个条目的主题单独归置：它们是「尚未展开的方向」，
+// 混在多条目主题里会让读者误以为那里已经有内容可读。
+const main = topics.filter((topic) => topic.count > 1);
+const single = topics.filter((topic) => topic.count === 1);
+---
+<Layout title="主题" description="按主题浏览全部记录：每个主题下有几篇、哪些主题经常一起出现。">
+  <header class="page-hero container">
+    <p class="eyebrow">主题 · {topics.length} 个</p>
+    <h1 class="page-title">这里写过什么，<br />一眼能看完。</h1>
+    <p class="lede">
+      每个主题下有 {main.length} 组是多篇成组的，其余是只写过一次的方向 ——
+      它们都在这里，不假装已经成体系。
+    </p>
+  </header>
+
+  <section class="container topic-section" aria-labelledby="grouped-title">
+    <h2 id="grouped-title" class="section-title">已成形</h2>
+    <ol class="topic-list">
+      {
+        main.map((topic) => (
+          <li class="topic">
+            <div class="topic-head">
+              <a class="topic-name" href={`/tags/${encodeURIComponent(topic.name)}/`}>
+                {topic.name}
+              </a>
+              <span class="topic-count">{topic.count} 篇</span>
+            </div>
+            {topic.related.length > 0 && (
+              <p class="topic-related">
+                常与
+                {topic.related.slice(0, 3).map((rel, index) => (
+                  <>
+                    {index > 0 && '、'}
+                    <a href={`/tags/${encodeURIComponent(rel.name)}/`}>{rel.name}</a>
+                  </>
+                ))}
+                一起出现
+              </p>
+            )}
+            <ul class="topic-posts">
+              {topic.posts.map((post) => (
+                <li>
+                  <a href={postHref(post)}>
+                    <time datetime={post.data.published.toISOString()}>
+                      {formatDate(post.data.published)}
+                    </time>
+                    <span>{post.data.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="container topic-section" aria-labelledby="single-title">
+    <div class="section-header">
+      <div>
+        <h2 id="single-title" class="section-title">只写过一次</h2>
+      </div>
+      <p>尚未展开的方向。写第二次时它们会自动进入上面那一组。</p>
+    </div>
+    <ul class="single-topics">
+      {
+        single.map((topic) => (
+          <li>
+            <a href={`/tags/${encodeURIComponent(topic.name)}/`}>{topic.name}</a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Layout>
+
+<style>
+  .topic-section {
+    padding-bottom: 64px;
+  }
+  .topic-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .topic {
+    padding: 26px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .topic-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .topic-name {
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .topic-name:hover {
+    color: var(--accent-text);
+  }
+  .topic-count {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .topic-related {
+    margin: 6px 0 0;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  .topic-related a {
+    color: var(--accent-text);
+    text-decoration: none;
+  }
+  .topic-related a:hover {
+    text-decoration: underline;
+  }
+  .topic-posts {
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .topic-posts a {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 16px;
+    padding: 7px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .topic-posts a:hover span:last-child {
+    color: var(--accent-text);
+  }
+  .topic-posts time {
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .topic-posts span:last-child {
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .single-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .single-topics a {
+    display: block;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--ink-soft);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .single-topics a:hover {
+    border-color: var(--accent-text);
+    color: var(--accent-text);
+  }
+
+  @media (max-width: 640px) {
+    .topic-posts a {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+  }
+</style>

@@ -1,15 +1,32 @@
 ---
+import SeeAlso from './SeeAlso.astro';
 import type { Post } from '../utils/posts';
+import type { Relation } from '../utils/relations';
 import { formatDate, normalizeCategory, normalizeTags, postHref, readingMinutes } from '../utils/posts';
-interface Props { post: Post; featured?: boolean; headingLevel?: 'h2' | 'h3'; }
+interface Props {
+  post: Post;
+  featured?: boolean;
+  headingLevel?: 'h2' | 'h3';
+  /** 可选「参见」。只在首页这类需要交叉引用的地方传，列表页不传以免噪音。 */
+  relations?: Relation[];
+  /** 主题标目：该文最稀有的标签，卡片目录的检索依据 */
+  subject?: string;
+}
 // 列表页里卡片直接位于 h1 之下，用 h2 才不跳级；
 // 首页卡片位于 section 的 h2 之下，用 h3。
-const { post, featured = false, headingLevel = 'h3' } = Astro.props;
+const { post, featured = false, headingLevel = 'h3', relations = [], subject } = Astro.props;
 const Heading = headingLevel;
 const tags = normalizeTags(post.data.tags).slice(0, 3);
 ---
 <article class:list={['post-card',{featured}]} data-pagefind-filter={`category:${normalizeCategory(post.data.category)}`}>
-  <a class="card-main" href={postHref(post)}><div class="card-meta"><span>{normalizeCategory(post.data.category)}</span><span>{formatDate(post.data.published)}</span><span>{readingMinutes(post)} 分钟</span></div><Heading>{post.data.title}</Heading><p>{post.data.description || '一篇来自旧日记录的文章。'}</p></a>
+  <a class="card-main" href={postHref(post)}><div class="card-meta">{subject && <span class="card-subject">{subject}</span>}<span>{normalizeCategory(post.data.category)}</span><span>{formatDate(post.data.published)}</span><span>{readingMinutes(post)} 分钟</span></div><Heading>{post.data.title}</Heading><p>{post.data.description || '一篇来自旧日记录的文章。'}</p></a>
+  {
+    relations.length > 0 && (
+      <div class="card-see-also">
+        <SeeAlso relations={relations.slice(0, 3)} compact label="参见" />
+      </div>
+    )
+  }
   <div class="card-bottom"><ul class="tag-list" aria-label="文章标签">{tags.map((tag) => <li><a class="tag" href={`/tags/${encodeURIComponent(tag)}/`}>{tag}</a></li>)}</ul><a class="arrow" href={postHref(post)} aria-label={`阅读《${post.data.title}》`}>↗</a></div>
 </article>
 <style>
@@ -17,7 +34,7 @@ const tags = normalizeTags(post.data.tags).slice(0, 3);
   /* 首篇用浅蓝底区分层级。上一版是整块反色（--paper），在浅色主题下
      一块深色会把视线全部吸走 —— 与「安静」冲突，层级也不该靠对比度硬拉。 */
   .post-card:hover { border-color:var(--line-strong); box-shadow:var(--shadow); } .post-card.featured { grid-column:span 2; min-height:280px; background:var(--primary-soft); border-color:transparent; }
-  .card-main { flex:1; color:inherit; text-decoration:none; } .card-meta { display:flex; flex-wrap:wrap; gap:7px 16px; margin-bottom:26px; color: var(--ink-soft); font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; }
+  .card-main { flex:1; color:inherit; text-decoration:none; } .card-subject { color:var(--accent-text); font-weight:600; } .card-see-also { margin-top:22px; padding-top:16px; border-top:1px solid var(--line); } .card-meta { display:flex; flex-wrap:wrap; gap:7px 16px; margin-bottom:26px; color: var(--ink-soft); font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; }
   h2, h3 { max-width:720px; margin:0 0 18px; font-family:var(--font-display); font-size:clamp(19px,2.1vw,25px); font-weight:600; letter-spacing:-.035em; line-height:1.13; } .featured h2, .featured h3 { font-size:clamp(23px,2.5vw,30px); }
   .card-main p { max-width:650px; margin:0; color:var(--ink-soft); }
   .card-bottom { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-top:34px; }

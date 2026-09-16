@@ -2,7 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import PostList from '../components/PostList.astro';
 import { nowItems, projects, site } from '../data/site';
-import { byNewest, formatDate, type Post } from '../utils/posts';
+import { byNewest, formatDate, normalizeTags, type Post } from '../utils/posts';
+import { buildRelations } from '../utils/relations';
 import {
   getAllPosts,
   splitBySubstance,
@@ -45,6 +46,35 @@ const longestLabel = longest
   ? `${Math.round(substanceLength(longest) / 1000)}K 字 · ${longest.data.title}`
   : '—';
 
+// 卡片目录的两样东西：主题标目（该文最稀有的标签，用作检索依据）
+// 与参见（真实共享标签的文章）。都来自 utils/relations.ts，与 /topics/ 同源。
+const relations = buildRelations(posts);
+const tagCount = new Map<string, number>();
+for (const post of posts) {
+  for (const tag of new Set(normalizeTags(post.data.tags))) {
+    tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+  }
+}
+// 主题标目 = 该文所属的**反复出现的**主题。
+//
+// 不能用「最稀有的标签」：全站 34 个标签里 31 个只出现一次，
+// 取最稀有的那个等于随机挑一个一次性标签（实测挑出过 `Note`、`LOVE`），
+// 对检索毫无帮助。只有当某个主题真的出现过两次以上，它才够格当标目；
+// 否则这张卡片就是没有既定主题，留空比编一个更诚实。
+const subjects = new Map(
+  posts
+    .map((post) => {
+      const recurring = normalizeTags(post.data.tags)
+        .filter((tag) => (tagCount.get(tag) ?? 0) >= 2)
+        .sort(
+          (a, b) =>
+            (tagCount.get(b) ?? 0) - (tagCount.get(a) ?? 0) || a.localeCompare(b),
+        )[0];
+      return [post.id, recurring] as const;
+    })
+    .filter(([, subject]) => Boolean(subject)),
+);
+
 const oldest = posts.at(-1);
 const newest = posts.at(0);
 const yearSpan =
@@ -81,6 +111,15 @@ const yearSpan =
           <a class="button primary" href="/blog/">阅读记录</a>
           <a class="button" href="/about/">关于我</a>
         </div>
+
+        <!-- 检索入口放在首屏：这个站首先服务于查阅，其次才是展示。
+             刻意做成链接而不是输入框 —— 首页不加载 Pagefind 的 JS，
+             一个点了才跳转的假输入框比一个诚实的按钮更让人困惑。 -->
+        <a class="catalog-query" href="/search/">
+          <span class="catalog-query-label">检索全部记录</span>
+          <span class="catalog-query-hint">{posts.length} 篇 · 标题 / 正文 / 标签</span>
+          <span class="catalog-query-go" aria-hidden="true">→</span>
+        </a>
       </div>
 
       <dl class="identity-facts">
@@ -133,7 +172,7 @@ const yearSpan =
         </div>
         <p>技术不是孤岛。这里同时保存过程、困惑，以及某个时刻真正想说的话。</p>
       </div>
-      <PostList posts={featured} lead headingLevel="h3" />
+      <PostList posts={featured} lead headingLevel="h3" relations={relations} subjects={subjects} />
     </div>
   </section>
 
@@ -151,7 +190,8 @@ const yearSpan =
       </div>
       <PostList posts={recent} variant="index" numberFor={entryNumber} />
       <p class="index-more">
-        <a class="text-link" href="/archive/">查看全部 {posts.length} 篇记录</a>
+        <a class="text-link" href="/topics/">按主题浏览</a>
+        <a class="text-link" href="/archive/">按年份浏览全部 {posts.length} 篇</a>
       </p>
     </div>
   </section>
@@ -245,6 +285,39 @@ const yearSpan =
     gap: 12px;
   }
 
+  /* 书目查询台：检索是这个站的第一功能，所以它在首屏 */
+  .catalog-query {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 16px;
+    margin-top: 30px;
+    padding: 16px 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 160ms ease;
+  }
+  .catalog-query:hover {
+    border-color: var(--accent-text);
+  }
+  .catalog-query-label {
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .catalog-query-hint {
+    grid-row: 2;
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+  .catalog-query-go {
+    grid-row: 1 / span 2;
+    align-self: center;
+    color: var(--accent-text);
+    font-size: 18px;
+  }
+
   .identity-facts {
     margin: 0;
     border-top: 1px solid var(--line);
@@ -329,8 +402,11 @@ const yearSpan =
      五处的同款规则各写一遍。现在只有一份实现。 */
 
   .index-more {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 24px;
     margin: 26px 0 0;
-    text-align: right;
   }
 
   /* ── CURRENT SIGNAL ── */

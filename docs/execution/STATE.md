@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-RENDER-001 — 文章渲染器审计与契约
+W1 视觉收口 — 书房方向落地
 
 ## Last known implementation state
 
@@ -27,8 +27,8 @@ RENDER-001 — 文章渲染器审计与契约
 
 ## Current objective
 
-确定文章渲染器的语义节点、样式责任与 Studio 复用边界，
-产出 fixture 集与兼容策略，为 Transformer 分章迁移做准备。
+完成「书房」方向：首页卡片目录、参见交叉引用、主题总览、
+文章详情与列表页视觉统一；桌面/移动/深色三态验证。
 
 ## Next READY task
 
@@ -47,5 +47,8 @@ RENDER-002 — Transformer 枢纽/分章迁移设计（依赖 RENDER-001）。
 - 三类 WebDAV：Public / Collection / Security。
 - R2/Cloudflare Images 不是必需依赖，先做供应商能力研究。
 - 公开批注允许发布；OTP 只认证、不加密。
+- 视觉方向为「书房」，单一蓝色相 + 中文优先；知识地图改为主题总览（ADR-019）。
+- 无人值守提交使用独立自动化身份，不依赖 1Password（ADR-016）。
+- 密钥闸门 check-secrets 覆盖路径黑名单与内容特征，不回显匹配内容。
 - 栏目归属以数据决定，人工 `section` 字段优先于标签推断（ADR-014）。
 - 组件 frontmatter 保持薄，派生逻辑放 `src/utils/`（ADR-015）。

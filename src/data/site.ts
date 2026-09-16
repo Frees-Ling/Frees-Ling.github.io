@@ -30,6 +30,7 @@ export const nav = [
 export const secondaryNav = [
   // research 与 notes 在五区导航里并入 WORK / NOTES 标签之下，
   // 但作为独立页面仍然存在，必须在页脚可到达 —— 否则成为孤儿页。
+  { href: '/topics/', label: '主题', latin: 'TOPICS' },
   { href: '/research/', label: '研究', latin: 'RESEARCH' },
   { href: '/notes/', label: '随笔', latin: 'NOTES' },
   { href: '/friends/', label: '朋友们', latin: 'FRIENDS' },

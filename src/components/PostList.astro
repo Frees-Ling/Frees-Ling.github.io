@@ -16,6 +16,7 @@
  */
 import PostCard from './PostCard.astro';
 import { buildListModel, isThin } from '../utils/posts-query';
+import type { Relation } from '../utils/relations';
 import {
   formatDate,
   formatShortDate,
@@ -51,6 +52,10 @@ interface Props {
    * 那种编号不该随列表被筛选或重排而变化。
    */
   numberFor?: (post: Post) => string;
+  /** 每篇文章的「参见」。传了才显示 —— 列表页通常不需要。 */
+  relations?: Map<string, Relation[]>;
+  /** 每篇文章的主题标目（最稀有的标签）。 */
+  subjects?: Map<string, string>;
 }
 
 const {
@@ -66,6 +71,8 @@ const {
   filterable = false,
   numberFrom,
   numberFor,
+  relations,
+  subjects,
 } = Astro.props;
 
 // 分组与降权的推导在查询层（buildListModel），组件只负责呈现。
@@ -96,6 +103,8 @@ const categoryOf = (post: Post) => normalizeCategory(post.data.category);
                   post={post}
                   featured={lead && index === 0}
                   headingLevel={headingLevel}
+                  relations={relations?.get(post.id)}
+                  subject={subjects?.get(post.id)}
                 />
               </div>
             ))}

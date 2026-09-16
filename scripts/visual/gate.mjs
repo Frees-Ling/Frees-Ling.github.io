@@ -47,6 +47,7 @@ const DEFAULT_ROUTES = [
   '/now/',
   '/notes/',
   '/research/',
+  '/topics/',
   '/history/',
   '/search/',
   '/blog/thinking/',
