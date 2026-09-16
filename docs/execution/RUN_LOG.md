@@ -19,3 +19,4 @@
 - 权限：`--permission-prompts none`（需要审批的操作一律拒绝，**不是** bypass 模式）
 - 管理：`sh scripts/auto-dev/ctl.sh status|pause|resume|stop|log`
 | 2026-09-16T18:40:35Z | KB-001 | DONE | 服务层实现完成，40 项测试通过 |
+| 2026-09-16T18:59:23Z | KB-002 | DONE | 编辑界面完成，48 项测试 + 浏览器验收 5/5 |

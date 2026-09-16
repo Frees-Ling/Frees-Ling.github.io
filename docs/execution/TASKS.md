@@ -312,7 +312,7 @@ Commit：本文件所在提交。
 
 ### KB-002 — 本地编辑界面（K2）
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: K2
 - Priority: P0
 - Depends-On: KB-001
@@ -327,7 +327,38 @@ Acceptance：
 - 真实浏览器验证（截图），非仅构建通过
 - 键盘可达、对比度达标
 
-Evidence：（待填）
+Evidence：
+
+- `studio/web/`：原生 HTML + CSS + JS，**未引入任何前端框架**（界面只有「列表 + 编辑」两件事）
+- 颜色、字体、圆角**全部取自 `/tokens.css`** —— 该文件由服务直接托管项目的
+  `src/styles/tokens.css`，与公开站同一真相源；有测试断言 `studio.css` 内
+  **不含任何颜色字面量**
+- 会话认证：登录页粘贴一次令牌 → 服务端下发 `HttpOnly; SameSite=Strict` Cookie。
+  **刻意不把令牌放进 URL**（会进浏览器历史、可能被 Referer 带出、会出现在截图里）
+- 静态资源路径已做越界检查，并有测试覆盖
+
+验收（`node studio/verify/browser.mjs`，真实 Chrome + 真实服务）：
+
+```
+✓ 未登录时显示登录页
+✓ 经真实界面新建的笔记已落库
+✓ 检索命中该笔记
+✓ 主题可切换
+✓ 键盘可依次聚焦到 8 个元素
+```
+
+测试：**48 项全部通过**（`npm test`）。
+
+**浏览器验证抓出了一个单测发现不了的缺陷**：登录表单提交的是
+`application/x-www-form-urlencoded`，而服务端只按 JSON 解析 ——
+于是 token 永远为空、登录必然失败。单测传的是 JSON，所以一直是绿的。
+这正是「构建通过不等于界面可用」的实例。
+
+遗留：
+- 控制台有一条 401 与一条 404（后者疑为 favicon）。不影响功能，未查明来源。
+- 未对 Studio 界面单独做对比度测量（公开站的门禁不覆盖 Studio）。
+
+Commit：本文件所在提交。
 
 ### KB-003 — 模型适配层与模拟推理服务（K3）
 

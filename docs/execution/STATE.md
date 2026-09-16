@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-002 — 本地编辑界面（K2）
+KB-003 — 模型适配层与模拟推理服务（K3）
 
 ## Last known implementation state
 
@@ -25,6 +25,8 @@ KB-002 — 本地编辑界面（K2）
 - 文章渲染器契约已确立（RENDER-001 DONE），见 `docs/article-renderer.md`。
 - 知识库存储层（K0）与服务层（KB-001 DONE）已实现，40 项测试通过；
   服务只绑 127.0.0.1、令牌鉴权、无任何发布到公网的路由。
+- 本地编辑界面（KB-002 DONE）可用：登录、列表、阅读、编辑、新建、删除、检索、双主题。
+  界面复用 tokens.css，未引入前端框架；有真实浏览器验收脚本。
 - 凭证走 apiKeyHelper + macOS 钥匙串，磁盘零明文；读取带 5 秒看门狗（ADR-020/021）。
 - 导航与页脚合计覆盖全部结构性路由；旧 URL 与大小写行为均已验证。
 - Studio、Knowledge Engine、WebDAV 集成、Collection 和灾备 UI 尚未实现。

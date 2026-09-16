@@ -7,7 +7,18 @@
 //     也没有能改变这个事实的参数
 //   · 错误响应不回显堆栈或内部路径
 
+import { join } from 'node:path';
 import { tokenMatches } from './index.mjs';
+import {
+  hasSession,
+  serveFile,
+  resolveStatic,
+  LOGIN_PAGE,
+  WEB_ROOT,
+  TOKENS_FILE,
+} from './web.mjs';
+
+const COOKIE = 'frees_studio';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 
@@ -33,6 +44,18 @@ async function readBody(req, limit = 1024 * 1024) {
   }
 }
 
+/** 读原始请求体字符串（表单与 JSON 都要用）。 */
+async function readRawBody(req, limit = 1024 * 1024) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > limit) throw new Error('请求体过大');
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
 function bearer(req) {
   const raw = req.headers.authorization || '';
   return raw.startsWith('Bearer ') ? raw.slice(7) : '';
@@ -44,8 +67,69 @@ export async function handleRequest(req, res, deps) {
   const path = url.pathname;
   const method = req.method || 'GET';
 
-  // ── 鉴权：所有路由，无例外 ──
-  if (!tokenMatches(token, bearer(req))) {
+  // ── 以下三条在鉴权之前 ──
+  //
+  // 它们必须免鉴权，否则浏览器永远拿不到令牌（鸡生蛋问题）。
+  // 安全性由另外两道保证：服务只绑 127.0.0.1，且 remoteAddress 必须本机。
+  // 这三条都不触碰任何笔记数据。
+
+  // 静态资源（界面本身不含私人数据）
+  if (path.startsWith('/static/')) {
+    const file = resolveStatic(WEB_ROOT, path.slice('/static'.length));
+    if (!file) return send(res, 404, { error: '没有这个资源' });
+    serveFile(res, file);
+    return;
+  }
+
+  // 设计变量直接取自项目的 tokens.css —— 单一真相源，界面与公开站不会漂移
+  if (path === '/tokens.css' && method === 'GET') {
+    serveFile(res, TOKENS_FILE);
+    return;
+  }
+
+  // 建立会话：校验令牌后下发 HttpOnly Cookie
+  if (path === '/api/session' && method === 'POST') {
+    // 登录页是原生表单，提交的是 application/x-www-form-urlencoded，
+    // **不是** JSON。这里曾经只按 JSON 解析，于是 token 永远是空字符串、
+    // 登录必然失败 —— 单测传 JSON 所以没发现，是浏览器验证抓出来的。
+    const raw = await readRawBody(req).catch(() => '');
+    const isForm = (req.headers['content-type'] || '').includes(
+      'form-urlencoded',
+    );
+    const provided = String(
+      isForm
+        ? new URLSearchParams(raw).get('token') || ''
+        : (JSON.parse(raw || '{}').token ?? ''),
+    );
+    if (!tokenMatches(token, provided)) {
+      res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(LOGIN_PAGE.replace('%ERROR%', '令牌不对，请重新复制'));
+      return;
+    }
+    res.writeHead(303, {
+      location: '/',
+      'set-cookie': `${COOKIE}=${encodeURIComponent(provided)}; HttpOnly; SameSite=Strict; Path=/`,
+    });
+    res.end();
+    return;
+  }
+
+  // 入口页：无会话给登录页，有会话给界面
+  if (path === '/' && method === 'GET') {
+    if (!hasSession(req, token)) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(LOGIN_PAGE.replace('%ERROR%', ''));
+      return;
+    }
+    const file = resolveStatic(WEB_ROOT, 'index.html');
+    if (!file) return send(res, 500, { error: '界面文件缺失' });
+    serveFile(res, file);
+    return;
+  }
+
+  // ── 鉴权：其余所有路由，无例外 ──
+  // 接受 Bearer 头（命令行/测试）或会话 Cookie（浏览器）
+  if (!tokenMatches(token, bearer(req)) && !hasSession(req, token)) {
     send(res, 401, { error: '需要有效的访问令牌' });
     return;
   }

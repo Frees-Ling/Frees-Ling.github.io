@@ -1,0 +1,202 @@
+/* 书房界面样式。
+ *
+ * 颜色、字体、圆角**全部取自 /tokens.css** —— 那是公开站与 Studio 的共同真相源。
+ * 这里只写布局与组件形态，不写任何颜色字面量。
+ * 后果是：改 tokens.css 会同时改变公开站与 Studio，这正是想要的。
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+}
+
+.sr-only {
+  position: absolute;
+  left: -9999px;
+}
+
+/* ── 顶栏 ── */
+.bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px var(--gutter-mobile);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.mark {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.search {
+  flex: 1;
+  min-width: 0;
+}
+.search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  color: var(--ink);
+  font: inherit;
+}
+.search input:focus-visible,
+.title:focus-visible,
+.tags:focus-visible,
+.body:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: var(--line-strong);
+}
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.btn.danger {
+  color: var(--signal-text);
+  border-color: var(--line);
+}
+
+/* ── 主体：左列表 / 右编辑 ── */
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.list {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  background: var(--surface);
+}
+.list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.list li + li {
+  border-top: 1px solid var(--line);
+}
+.list a {
+  display: block;
+  padding: 11px var(--gutter-mobile);
+  color: inherit;
+  text-decoration: none;
+}
+.list a:hover {
+  background: var(--surface-2);
+}
+.list a[aria-current='true'] {
+  background: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.note-title {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+}
+.note-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.empty,
+.placeholder {
+  padding: 32px var(--gutter-mobile);
+  color: var(--ink-soft);
+}
+
+/* ── 编辑区 ── */
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+#editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  padding: var(--gutter-mobile);
+  min-height: 0;
+}
+.title {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+}
+.tags,
+.body {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.tags {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.body {
+  flex: 1;
+  min-height: 320px;
+  resize: vertical;
+  line-height: 1.9;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.status {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+/* ── 移动端：单列 ── */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .list {
+    max-height: 38vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}

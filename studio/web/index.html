@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>书房 · 知识库</title>
+    <!-- 与公开站共用同一套设计变量，不复制一份 -->
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/static/studio.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <span class="mark">书房</span>
+      <form class="search" role="search" id="search-form">
+        <label class="sr-only" for="q">检索笔记</label>
+        <input id="q" type="search" placeholder="检索标题与正文…" autocomplete="off" />
+      </form>
+      <button type="button" id="new" class="btn primary">新建</button>
+      <button type="button" id="theme" class="btn" aria-pressed="false">深色</button>
+    </header>
+
+    <main class="layout">
+      <nav class="list" aria-label="笔记列表">
+        <ol id="notes"></ol>
+        <p id="empty" class="empty" hidden>这里还没有笔记。点「新建」开始。</p>
+      </nav>
+
+      <section class="pane" aria-live="polite">
+        <div id="placeholder" class="placeholder">
+          <p>从左边选一条，或者新建一条。</p>
+        </div>
+
+        <form id="editor" hidden>
+          <label class="sr-only" for="title">标题</label>
+          <input id="title" class="title" type="text" placeholder="标题" required />
+          <label class="sr-only" for="tags">标签（逗号分隔）</label>
+          <input id="tags" class="tags" type="text" placeholder="标签，用逗号分隔" />
+          <label class="sr-only" for="body">正文</label>
+          <textarea id="body" class="body" placeholder="用 Markdown 写…"></textarea>
+
+          <div class="actions">
+            <button type="submit" class="btn primary">保存</button>
+            <button type="button" id="delete" class="btn danger">删除</button>
+            <span id="status" class="status" role="status"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

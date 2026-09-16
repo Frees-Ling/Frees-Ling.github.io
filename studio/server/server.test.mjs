@@ -312,3 +312,110 @@ test('服务只绑 127.0.0.1', () => {
   assert.equal(BIND_HOST, '127.0.0.1');
   assert.ok(!existsSync('/dev/null/nope'), 'sanity');
 });
+
+// ─────────────────── 界面托管与会话（KB-002）───────────────────
+
+test('未登录访问 / 得到登录页而不是界面', async () => {
+  await withServer(async ({ base }) => {
+    const res = await fetch(base + '/');
+    assert.equal(res.status, 200);
+    const html = await res.text();
+    assert.match(html, /书房/);
+    assert.match(html, /token/);
+    assert.doesNotMatch(html, /id="editor"/, '不应直接给出编辑界面');
+  });
+});
+
+test('令牌正确时下发 HttpOnly + SameSite=Strict 的会话 Cookie', async () => {
+  await withServer(async ({ base, token }) => {
+    const res = await fetch(base + '/api/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token }),
+      redirect: 'manual',
+    });
+    assert.equal(res.status, 303);
+    const cookie = res.headers.get('set-cookie') || '';
+    assert.match(cookie, /HttpOnly/);
+    assert.match(cookie, /SameSite=Strict/);
+    assert.doesNotMatch(cookie, /Domain=/, '不应设置 Domain');
+  });
+});
+
+test('令牌错误时拒绝建立会话', async () => {
+  await withServer(async ({ base }) => {
+    const res = await fetch(base + '/api/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: 'wrong' }),
+    });
+    assert.equal(res.status, 401);
+    assert.equal(res.headers.get('set-cookie'), null, '失败时不应下发 Cookie');
+  });
+});
+
+test('带会话 Cookie 时可访问 API', async () => {
+  await withServer(async ({ base, token }) => {
+    const res = await fetch(base + '/api/notes', {
+      headers: { cookie: `frees_studio=${encodeURIComponent(token)}` },
+    });
+    assert.equal(res.status, 200);
+  });
+});
+
+test('伪造的会话 Cookie 无效', async () => {
+  await withServer(async ({ base }) => {
+    const res = await fetch(base + '/api/notes', {
+      headers: { cookie: 'frees_studio=fake' },
+    });
+    assert.equal(res.status, 401);
+  });
+});
+
+test('静态资源路径穿越被拒绝', async () => {
+  await withServer(async ({ base }) => {
+    for (const p of [
+      '/static/../../package.json',
+      '/static/..%2f..%2fpackage.json',
+      '/static/nope.js',
+    ]) {
+      const res = await fetch(base + p);
+      // 只断言「读不到」，不锁定具体状态码：
+      // fetch 会先把 /static/../../x 规范化成 /x，于是走鉴权分支返回 401；
+      // 编码过的变体才会真正到达静态处理器并返回 404。
+      // 两种情况都安全，测试不该把实现细节写死。
+      assert.notEqual(res.status, 200, `${p} 不应可读`);
+      const body = await res.text();
+      assert.doesNotMatch(
+        body,
+        /"name":\s*"frees-blog"/,
+        `${p} 泄露了文件内容`,
+      );
+    }
+  });
+});
+
+test('tokens.css 可被界面读取（设计与公开站同源）', async () => {
+  await withServer(async ({ base }) => {
+    const res = await fetch(base + '/tokens.css');
+    assert.equal(res.status, 200);
+    const css = await res.text();
+    assert.match(css, /--canvas:/);
+    assert.match(css, /--primary:/);
+  });
+});
+
+test('界面脚本不含任何令牌或内联色值', async () => {
+  await withServer(async ({ base }) => {
+    const js = await (await fetch(base + '/static/app.js')).text();
+    assert.doesNotMatch(js, /Bearer/, '脚本不应接触令牌');
+    const css = await (await fetch(base + '/static/studio.css')).text();
+    // 颜色必须来自 tokens.css，样式表里不应出现颜色字面量
+    const literals = css.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
+    assert.deepEqual(
+      literals,
+      [],
+      `studio.css 不应含颜色字面量，发现: ${literals}`,
+    );
+  });
+});
