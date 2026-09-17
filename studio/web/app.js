@@ -128,11 +128,39 @@ async function renderPreview() {
       body: JSON.stringify({ markdown: $('body').value }),
     });
     if (seq !== preview.seq) return;
-    $('preview').innerHTML = html;
+    setPreviewDoc(html);
   } catch (error) {
     if (seq !== preview.seq) return;
-    $('preview').textContent = `渲染失败：${error.message}`;
+    setPreviewDoc(`<p>渲染失败：${escapeHtml(error.message)}</p>`);
   }
+}
+
+/**
+ * 把渲染结果放进沙箱 iframe。
+ *
+ * 用 `srcdoc` **属性赋值**而不是拼进 innerHTML —— 属性赋值不经过 HTML 解析，
+ * 因此正文档里出现 `</iframe>` 之类的文本也破坏不了结构。
+ *
+ * 样式链接用的是服务端**免鉴权**提供的 /tokens.css 与 /prose.css，
+ * 与公开站同一份，预览与发布才不会长得不一样。
+ */
+function setPreviewDoc(bodyHtml) {
+  $('preview').srcdoc = `<!doctype html><html lang="zh-CN"><head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/prose.css">
+<style>body{margin:0;background:var(--canvas)}</style>
+</head><body><div class="prose">${bodyHtml}</div></body></html>`;
+}
+
+function escapeHtml(text) {
+  return String(text).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
+        c
+      ],
+  );
 }
 
 function schedulePreview() {

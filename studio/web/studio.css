@@ -397,10 +397,11 @@ body {
    而 vw 跟的是视口宽度。半宽面板里排出来的字号与真正发布的不一样，
    那种预览会误导人 —— 而预览唯一的用处就是「所见即所发」。 */
 .preview-wrap {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 320px;
-  overflow-y: auto;
-  padding: 4px 2px 24px;
+  padding: 4px 2px 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -412,7 +413,11 @@ body {
   font-family: var(--font-mono);
   font-size: 11px;
 }
-/* 预览区里再套一层内边距，让正文不贴边 —— 与公开站的内容栏一致 */
-#preview {
-  padding: 0 16px;
+/* iframe 自己滚，外层不再滚 —— 两层滚动条会让人分不清在滚哪一层 */
+.preview-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 320px;
+  border: 0;
+  background: var(--canvas);
 }

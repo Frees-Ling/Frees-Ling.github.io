@@ -92,7 +92,22 @@
                全宽切换则与实际页面在同一视口宽度下，看到的才是真的。 -->
           <div id="preview-wrap" class="preview-wrap" hidden>
             <p class="preview-note">预览 · 与发布使用同一套渲染管线与样式</p>
-            <div id="preview" class="prose"></div>
+            <!-- 用**沙箱 iframe** 而不是把 HTML 塞进 innerHTML。
+                 渲染管线按设计是透传裸 HTML 的（Astro 的 markdown 如此），
+                 于是「从网页或 AI 输出里粘一段带 <script> 的内容再预览」
+                 就会以**当前会话的身份**执行它 —— 这是公开站没有的提权：
+                 静态站点上没有会话可偷，而 Studio 里有。
+
+                 沙箱同时关掉脚本与同源：脚本不执行，框架也读不到父页面、
+                 用不上会话。比「把危险标签过滤掉」可靠 ——
+                 自己写过滤器是出了名容易漏的活，而沙箱是浏览器保证的。
+                 好处是**保真度不受影响**：HTML 还是同一份，只是不执行。 -->
+            <iframe
+              id="preview"
+              class="preview-frame"
+              sandbox
+              title="预览"
+            ></iframe>
           </div>
 
           <div class="actions">
