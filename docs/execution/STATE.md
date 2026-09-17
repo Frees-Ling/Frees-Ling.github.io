@@ -1,6 +1,6 @@
 # Current Project State
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 Branch: `main`
 
@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
+MEDIA-001 已完成（本地媒体目录与索引）。下一项见下方 Next READY task。
 
 ## Last known implementation state
 
@@ -43,6 +43,11 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   向量存本地 SQLite，不引入向量数据库。
 - 完整导出/导入与向量重建（KB-008 DONE）：导出不含向量、导入只接受空库、
   重建全算完才落库以避免半新半旧。
+- 本地媒体库（MEDIA-001 DONE）：内容寻址 id + 迁移 v10，原子落盘与崩溃恢复。
+  EXIF 策略是**原图保留、派生物一律不含元数据** —— 分界是「哪个文件会离开
+  这台机器」。实测推翻三点：`.withMetadata(false)` 反而保留 EXIF、
+  `withMetadata()` 往返会**造出** EXIF 块（使检测恒真）、GPS 不能靠搜字节判定
+  （大端相机会漏报）。29 项测试，判据各自做过变异验证。
 - 命令行入口（KB-009 DONE）：status / start / export / import / rebuild，`npm run studio`。
 - 加密备份格式（KB-010 DONE）：AES-256-GCM + scrypt，口令不落盘。
 - 备份传输层（KB-011 DONE）：WebDAV 上传 → **回读校验** → 保留策略（默认 dry-run、

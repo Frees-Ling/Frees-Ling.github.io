@@ -419,6 +419,75 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    version: 10,
+    name: 'media-library',
+    up: (db) => {
+      // ── 本地媒体库（MEDIA-001）──
+      //
+      // ── 为什么 id 是内容哈希 ──
+      //
+      // 图片没有「天然主键」。用文件名？同一张图在不同目录下会重复导入，
+      // 而改名又会让引用断掉。用自增序号？那导两次同一张图就是两条记录，
+      // 而「重复导入要幂等」恰恰是验收里写明的。
+      //
+      // 内容哈希一次解决三件事：**稳定**（同样的字节永远是同一个 id）、
+      // **去重**（导两次自然只剩一条）、**可校验**（文件与记录对不上时立刻能发现）。
+      //
+      // 代价是「改一个像素就是另一张图」，而那正是我们想要的语义 ——
+      // 媒体库里没有「同一张图的新版本」，只有不同的图。
+      db.exec(`
+        CREATE TABLE media (
+          id          TEXT PRIMARY KEY,
+          hash        TEXT NOT NULL UNIQUE,
+          -- 原始文件名只作记录，**不参与寻址** —— 改名不该让引用断掉
+          filename    TEXT NOT NULL,
+          mime        TEXT NOT NULL,
+          bytes       INTEGER NOT NULL,
+          width       INTEGER,
+          height      INTEGER,
+          -- EXIF 策略：原图**原样保留**（它是母版，抹掉就是毁数据），
+          -- 但记下它带了什么，好让用户知道哪几张照片含位置信息
+          has_exif    INTEGER NOT NULL DEFAULT 0,
+          has_gps     INTEGER NOT NULL DEFAULT 0,
+          imported_at TEXT NOT NULL
+        );
+      `);
+      db.exec(`CREATE INDEX idx_media_imported ON media (imported_at DESC);`);
+
+      // ── 派生物 ──
+      //
+      // 与母版分开存：派生物可以随时重算，母版不能。
+      // 因此 `ON DELETE CASCADE` 在这里是安全的 —— 删掉母版时派生物没有意义了。
+      db.exec(`
+        CREATE TABLE media_derivatives (
+          id         TEXT PRIMARY KEY,
+          media_id   TEXT NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+          kind       TEXT NOT NULL,
+          width      INTEGER NOT NULL,
+          bytes      INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          UNIQUE (media_id, kind, width)
+        );
+      `);
+
+      // ── 反向引用：哪篇笔记用了这张图 ──
+      //
+      // 没有它，「这张图能不能删」就只能靠人去翻所有笔记。
+      db.exec(`
+        CREATE TABLE media_refs (
+          media_id   TEXT NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+          owner_kind TEXT NOT NULL,
+          owner_id   TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (media_id, owner_kind, owner_id)
+        );
+      `);
+      db.exec(
+        `CREATE INDEX idx_media_refs_owner ON media_refs (owner_kind, owner_id);`,
+      );
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
