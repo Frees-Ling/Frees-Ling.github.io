@@ -19,7 +19,7 @@
     "check:preview": "node scripts/check-preview-parity.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "verify:secrets": "node studio/verify/secret-scan.mjs",
-    "test": "node --test studio/",
+    "test": "node --test studio/ src/",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "lint:md": "markdownlint-cli2 --config .markdownlint.json 'src/content/posts/*.md'",

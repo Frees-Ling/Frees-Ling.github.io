@@ -1160,10 +1160,26 @@ Commit：本文件所在提交。
 
 Acceptance：ARTICLE/KNOWLEDGE/PROJECT 共用稳定 block ID 和生产渲染预览；重启恢复编辑状态。
 
-**已完成的部分**（提交见下方）：渲染管线抽取 + 预览与发布的一致性闸门。
+**已完成的部分**（提交见下方）：渲染管线抽取 + 预览一致性闸门 + 稳定 block ID。
 
-Delivered：`src/utils/markdown-pipeline.mjs`（公开站与预览的共用真相源）+
-`scripts/check-preview-parity.mjs`（`npm run check:preview`）。
+Delivered：`src/utils/markdown-pipeline.mjs`（公开站与预览的共用真相源）、
+`scripts/check-preview-parity.mjs`（`npm run check:preview`）、
+`src/utils/blocks.mjs`（三种文档类型共用的稳定 block ID）。
+
+### 稳定 block ID
+
+- ID = 规范化内容（NFKC + 空白折叠）的 sha256 前 8 位，同文档内重复出现的
+  按次序加 `-2` / `-3` 后缀。同一份 Markdown 任何时候算出同一组 ID，
+  因此预览、发布、重新渲染之间对得上。
+- **改写一段只影响那一段**，其余 ID 全部不变 —— 这是选内容哈希而不是序号的
+  核心理由：用序号的话，在开头插一段会让后面所有块 ID 平移，
+  「这条批注属于第 5 段」就会在无关的编辑后指向别的段落。用例专门守这一条。
+- 代价如实记录：同一段改了字就换了身份。需要跨修订追踪时应当显式保存修订
+  历史，而不是指望 ID 自己不变。
+- 标题复用渲染器给出的锚点（不自己再算一套 slug），层级报告的是**渲染后**的层级。
+- **产物零影响**：ID 是算出来的，不写进 HTML。写 `data-block-id` 会让公开站
+  每页多几百个属性，还会让预览与发布不再逐字相同、逼着 `check:preview` 放宽 ——
+  为一个编辑器才要的功能削弱一道防漂移闸门不划算。有用例守着这条。
 
 Evidence：
 
@@ -1191,9 +1207,14 @@ Evidence：
 
 未完成（本任务剩下的部分）：
 
-- [ ] ARTICLE / KNOWLEDGE / PROJECT 共用稳定 block ID
+- [x] ARTICLE / KNOWLEDGE / PROJECT 共用稳定 block ID
 - [ ] Studio 侧的预览界面接入
 - [ ] 重启恢复编辑状态
+
+顺带修掉：`npm run test` 是 `node --test studio/`，因此 `src/` 下的用例
+**根本不会被执行**。新加的 `blocks.test.mjs` 起初就落在盲区里 ——
+11 条用例写完了却一条都没跑过。已把脚本扩到 `node --test studio/ src/`，
+用例数 272 → 283。这类「测试存在但从不运行」的缺口比没有测试更隐蔽。
 
 Commit：本文件所在提交。
 

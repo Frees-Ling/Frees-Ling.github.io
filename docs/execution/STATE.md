@@ -75,7 +75,8 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   5 处依赖字段不可机器解析（中文顿号、散文）。
 - 渲染管线已抽取（EDITOR-001 进行中）：`src/utils/markdown-pipeline.mjs` 是公开站
   与 Studio 预览的共用真相源；`npm run check:preview` 逐字比对预览与发布，
-  17 篇全部一致。
+  17 篇全部一致。稳定 block ID 已就绪（`src/utils/blocks.mjs`），
+  三种文档类型共用；ID 是算出来的，产物零影响。
 - 长期记忆服务已建立（MEM-001 DONE，`docs/memory-service.md`）：三层分离、
   追加式纠正、去重与冲突标记、可见性、自动提取开关。31 项测试。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
