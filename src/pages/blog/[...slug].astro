@@ -6,6 +6,11 @@ import SeeAlso from '../../components/SeeAlso.astro';
 import { byNewest, formatDate, normalizeCategory, normalizeTags, postHref, readingMinutes } from '../../utils/posts';
 import { buildRelations, getRelated } from '../../utils/relations';
 import { buildToc } from '../../utils/toc';
+import { buildKnowledge } from '../../utils/knowledge.mjs';
+// JSDoc 的 typedef 不会自动传导到模板里的回调参数上，
+// 从这里取一次类型再在模板里显式标注
+type KnowledgeNode = import('../../utils/knowledge.mjs').KnowledgeNode;
+type Source = import('../../utils/knowledge.mjs').Source;
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);
@@ -26,6 +31,11 @@ const related = getRelated(post, buildRelations(allPosts), 4);
 
 // 目录模型：短文平铺，长文按章节分组折叠（见 utils/toc.ts 的阈值说明）
 const toc = buildToc(headings as { depth: number; slug: string; text: string }[]);
+
+// 知识层：前置知识、相关阅读、被引用、事实来源（KNOW-001）。
+// 全部来自 frontmatter 的人工声明 —— 不做标签推断，理由见 utils/knowledge.mjs
+// 与 ADR-019。没有声明时各块为空，页面上什么也不渲染。
+const knowledge = buildKnowledge(allPosts).get(post.id);
 ---
 <Layout title={post.data.title} description={post.data.description} image={post.data.image || '/images/banner.jpg'} article>
   <div class="reading-progress" aria-hidden="true"><span></span></div>
@@ -57,6 +67,39 @@ const toc = buildToc(headings as { depth: number; slug: string; text: string }[]
           : <nav>{toc.flat.map((heading) => <a class={`depth-${heading.depth}`} href={`#${heading.slug}`}>{heading.text}</a>)}</nav>}
       </aside>
       <div class="article-main"><div class="prose"><Content /></div>
+        {knowledge && (knowledge.sources.length > 0 || knowledge.prerequisites.length > 0 || knowledge.related.length > 0 || knowledge.backlinks.length > 0) && (
+          <section class="knowledge" aria-label="知识坐标">
+            {knowledge.prerequisites.length > 0 && (
+              <div class="k-block">
+                <h2>前置知识</h2>
+                <ul>{knowledge.prerequisites.map((n: KnowledgeNode) => <li><a href={n.href}>{n.title}</a></li>)}</ul>
+              </div>
+            )}
+            {knowledge.related.length > 0 && (
+              <div class="k-block">
+                <h2>相关阅读</h2>
+                <ul>{knowledge.related.map((n: KnowledgeNode) => <li><a href={n.href}>{n.title}</a></li>)}</ul>
+              </div>
+            )}
+            {knowledge.backlinks.length > 0 && (
+              <div class="k-block">
+                <h2>被引用</h2>
+                <ul>{knowledge.backlinks.map((n: KnowledgeNode) => <li><a href={n.href}>{n.title}</a></li>)}</ul>
+              </div>
+            )}
+            {knowledge.sources.length > 0 && (
+              <div class="k-block">
+                <h2>事实来源</h2>
+                <ol>{knowledge.sources.map((src: Source) => (
+                  <li>
+                    {src.url ? <a href={src.url} target="_blank" rel="noreferrer">{src.title}</a> : <span>{src.title}</span>}
+                    {src.note && <span class="k-note">{src.note}</span>}
+                  </li>
+                ))}</ol>
+              </div>
+            )}
+          </section>
+        )}
         {related.length > 0 && <SeeAlso relations={related} label="参见 —— 讲过同一件事的记录" />}
 
         <div class="article-license"><span>CC</span><p>除特别注明外，本文采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noreferrer">CC BY-NC-SA 4.0</a> 协议。</p></div>
@@ -333,5 +376,40 @@ const toc = buildToc(headings as { depth: number; slug: string; text: string }[]
 }
 .toc-chapter.is-current > summary {
   font-weight: 600;
+}
+
+/* ── 知识坐标（KNOW-001） ──
+   只有作者在 frontmatter 里声明过才渲染。不做标签推断 ——
+   ADR-019 已用真实语料否掉过那种「填满画布」的做法。 */
+.knowledge {
+  margin-top: 64px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.k-block + .k-block {
+  margin-top: 28px;
+}
+.k-block h2 {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+.k-block ul,
+.k-block ol {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 14px;
+  line-height: 1.9;
+}
+.k-block a {
+  color: var(--ink);
+}
+.k-block .k-note {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12px;
 }
 </style>

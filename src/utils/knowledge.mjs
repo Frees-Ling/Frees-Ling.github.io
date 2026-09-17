@@ -14,47 +14,36 @@
 // 「都是笔记」不是关联，而一个靠推断填满的列表看起来与真实的一样，
 // 读的人无从分辨哪条是作者的意思、哪条是脚本猜的。
 
-import type { CollectionEntry } from 'astro:content';
-
-/** 一篇内容对应的知识节点。 */
-export interface KnowledgeNode {
-  id: string;
-  title: string;
-  href: string;
-  tags: string[];
-  updated?: Date;
-}
-
-/** 一条事实来源。 */
-export interface Source {
-  title: string;
-  url?: string;
-  note?: string;
-}
-
-/** 一个知识节点的完整视图。 */
-export interface KnowledgeView {
-  node: KnowledgeNode;
-  /** 读这篇之前该先读的（人工声明，已解析成节点）。 */
-  prerequisites: KnowledgeNode[];
-  /** 相关阅读（人工声明）。 */
-  related: KnowledgeNode[];
-  /** 引用本节点的**其他**节点 —— 反链。 */
-  backlinks: KnowledgeNode[];
-  /** 事实来源（原样透传，不需要解析）。 */
-  sources: Source[];
-  /** 声明了但找不到对应文章的 id —— 不静默丢弃，交给上层报出来。 */
-  missing: string[];
-}
-
-type Post = CollectionEntry<'posts'>;
+/**
+ * @typedef {object} KnowledgeNode
+ * @property {string} id
+ * @property {string} title
+ * @property {string} href
+ * @property {string[]} tags
+ * @property {Date} [updated]
+ *
+ * @typedef {object} Source
+ * @property {string} title
+ * @property {string} [url]
+ * @property {string} [note]
+ *
+ * @typedef {object} KnowledgeView
+ * @property {KnowledgeNode} node
+ * @property {KnowledgeNode[]} prerequisites
+ * @property {KnowledgeNode[]} related
+ * @property {KnowledgeNode[]} backlinks
+ * @property {Source[]} sources
+ * @property {string[]} missing
+ *
+ * @typedef {import('astro:content').CollectionEntry<'posts'>} Post
+ */
 
 /** 与 posts-query.ts 保持同一套 href 规则，避免两处漂移。 */
-export function nodeHref(id: string): string {
+export function nodeHref(id) {
   return `/blog/${id.replace(/\.(md|mdx)$/i, '')}/`;
 }
 
-function toNode(post: Post): KnowledgeNode {
+function toNode(post) {
   return {
     id: post.id,
     title: post.data.title,
@@ -65,7 +54,7 @@ function toNode(post: Post): KnowledgeNode {
 }
 
 /** 文章 id 的规范化：内容集合的 id 带扩展名，而 frontmatter 里写的是纯名字。 */
-function normalizeId(raw: string): string {
+function normalizeId(raw) {
   return raw
     .trim()
     .replace(/\.(md|mdx)$/i, '')
@@ -79,15 +68,15 @@ function normalizeId(raw: string): string {
  * 后者在 17 篇时看不出差别，在几百篇时是 O(n²)，
  * 而这种「现在够快」的写法最容易在数据变多之后才暴露。
  */
-export function buildKnowledge(posts: Post[]): Map<string, KnowledgeView> {
-  const byId = new Map<string, Post>();
+export function buildKnowledge(posts) {
+  const byId = new Map();
   for (const post of posts) byId.set(normalizeId(post.id), post);
 
   // 反链：谁声明了「前置 = 我」或「相关 = 我」
-  const backlinks = new Map<string, Set<string>>();
-  const addBacklink = (target: string, from: string) => {
+  const backlinks = new Map();
+  const addBacklink = (target, from) => {
     if (!backlinks.has(target)) backlinks.set(target, new Set());
-    (backlinks.get(target) as Set<string>).add(from);
+    backlinks.get(target).add(from);
   };
 
   for (const post of posts) {
@@ -100,9 +89,9 @@ export function buildKnowledge(posts: Post[]): Map<string, KnowledgeView> {
     }
   }
 
-  const resolve = (ids: string[], selfId: string) => {
-    const found: KnowledgeNode[] = [];
-    const missing: string[] = [];
+  const resolve = (ids, selfId) => {
+    const found = [];
+    const missing = [];
     for (const raw of ids) {
       const id = normalizeId(raw);
       if (id === selfId) continue; // 自己引用自己：忽略，不是错误
@@ -113,7 +102,7 @@ export function buildKnowledge(posts: Post[]): Map<string, KnowledgeView> {
     return { found, missing };
   };
 
-  const index = new Map<string, KnowledgeView>();
+  const index = new Map();
   for (const post of posts) {
     const id = normalizeId(post.id);
 
@@ -123,7 +112,7 @@ export function buildKnowledge(posts: Post[]): Map<string, KnowledgeView> {
     const back = [...(backlinks.get(id) ?? [])]
       // 不把自己算进自己的反链
       .filter((from) => from !== id)
-      .map((from) => toNode(byId.get(from) as Post))
+      .map((from) => toNode(byId.get(from)))
       // 按标题排序：反链的顺序若跟着遍历顺序走，会随文件系统变化而抖动
       .sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN'));
 
@@ -148,11 +137,9 @@ export function buildKnowledge(posts: Post[]): Map<string, KnowledgeView> {
  * 在页面上表现为「少了一个链接」—— 静默得没人会发现，
  * 而那正是「事实来源可追溯」最容易被破坏的方式。
  */
-export function danglingReferences(
-  posts: Post[],
-): { from: string; raw: string }[] {
+export function danglingReferences(posts) {
   const known = new Set(posts.map((p) => normalizeId(p.id)));
-  const out: { from: string; raw: string }[] = [];
+  const out = [];
   for (const post of posts) {
     const self = normalizeId(post.id);
     for (const raw of [

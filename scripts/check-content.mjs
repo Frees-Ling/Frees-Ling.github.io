@@ -66,6 +66,31 @@ function readPost(file) {
       .map((tag) => tag.trim().replace(/^["']|["']$/g, ''))
       .filter(Boolean);
   };
+  /**
+   * 块状列表（prerequisites / related）。
+   *
+   * 支持两种写法：行内数组 `[a, b]` 与短横线列表。
+   * 只认其中一种会让另一种写法**静默失效** —— 作者以为填了，
+   * 页面上却什么也没有，而且不报错。
+   */
+  const idList = (key) => {
+    const inline = front.match(new RegExp(`^${key}:\\s*\\[([^\\]]*)\\]`, 'm'));
+    if (inline) {
+      return inline[1]
+        .split(/[，,]/)
+        .map((v) => v.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
+    }
+    const block = front.match(
+      new RegExp(`^${key}:\\s*\\n((?:[ \\t]*-[ \\t]*.+\\n?)+)`, 'm'),
+    );
+    if (!block) return [];
+    return block[1]
+      .split('\n')
+      .map((line) => line.replace(/^[ \t]*-[ \t]*/, '').trim())
+      .map((v) => v.replace(/^["']|["']$/g, ''))
+      .filter(Boolean);
+  };
   return {
     file,
     id: file.replace(/\.(md|mdx)$/i, ''),
@@ -77,6 +102,8 @@ function readPost(file) {
     updated: date('updated'),
     draft: scalar('draft') === 'true',
     tags: tags(),
+    prerequisites: idList('prerequisites'),
+    related: idList('related'),
   };
 }
 
@@ -190,6 +217,44 @@ for (const { post, matched } of membership) {
     );
   }
 }
+
+// ---------- 知识层的悬空引用（KNOW-001）----------
+//
+// `prerequisites` / `related` 里写的是别的文章的 id。写错一个字母不会报错，
+// 页面上只是**少了一个链接** —— 静默得没人会发现，
+// 而那正是「事实来源可追溯」最容易被破坏的方式。
+//
+// 这是 error 而不是 warning：一条指向不存在文章的前置知识不是「风格问题」，
+// 是这条知识链断了。
+const knownIds = new Set(posts.map((p) => p.id.toLowerCase()));
+for (const post of posts) {
+  const self = post.id.toLowerCase();
+  for (const [field, list] of [
+    ['prerequisites', post.prerequisites],
+    ['related', post.related],
+  ]) {
+    for (const raw of list) {
+      const target = raw.replace(/\.(md|mdx)$/i, '').toLowerCase();
+      if (target === self) {
+        errors.push(
+          `src/content/posts/${post.file}  ${field} 指向自己（${raw}）—— 自引用没有意义`,
+        );
+        continue;
+      }
+      if (!knownIds.has(target)) {
+        errors.push(
+          `src/content/posts/${post.file}  ${field} 指向不存在的文章「${raw}」—— ` +
+            '页面上会表现为少一个链接，而不会有任何提示',
+        );
+      }
+    }
+  }
+}
+
+// 去重：同一篇的同一处问题只报一次（重复段落会让列表读起来像坏了）
+const uniqueErrors = [...new Set(errors)];
+errors.length = 0;
+errors.push(...uniqueErrors);
 
 // ---------- 输出 ----------
 if (warnings.length) {
