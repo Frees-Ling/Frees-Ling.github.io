@@ -14,6 +14,8 @@ import { handleChat } from './chat.mjs';
 import { listSettings, setSetting } from '../db/settings.mjs';
 import { renderDocument } from '../../src/utils/blocks.mjs';
 import { getSession, saveSession, clearSession } from '../db/session.mjs';
+import { validatePatch, applyHunks, describePatch } from '../editor/patch.mjs';
+import { collectBlocks } from '../../src/utils/blocks.mjs';
 import {
   verifyToken,
   scopeAllows,
@@ -280,6 +282,47 @@ export async function handleRequest(req, res, deps) {
     if (path === '/api/health' && method === 'GET') {
       send(res, 200, { ok: true });
       return;
+    }
+
+    // ── 选区 diff：校验与接受（EDITOR-002）──
+    //
+    // 两个动作分开，因为它们是**两种不同的决定**：
+    //   · validate —— 「这份 patch 合法吗」（越界、陈旧、重复）
+    //   · apply    —— 「我接受它」
+    // 合并成一个的话，人在按下「生成」时就已经应用了，
+    // 而「可接受/拒绝」就不再存在。
+    const previewPatch = path.match(/^\/api\/notes\/([^/]+)\/patch$/);
+    if (previewPatch && (method === 'POST' || method === 'PUT')) {
+      const id = decodeURIComponent(previewPatch[1]);
+      const note = store.getNote(db, id);
+      if (!note) return send(res, 404, { error: '笔记不存在' });
+
+      const body = await readBody(req);
+      const patch = body.patch;
+      const selection = Array.isArray(body.selection)
+        ? body.selection
+        : (patch?.selection ?? []);
+
+      const { blocks } = await collectBlocks(note.body);
+      try {
+        const { hunks } = validatePatch(patch, { selection, blocks });
+        const applied = applyHunks(note.body, hunks);
+        if (method === 'POST') {
+          // 只校验，不落库 —— 让编辑器先把它显示给用户看
+          return send(res, 200, {
+            valid: true,
+            preview: describePatch(patch),
+            applied,
+          });
+        }
+        // 接受：写入。**校验通过才走到这里**，不存在「部分应用」。
+        const updated = store.updateNote(db, id, { body: applied });
+        return send(res, 200, { note: updated, applied: describePatch(patch) });
+      } catch (error) {
+        // 校验失败是**用户可读的拒绝理由**，不是 500。
+        // 「它想改选区之外的地方」这句话本身就是要给人看的信息。
+        return send(res, 422, { error: error.message });
+      }
     }
 
     // ── 编辑会话（EDITOR-001）──

@@ -367,3 +367,18 @@ test('撤销之后立刻连搜索都进不去', async () => {
     assert.equal((await request('/api/search?q=x', { token })).status, 401);
   });
 });
+
+// ── 选区 patch 的能力归属（EDITOR-002 × ACCESS-001）──
+//
+// patch 会**改写已有内容**，不是「提一条草稿」。所以它必须落在 admin 一侧 ——
+// 一个「可以提草稿」的外部身份不该能借这个接口改掉用户的正文。
+
+test('选区 patch 需要 admin，write:draft 不够', () => {
+  assert.equal(requiredScope('POST', '/api/notes/abc/patch'), 'admin');
+  assert.equal(requiredScope('PUT', '/api/notes/abc/patch'), 'admin');
+  assert.equal(
+    scopeAllows({ scopes: PRESETS.drafter }, 'POST', '/api/notes/abc/patch'),
+    false,
+    '能提草稿 ≠ 能改正文',
+  );
+});
