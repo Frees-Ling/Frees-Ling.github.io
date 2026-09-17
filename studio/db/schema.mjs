@@ -343,6 +343,56 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 8,
+    name: 'access-tokens',
+    up: (db) => {
+      // ── 受限访问身份（ACCESS-001）──
+      //
+      // 在此之前服务只有**一个**令牌，而它是全权的：拿到它就能读全部私人笔记、
+      // 记忆、对话历史，还能发起对话（等于把私人内容送到模型端点）。
+      // 要把它交给一个外部 AI，等于把整个知识库交出去。
+      //
+      // ── 为什么存哈希而不是令牌本身 ──
+      //
+      // 与 ADR-026 同一个理由：库被拿走时里面不该有能直接用的凭据。
+      // 令牌只在创建那一刻返回一次，之后库里只有 sha256。
+      // 代价是「令牌丢了只能重建」—— 而那是正确的结果，不是缺陷。
+      db.exec(`
+        CREATE TABLE access_tokens (
+          id           TEXT PRIMARY KEY,
+          -- sha256(令牌)，唯一。不存明文。
+          token_hash   TEXT NOT NULL UNIQUE,
+          -- 给人看的用途说明，便于在撤销时认出是哪一个
+          label        TEXT NOT NULL,
+          -- 逗号分隔的能力清单。**默认空 = 什么都不能做**（默认拒绝）
+          scopes       TEXT NOT NULL DEFAULT '',
+          created_at   TEXT NOT NULL,
+          expires_at   TEXT,
+          revoked_at   TEXT,
+          last_used_at TEXT
+        );
+      `);
+      db.exec(`CREATE INDEX idx_access_hash ON access_tokens (token_hash);`);
+
+      // ── 审计日志 ──
+      //
+      // 记「谁在什么时候访问了什么」，**不记内容** ——
+      // 一份用来审计的日志若把私人内容也抄进去，它本身就变成了新的泄漏面。
+      db.exec(`
+        CREATE TABLE access_log (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          token_id   TEXT,
+          method     TEXT NOT NULL,
+          path       TEXT NOT NULL,
+          -- 允许还是拒绝。拒绝也要记 —— 「有人试过但没成功」是最该被看见的
+          allowed    INTEGER NOT NULL,
+          at         TEXT NOT NULL
+        );
+      `);
+      db.exec(`CREATE INDEX idx_access_log_at ON access_log (at DESC);`);
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

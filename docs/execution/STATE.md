@@ -77,6 +77,10 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   预览的共用真相源；`npm run check:preview` 逐字比对预览与发布（17 篇一致）；
   稳定 block ID 三种文档类型共用、产物零影响；Studio 侧预览接入，
   编辑会话存库、**关掉服务再起来未保存的草稿一字不少**。
+- 外部 AI 访问（ACCESS-001 DONE）：核实结论是**「仅凭 API Key 就能让 ChatGPT
+  访问本地知识库」不成立**（不接受贴 key、必须公网 HTTPS、要付费套餐）。
+  真正的交付是受限访问身份：具名、有范围、可撤销、可审计，
+  默认拒绝 + 只存哈希。MCP 服务器与隧道路径记为后续任务。
 - 知识层已建立（KNOW-001 DONE）：`sources` / `prerequisites` / `related` 三个
   可选内容字段 + `src/utils/knowledge.mjs` 的反链索引 + 文章页「知识坐标」。
   全部来自人工声明，不做标签推断（ADR-019）。悬空引用是 error。
@@ -88,7 +92,7 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 
 ## Current objective
 
-KNOW-001 已完成。下一项见 Next READY task。
+ACCESS-001 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

@@ -15,6 +15,12 @@ import { listSettings, setSetting } from '../db/settings.mjs';
 import { renderDocument } from '../../src/utils/blocks.mjs';
 import { getSession, saveSession, clearSession } from '../db/session.mjs';
 import {
+  verifyToken,
+  scopeAllows,
+  requiredScope,
+  logAccess,
+} from '../access/tokens.mjs';
+import {
   hasSession,
   serveFile,
   resolveStatic,
@@ -215,11 +221,47 @@ export async function handleRequest(req, res, deps) {
   }
 
   // ── 鉴权：其余所有路由，无例外 ──
-  // 接受 Bearer 头（命令行/测试）或会话 Cookie（浏览器）
-  if (!tokenMatches(token, bearer(req)) && !hasSession(req, token)) {
-    send(res, 401, { error: '需要有效的访问令牌' });
-    return;
+  //
+  // 两条路：
+  //   · 主令牌（Bearer 或会话 Cookie）→ **全权**，就是用户自己
+  //   · 受限令牌（Bearer）→ 只有它被授予的那几项能力，见 access/tokens.mjs
+  //
+  // 主令牌走完整鉴权，受限令牌走范围检查。两者是**不同类型的主体**，
+  // 而不是「同一个令牌的不同权限」—— 后者会让「这是谁在做」变得含糊，
+  // 而审计日志首先要回答的就是那个问题。
+  const ownerRequest =
+    tokenMatches(token, bearer(req)) || hasSession(req, token);
+
+  let identity = null;
+  if (ownerRequest) {
+    identity = { owner: true, scopes: [] };
+  } else {
+    identity = verifyToken(db, bearer(req));
+    if (!identity) {
+      send(res, 401, { error: '需要有效的访问令牌' });
+      return;
+    }
+    // 受限身份：按路径所需能力判定。
+    // **拒绝也记审计** —— 「有人试过但没成功」是最该被看见的一类记录。
+    if (!scopeAllows(identity, method, path)) {
+      logAccess(db, {
+        tokenId: identity.id,
+        method,
+        path,
+        allowed: false,
+      });
+      send(res, 403, {
+        error: `这个身份没有「${requiredScope(method, path)}」能力：${identity.label}`,
+      });
+      return;
+    }
+    logAccess(db, { tokenId: identity.id, method, path, allowed: true });
   }
+  // identity 是**本请求的局部变量**，不写回 deps。
+  //
+  // deps 是 createServer 建好、所有请求共用同一个对象；把身份挂上去，
+  // 并发请求会在 await 处互相覆盖 —— 一个请求的身份变成另一个的。
+  // 这类错误不会报错，只会让权限判定间歇性地判错人。
 
   try {
     // ── 对话相关（KB-004）── 未命中时返回 null，继续走下面的路由
@@ -229,6 +271,8 @@ export async function handleRequest(req, res, deps) {
       url,
       readBody,
       send,
+      // 身份随请求对象传下去，而不是挂在共享的 deps 上
+      identity,
     });
     if (chatHandled !== null) return;
 
@@ -307,8 +351,14 @@ export async function handleRequest(req, res, deps) {
         title: body.title,
         body: body.body ?? '',
         kind: body.kind ?? 'note',
-        // 刻意不接受调用方指定 origin：外部不能自称「人工写的」，
-        // 只有服务内部（将来接 AI 时）才写 ai_draft
+        // 刻意不接受调用方指定 origin：外部不能自称「人工写的」。
+        //
+        // 主令牌 = 用户自己在操作，记为 human；
+        // 受限身份 = 别人（例如外部 AI）写的，**一律记为 ai_draft**，
+        // 因此它会带着「AI 起草、未经确认」的身份进入，而不是混进正式内容。
+        // 这就是「写入只进待审核草稿」的落点：不是拒绝它写，
+        // 而是让它写的东西必须经过人的确认才生效。
+        origin: identity.owner ? 'human' : 'ai_draft',
         tags: Array.isArray(body.tags) ? body.tags : [],
       });
       send(res, 201, { note });

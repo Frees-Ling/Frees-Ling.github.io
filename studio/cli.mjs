@@ -35,6 +35,15 @@ import { createEmbedder } from './ai/embeddings.mjs';
 import { createWebdav, webdavConfigFromEnv } from './backup/webdav.mjs';
 import { runBackup, runRetention } from './backup/remote.mjs';
 import { decrypt } from './backup/crypto.mjs';
+import {
+  createToken,
+  listTokens,
+  revokeToken,
+  rotateToken,
+  recentAccess,
+  SCOPES,
+  PRESETS,
+} from './access/tokens.mjs';
 
 const command = process.argv[2];
 const arg = process.argv[3];
@@ -264,6 +273,108 @@ const commands = {
     }
   },
 
+  // ── 受限访问身份（ACCESS-001）──
+
+  async token() {
+    const db = openExisting();
+    if (!db) return;
+    try {
+      const sub = process.argv[3];
+
+      if (sub === 'list' || sub === undefined) {
+        const tokens = listTokens(db);
+        if (tokens.length === 0) {
+          console.log('还没有受限身份。');
+          console.log(
+            '\n新建一个：node studio/cli.mjs token new <用途> [预设]',
+          );
+          console.log(`预设：${Object.keys(PRESETS).join(' / ')}`);
+          return;
+        }
+        console.log('  用途'.padEnd(24) + '能力'.padEnd(46) + '状态');
+        for (const t of tokens) {
+          const scopes = t.scopes.length ? t.scopes.join(',') : '（无）';
+          console.log(
+            '  ' +
+              t.label.slice(0, 22).padEnd(22) +
+              scopes.slice(0, 44).padEnd(46) +
+              (t.active ? '有效' : '已撤销/过期'),
+          );
+        }
+        console.log('\n可用能力：');
+        for (const [k, v] of Object.entries(SCOPES))
+          console.log(`  ${k.padEnd(16)} ${v}`);
+        return;
+      }
+
+      if (sub === 'new') {
+        const label = process.argv[4];
+        const preset = process.argv[5] ?? 'searcher';
+        if (!label)
+          return fail(
+            '需要用途说明',
+            'node studio/cli.mjs token new <用途> [reader|searcher|drafter]',
+          );
+        const scopes = PRESETS[preset];
+        if (!scopes)
+          return fail(
+            `未知预设：${preset}`,
+            `可用：${Object.keys(PRESETS).join(' / ')}`,
+          );
+
+        const { token, record } = createToken(db, { label, scopes });
+        console.log(`✓ 已创建受限身份「${record.label}」`);
+        console.log(`  能力：${scopes.join(', ')}`);
+        console.log('\n令牌（**只显示这一次**，请立刻交给使用者）：');
+        console.log(`  ${token}`);
+        console.log(
+          '\n服务端只保存它的哈希，因此这个值再也取不回来 —— 丢了就轮换。',
+        );
+        return;
+      }
+
+      if (sub === 'revoke') {
+        const id = process.argv[4];
+        if (!id) return fail('需要令牌 id', '先跑 token list');
+        console.log(revokeToken(db, id) ? '✓ 已撤销' : '✗ 没找到或已经撤销过');
+        return;
+      }
+
+      if (sub === 'rotate') {
+        const id = process.argv[4];
+        if (!id) return fail('需要令牌 id', '先跑 token list');
+        const { token, record } = rotateToken(db, id);
+        console.log(`✓ 已轮换，沿用「${record.label}」与同样的能力`);
+        console.log('\n新令牌（**只显示这一次**）：');
+        console.log(`  ${token}`);
+        return;
+      }
+
+      if (sub === 'log') {
+        const rows = recentAccess(db, { limit: Number(process.argv[4] ?? 40) });
+        if (rows.length === 0) {
+          console.log('还没有访问记录。');
+          return;
+        }
+        for (const r of rows) {
+          // 只打印方法与路径：审计要能回答「谁碰过什么」，
+          // 而查询串与响应体里可能是私人内容
+          console.log(
+            `  ${r.at}  ${r.allowed ? '放行' : '拒绝'}  ${(r.tokenLabel ?? '(已删)').padEnd(18)}${r.method} ${r.path}`,
+          );
+        }
+        return;
+      }
+
+      return fail(
+        `未知子命令：${sub}`,
+        '可用：list / new / revoke / rotate / log',
+      );
+    } finally {
+      db.close();
+    }
+  },
+
   async rebuild() {
     const db = openExisting();
     if (!db) return;
@@ -295,6 +406,9 @@ if (!command || !commands[command]) {
   console.log('  restore <name>      从远端备份恢复');
   console.log(
     '  retention [n]       清理旧备份（默认 dry-run，加 --apply 执行）',
+  );
+  console.log(
+    '  token <子命令>      受限访问身份：list / new / revoke / rotate / log',
   );
   console.log('  rebuild             重算全部向量');
   process.exitCode = command ? 1 : 0;
