@@ -38,6 +38,13 @@ export function parseTasks(text) {
       id: heading.split(' — ')[0].trim(),
       title: heading.split(' — ')[1]?.trim() ?? '',
       status,
+      // 有 Status 才是任务；否则可能是任务内的小节
+      hasStatus: status !== null,
+      looksLikeTask: /^- Acceptance[：:]/m.test(body)
+        ? 'Acceptance'
+        : /^- Depends-On:/m.test(body)
+          ? 'Depends-On'
+          : null,
       phase,
       // 同时接受半角逗号与中文顿号：作者用顿号是很自然的写法，
       // 而「写作习惯」不该让一条依赖静默失效。`-` 表示没有依赖。
@@ -50,8 +57,27 @@ export function parseTasks(text) {
 }
 
 const text = readFileSync(FILE, 'utf8');
-const tasks = parseTasks(text);
+
+// 约定：`###` 是任务，`####` 是任务内部的小节。
+// 但光靠约定不够 —— 在任务里写一个 `### 小节名` 是很自然的事，
+// 实测就这么踩过一次：加了一节说明，闸门立刻报「任务 稳定 block ID 缺少 Status」。
+// 所以判定改为**看内容**：有 `- Status:` 的才是任务。
+//
+// 但「缺少 Status 的真实任务」不能被静默略过，那等于把校验关掉一半。
+// 因此补一条：若一个块带着任务特有的字段却没有 Status，仍然报出来。
+const ALL = parseTasks(text).filter((t) => t.hasStatus);
 const problems = [];
+
+for (const t of parseTasks(text)) {
+  if (t.status) continue;
+  if (t.looksLikeTask) {
+    problems.push(
+      `「${t.id}」带着 ${t.looksLikeTask} 却没有 Status —— 是漏写了，还是本该用 #### 写成小节？`,
+    );
+  }
+}
+
+const tasks = ALL;
 
 // ① 重复 id —— 这一条就是本次真实踩到的那个
 const byId = new Map();
@@ -67,8 +93,7 @@ for (const t of tasks) {
 
 // ② 状态取值
 for (const t of tasks) {
-  if (!t.status) problems.push(`任务 ${t.id} 缺少 Status`);
-  else if (!VALID_STATUS.includes(t.status)) {
+  if (!VALID_STATUS.includes(t.status)) {
     problems.push(
       `任务 ${t.id} 的 Status 是「${t.status}」，不在 ${VALID_STATUS.join(' / ')} 之内`,
     );

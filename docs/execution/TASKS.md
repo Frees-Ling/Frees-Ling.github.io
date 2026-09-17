@@ -1166,7 +1166,7 @@ Delivered：`src/utils/markdown-pipeline.mjs`（公开站与预览的共用真�
 `scripts/check-preview-parity.mjs`（`npm run check:preview`）、
 `src/utils/blocks.mjs`（三种文档类型共用的稳定 block ID）。
 
-### 稳定 block ID
+#### 稳定 block ID
 
 - ID = 规范化内容（NFKC + 空白折叠）的 sha256 前 8 位，同文档内重复出现的
   按次序加 `-2` / `-3` 后缀。同一份 Markdown 任何时候算出同一组 ID，
