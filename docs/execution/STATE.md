@@ -68,6 +68,11 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 - Owner 认证威胁模型已定（SEC-002 DONE，`docs/security-threat-model.md`）：
   **不做公网 Owner mode**；本地场景下成立的两条威胁（DNS rebinding、猜令牌）
   已修并测。会话无细粒度撤销，撤销手段是轮换令牌后重启。
+- 任务清单本身纳入闸门（`npm run check:tasks`）：查重复条目、悬空依赖、依赖成环。
+  起因是 TASKS.md 里出现两块 STUDIO-002（一块 DONE、一块过期的 BACKLOG），
+  而所有读取方按名字取最后一次 —— 于是 STUDIO-002 被判为未完成，
+  连带堵住 EDITOR-001 → KNOW-001 → ACCESS-001 整条链。同一次检查还发现
+  5 处依赖字段不可机器解析（中文顿号、散文）。
 - 长期记忆服务已建立（MEM-001 DONE，`docs/memory-service.md`）：三层分离、
   追加式纠正、去重与冲突标记、可见性、自动提取开关。31 项测试。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；

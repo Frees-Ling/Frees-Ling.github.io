@@ -11,7 +11,7 @@
 - Status: DONE
 - Phase: G0
 - Priority: P0
-- Depends-On: none
+- Depends-On: -
 
 Objective：把共享对话的最终决定与当前仓库事实整理为不冲突、可迁移、可执行的文档体系。
 
@@ -273,7 +273,7 @@ Commit：本文件所在提交。
 - Status: DONE
 - Phase: K1
 - Priority: P0
-- Depends-On: 无（K0 存储层已 DONE）
+- Depends-On: -
 
 Objective：在 `studio/db/` 存储层之上建立本地 HTTP 服务，让知识库可被实际读写。
 
@@ -411,7 +411,7 @@ Commit：本文件所在提交。
 - Status: DONE
 - Phase: K3
 - Priority: P1
-- Depends-On: KB-003、KB-002
+- Depends-On: KB-003, KB-002
 
 Objective：把 KB-003 的适配层与对话存储接到 HTTP 路由与界面上，让 AI Studio 可用。
 
@@ -482,7 +482,7 @@ Evidence（进行中）：
 - Status: DONE
 - Phase: K4
 - Priority: P1
-- Depends-On: KB-001、KB-003、KB-004
+- Depends-On: KB-001, KB-003, KB-004
 
 Objective：把三层数据连起来 —— 原始档案是底档，长期记忆是从中提取且经人工确认的结论，
 知识库是整理后的正式内容。目前三层各自存在但互不连通。
@@ -629,7 +629,7 @@ Commit：本文件所在提交。
 - Status: DONE
 - Phase: R2
 - Priority: P0
-- Depends-On: KB-005、KB-007
+- Depends-On: KB-005, KB-007
 
 Objective：满足「可完整导出」这条硬要求，并补上换嵌入模型后无法重建向量的缺口。
 
@@ -1112,15 +1112,6 @@ Evidence：验证在真实文件库上完成（不是 `:memory:`），新增
 而「打不开」是可恢复的、「打开了但写坏」不是。
 
 Commit：本文件所在提交。
-
-### STUDIO-002 — 本地数据与迁移原型
-
-- Status: BACKLOG
-- Phase: S1
-- Priority: P0
-- Depends-On: STUDIO-001
-
-Acceptance：SQLite schema version、事务、重启恢复、迁移/回滚、备份一致性在可抛弃原型中验证。
 
 ### STUDIO-003 — 配置与 secret reference
 
