@@ -132,7 +132,7 @@ export function createWebdav({
       // （http://host/backups/x），真实服务两种都有。
       // 只认其中一种会让列举在某些服务上静默返回空 —— 而空列表会被
       // 保留策略解读成「没有备份」，那是很危险的误判。
-      const dirPrefix = dirPath.replace(/\/+$/, '') + '/';
+      const dirPrefix = `${dirPath.replace(/\/+$/, '')}/`;
       return (
         [...xml.matchAll(/<[^>]*href[^>]*>([^<]+)<\/[^>]*href>/gi)]
           // ── 顺序很重要：**先解析成路径，再解码** ──

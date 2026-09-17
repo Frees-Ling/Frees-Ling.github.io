@@ -29,7 +29,7 @@ const warnings = [];
 // 避免为了一个检查脚本去搭一套 TS 运行时。
 function readSections() {
   const source = readFileSync(join(ROOT, SECTIONS_FILE), 'utf8');
-  const blocks = source.split(/\n  \{\n/).slice(1);
+  const blocks = source.split(/\n {2}\{\n/).slice(1);
   return blocks.map((block) => {
     const id = block.match(/id:\s*'([^']+)'/)?.[1];
     const route = block.match(/route:\s*'([^']+)'/)?.[1];

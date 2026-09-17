@@ -69,7 +69,7 @@ test('配置从环境变量读取并去掉尾部斜杠', () => {
 // ─────────────────────── 客户端 ───────────────────────
 
 test('凭证错误时服务端拒绝', async () => {
-  await withMock(async ({ mock, webdav }) => {
+  await withMock(async ({ mock }) => {
     const wrong = createWebdav({
       baseUrl: `http://127.0.0.1:${mock.server.address().port}`,
       username: 'u',
@@ -80,7 +80,7 @@ test('凭证错误时服务端拒绝', async () => {
 });
 
 test('上传到不存在的目录时给出可操作提示，而不是静默建目录', async () => {
-  await withMock(async ({ mock, webdav }) => {
+  await withMock(async ({ mock }) => {
     const base = `http://127.0.0.1:${mock.server.address().port}`;
     const w = createWebdav({ baseUrl: base, username: 'u', password: 'p' });
     await assert.rejects(
@@ -145,7 +145,7 @@ test('远端的备份是加密的：不含明文标题', async () => {
 });
 
 test('上传内容被服务端截断时，回读校验必须失败', async () => {
-  await withMock(async ({ mock, webdav }) => {
+  await withMock(async ({ webdav }) => {
     const db = seedDb();
     // 模拟服务端悄悄截断：PUT 之后把文件改小
     const originalPut = webdav.put.bind(webdav);

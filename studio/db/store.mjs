@@ -44,7 +44,7 @@ export function createNote(
   db,
   { title, body = '', kind = 'note', origin = 'human', tags = [] },
 ) {
-  if (!title || !title.trim()) throw new Error('标题不能为空');
+  if (!title?.trim()) throw new Error('标题不能为空');
   if (!['note', 'article'].includes(kind))
     throw new Error(`未知的 kind: ${kind}`);
   if (!['human', 'ai_draft'].includes(origin))
@@ -232,7 +232,7 @@ export function proposeMemory(
   db,
   { content, sourceEntryId = null, confidence = 0 },
 ) {
-  if (!content || !content.trim()) throw new Error('记忆内容不能为空');
+  if (!content?.trim()) throw new Error('记忆内容不能为空');
   if (confidence < 0 || confidence > 1)
     throw new Error('confidence 必须在 0–1 之间');
 

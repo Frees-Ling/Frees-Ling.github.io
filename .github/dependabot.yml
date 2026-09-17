@@ -3,7 +3,17 @@ updates:
   - package-ecosystem: 'npm'
     directory: '/'
     # archives/ 是只读历史归档，其中的旧 lockfile 不参与当前站点构建，
-    # 不应为其创建依赖更新 PR
+    # 不应为其创建依赖更新 PR。
+    #
+    # ⚠️ 这一条**只挡版本更新 PR，挡不住安全告警**（核对过官方文档：
+    # exclude-paths 标注为 "Version updates only"）。归档目录里的
+    # 旧依赖仍然会出现在依赖图里、仍然会生成 Dependabot alerts ——
+    # 这正是归档告警噪音的来源，而它**无法用本文件解决**：
+    # 依赖图不支持按路径排除，任何 manifest 只要在仓库里就会被扫描。
+    #
+    # 真正的处理方式见 docs/execution/PENDING_AUTHORIZATION.md 的
+    # PENDING-003：用 auto-triage 规则按 manifest path 自动关闭
+    # （只能从仓库 Settings 的 UI 建，没有 API 也没有配置文件）。
     exclude-paths:
       - 'archives/**'
     schedule:
@@ -27,7 +37,8 @@ updates:
 
   - package-ecosystem: 'github-actions'
     directory: '/'
-    # 同上：归档目录内的旧工作流不参与当前 CI
+    # 同上：归档目录内的旧工作流不参与当前 CI。
+    # 同样只挡更新 PR，不挡告警 —— 理由见上面 npm 那一段。
     exclude-paths:
       - 'archives/**'
     schedule:

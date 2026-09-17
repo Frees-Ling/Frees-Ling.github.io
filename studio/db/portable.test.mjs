@@ -20,7 +20,6 @@ import {
   createConversation,
   addMessage,
   proposeMemoryFromMessage,
-  getEmbedding,
   semanticSearch,
 } from './store.mjs';
 import {

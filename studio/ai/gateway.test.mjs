@@ -289,7 +289,7 @@ test('用量按供应商分开累计，并记下「没上报」的次数', async
 // ── 重试 ──
 
 test('5xx 会被重试，最终成功', async () => {
-  await withServers(async ({ urlB, b }) => {
+  await withServers(async ({ b }) => {
     b.reset();
     const flaky = startFlaky({ failTimes: 2 });
     await new Promise((r) => flaky.server.listen(0, '127.0.0.1', r));
@@ -347,7 +347,7 @@ test('重试用尽后如实报失败，并记进用量', async () => {
 });
 
 test('4xx 不重试 —— 请求本身有问题，再发十次也一样', async () => {
-  const server = http.createServer((req, res) => {
+  const server = http.createServer((_req, res) => {
     res.writeHead(400, { 'content-type': 'application/json' });
     res.end('{"error":{"message":"bad"}}');
   });

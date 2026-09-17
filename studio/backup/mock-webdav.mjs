@@ -16,6 +16,52 @@
 
 import http from 'node:http';
 
+/**
+ * 按 RFC 3986 的 remove_dot_segments 规范化路径。
+ *
+ * ── 为什么模拟服务端必须做这一步 ──
+ *
+ * 最初这里直接把解码后的 path 当作 Map 的键，于是 `/backups/../evil`
+ * 和 `/evil` 是两个不同的键 —— 而这个模拟服务端因此**永远不可能**
+ * 被越界路径骗到，用它测越界也就变成了空转。
+ *
+ * 真实的 HTTP 服务端会规范化。KB-011 里那个真实可用的越界缺陷
+ * （`/backups/..%2Fevil` → DELETE `/evil`）正是**利用了这个规范化**：
+ * 编码的 `%2F` 在 URL 解析阶段不是分隔符，通过检查之后才解码成 `../`，
+ * 再被服务端规范化成根路径。不模拟这一步，就等于不测这个缺陷。
+ */
+function normalize(path) {
+  const out = [];
+  for (const segment of path.split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') out.pop();
+    else out.push(segment);
+  }
+  return `/${out.join('/')}`;
+}
+
+/**
+ * 把内部路径编成 href 该有的样子。
+ *
+ * ── 为什么 href 必须编码 ──
+ *
+ * RFC 4918 里 `<d:href>` 装的是一个 **URI**，URI 里的 `#`、`?`、`%`
+ * 都有语法含义，因此真实服务端返回的是编码后的形式
+ * （`hash%231.freesbk` 而不是 `hash#1.freesbk`）。
+ *
+ * 这个模拟服务端最初直接吐原始路径，于是**永远测不出**客户端那侧
+ * 「先解码再解析 URL」的缺陷 —— 因为原始路径里的 `#` 会被 `new URL()`
+ * 当成 fragment 的起点，pathname 在那里被截断。客户端在这个模拟服务端上
+ * 反而表现正常，缺陷只在真实服务端上出现。
+ *
+ * 一致性用例把这件事暴露了出来（`hash#1.bin` 被列举成 `hash`）——
+ * 报错的是模拟服务端不够真，不是客户端有 bug。修在这里，
+ * 所有用它的用例才都测在真实形态上。
+ */
+function encodeHref(path) {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 export function createMockWebdav({
   username = 'u',
   password = 'p',
@@ -34,7 +80,9 @@ export function createMockWebdav({
 
     if (req.headers.authorization !== expected) return send(401);
 
-    const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    const path = normalize(
+      decodeURIComponent(new URL(req.url, 'http://x').pathname),
+    );
 
     if (req.method === 'PUT') {
       const parent = path.replace(/\/[^/]*$/, '') || '/';
@@ -65,8 +113,10 @@ export function createMockWebdav({
     if (req.method === 'PROPFIND') {
       if (!dirs.includes(path)) return send(404);
       const hrefs = [...files.keys()]
-        .filter((p) => p.startsWith(path.replace(/\/+$/, '') + '/'))
-        .map((p) => `<d:response><d:href>${p}</d:href></d:response>`)
+        .filter((p) => p.startsWith(`${path.replace(/\/+$/, '')}/`))
+        .map(
+          (p) => `<d:response><d:href>${encodeHref(p)}</d:href></d:response>`,
+        )
         .join('');
       return send(
         207,

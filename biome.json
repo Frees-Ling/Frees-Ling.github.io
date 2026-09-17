@@ -38,7 +38,7 @@
       }
     },
     {
-      "includes": ["src/styles/**/*.css"],
+      "includes": ["src/styles/**/*.css", "studio/web/**/*.css"],
       "linter": {
         "rules": {
           "complexity": {

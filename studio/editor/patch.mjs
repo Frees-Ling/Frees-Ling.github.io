@@ -174,10 +174,16 @@ export function applyHunks(body, hunks) {
 /**
  * 完整的「生成 → 校验 → 应用」。
  *
+ * `_db` 目前**没有用到** —— 这一步是纯函数：正文进、正文出。
+ * 它留在签名里是因为调用方按位置传它（11 处），
+ * 且补丁持久化落地时正需要在这里写库。用下划线前缀标明「有意未使用」，
+ * 而不是删掉它 —— 删参数会让 11 个调用点一起改签名，
+ * 那是重构而不是收口。
+ *
  * @returns 应用后的正文
  * @throws 任何一处不合法都抛错，**不做部分应用**
  */
-export async function applyPatch(db, { noteId, patch, body, scope }) {
+export async function applyPatch(_db, { noteId, patch, body, scope }) {
   if (typeof body !== 'string') throw new Error('需要正文才能校验 patch');
   if (!noteId) throw new Error('需要 noteId');
 

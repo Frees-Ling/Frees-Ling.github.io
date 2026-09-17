@@ -56,7 +56,9 @@ export function assertEndpointAllowed(baseUrl, { allowRemote = false } = {}) {
 export function createProvider({
   baseUrl = 'http://127.0.0.1:1234/v1',
   model = 'local-model',
-  apiKey = '',
+  // 本适配器**不做鉴权**：默认端点是本机的 LM Studio，不需要它。
+  // 将来接需要 API key 的远端时，这里要真正发送它，而不是收下一个被
+  // 静默丢弃的参数。
   allowRemote = false,
   timeoutMs = 60_000,
   fetchImpl = globalThis.fetch,

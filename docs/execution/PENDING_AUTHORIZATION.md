@@ -93,3 +93,47 @@ chmod -R a-w archives public/history
 步骤见 `docs/security.md`，摘要：先建新 key → 存入钥匙串 → 切换 → **验证** → 最后才撤销旧 key。
 
 在完成之前，所有不依赖新凭证的研究与开发均可继续。
+
+---
+
+## PENDING-003 — 归档目录的 Dependabot 告警噪音
+
+- 状态: **待你操作**（不阻塞开发）
+- 影响: 无 —— 只是告警列表里有若干条来自只读归档的旧依赖
+
+### 先说清楚：这不是配置能解决的
+
+`.github/dependabot.yml` 里已经有 `exclude-paths: ['archives/**']`，
+但**它挡不住告警**。核对过官方文档：
+
+- `exclude-paths` 标注为 **"Version updates only"** —— 它只影响版本更新 PR，
+  与安全告警无关
+- **依赖图不支持按路径排除**：只要仓库里存在 manifest，它就会被扫描并生成告警，
+  `dependabot.yml` 里没有任何选项能改变这一点
+- `directory` 只决定版本更新 PR 建在哪，同样不影响告警
+
+换句话说，归档必须是只读的（不能为了清告警去升级旧依赖），而告警又无法从
+仓库侧的配置里排除 —— 这两条约束合起来，**唯一的解法在仓库设置里，不在代码里**。
+
+### 你需要做的（只有这一步）
+
+仓库 → **Settings** → **Code security and analysis** → 找到 Dependabot alerts →
+展开 **Dependabot rules** → **New rule**：
+
+- 条件：**Manifest path** 匹配 `archives/`（该条件仅仓库级规则可用，
+  组织级规则不支持）
+- 动作：**Dismiss alerts**（选 indefinite 或 until a patch is available）
+
+已知限制（同样来自官方文档，写在这里免得以后重新查）：
+
+- auto-triage 规则**只能从 UI 建**，没有 REST/GraphQL API，也没有配置文件 ——
+  所以它无法被纳入本仓库的版本管理，这一条只能由你手动完成
+- 每个仓库上限 10 条自定义规则
+- 自动关闭的告警仍可检索（`resolution:auto-dismissed`），
+  且告警元数据变化时会被重新打开
+- 公开仓库免费可用
+
+### 已经做了的部分
+
+`dependabot.yml` 的注释原先声称这一项能解决归档噪音 —— 那是错的，
+已按官方文档更正，并指明真正的解法在这里。

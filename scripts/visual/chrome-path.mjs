@@ -10,11 +10,18 @@ import { existsSync, globSync } from 'node:fs';
 import { homedir } from 'node:os';
 
 const CANDIDATES = [
+  // 显式指定优先 —— CI 里靠它把路径钉死，不依赖下面的猜测
   process.env.CHROME_PATH,
+  // macOS
   `${homedir()}/.cache/puppeteer/chrome-headless-shell/*/chrome-headless-shell-*/chrome-headless-shell`,
   `${homedir()}/.cache/puppeteer/chrome/*/chrome-*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/Applications/Chromium.app/Contents/MacOS/Chromium',
+  // Linux（GitHub Actions 的 ubuntu runner 预装 Chrome）
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
 ].filter(Boolean);
 
 /**

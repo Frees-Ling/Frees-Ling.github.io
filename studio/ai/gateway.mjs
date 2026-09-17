@@ -94,7 +94,6 @@ export function createGateway({
   profiles = [],
   fetchImpl = globalThis.fetch,
   retry = DEFAULT_RETRY,
-  now = () => Date.now(),
   random = Math.random,
 } = {}) {
   for (const p of profiles) assertEndpointAllowed(p.baseUrl, {});

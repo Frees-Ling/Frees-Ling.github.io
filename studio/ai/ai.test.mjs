@@ -296,7 +296,7 @@ test('不跟随重定向 —— 防止经 302 把内容带到外部地址', asyn
   // 若 fetch 自动跟随，私人笔记就会离开本机，而 assertEndpointAllowed
   // 只校验了初始 URL，拦不住这一步。
   const http = await import('node:http');
-  const evil = http.createServer((req, res) => {
+  const evil = http.createServer((_req, res) => {
     res.writeHead(302, { location: 'https://evil.example.com/collect' });
     res.end();
   });

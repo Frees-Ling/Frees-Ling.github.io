@@ -192,7 +192,7 @@ test('中文检索走通服务层', async () => {
       body: JSON.stringify({ title: '无关内容', body: '别的东西' }),
     });
 
-    const res = await call('/api/search?q=' + encodeURIComponent('注意力机制'));
+    const res = await call(`/api/search?q=${encodeURIComponent('注意力机制')}`);
     const { hits } = await res.json();
     assert.equal(hits.length, 1);
   });
@@ -337,7 +337,7 @@ test('服务只绑 127.0.0.1', () => {
 
 test('未登录访问 / 得到登录页而不是界面', async () => {
   await withServer(async ({ base }) => {
-    const res = await fetch(base + '/');
+    const res = await fetch(`${base}/`);
     assert.equal(res.status, 200);
     const html = await res.text();
     assert.match(html, /书房/);
@@ -348,7 +348,7 @@ test('未登录访问 / 得到登录页而不是界面', async () => {
 
 test('令牌正确时下发 HttpOnly + SameSite=Strict 的会话 Cookie', async () => {
   await withServer(async ({ base, token }) => {
-    const res = await fetch(base + '/api/session', {
+    const res = await fetch(`${base}/api/session`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -364,7 +364,7 @@ test('令牌正确时下发 HttpOnly + SameSite=Strict 的会话 Cookie', async 
 
 test('令牌错误时拒绝建立会话', async () => {
   await withServer(async ({ base }) => {
-    const res = await fetch(base + '/api/session', {
+    const res = await fetch(`${base}/api/session`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ token: 'wrong' }),
@@ -376,7 +376,7 @@ test('令牌错误时拒绝建立会话', async () => {
 
 test('带会话 Cookie 时可访问 API', async () => {
   await withServer(async ({ base, token }) => {
-    const res = await fetch(base + '/api/notes', {
+    const res = await fetch(`${base}/api/notes`, {
       headers: { cookie: `frees_studio=${encodeURIComponent(token)}` },
     });
     assert.equal(res.status, 200);
@@ -385,7 +385,7 @@ test('带会话 Cookie 时可访问 API', async () => {
 
 test('伪造的会话 Cookie 无效', async () => {
   await withServer(async ({ base }) => {
-    const res = await fetch(base + '/api/notes', {
+    const res = await fetch(`${base}/api/notes`, {
       headers: { cookie: 'frees_studio=fake' },
     });
     assert.equal(res.status, 401);
@@ -417,7 +417,7 @@ test('静态资源路径穿越被拒绝', async () => {
 
 test('tokens.css 可被界面读取（设计与公开站同源）', async () => {
   await withServer(async ({ base }) => {
-    const res = await fetch(base + '/tokens.css');
+    const res = await fetch(`${base}/tokens.css`);
     assert.equal(res.status, 200);
     const css = await res.text();
     assert.match(css, /--canvas:/);
@@ -427,9 +427,9 @@ test('tokens.css 可被界面读取（设计与公开站同源）', async () => 
 
 test('界面脚本不含任何令牌或内联色值', async () => {
   await withServer(async ({ base }) => {
-    const js = await (await fetch(base + '/static/app.js')).text();
+    const js = await (await fetch(`${base}/static/app.js`)).text();
     assert.doesNotMatch(js, /Bearer/, '脚本不应接触令牌');
-    const css = await (await fetch(base + '/static/studio.css')).text();
+    const css = await (await fetch(`${base}/static/studio.css`)).text();
     // 颜色必须来自 tokens.css，样式表里不应出现颜色字面量
     const literals = css.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
     assert.deepEqual(
@@ -686,7 +686,7 @@ test('提取记忆时校验消息确实属于 URL 中的对话', async () => {
         await call(`/api/conversations/${conversation.id}/messages`, {
           method: 'POST',
           body: JSON.stringify({
-            content: '问题 ' + conversation.id.slice(0, 6),
+            content: `问题 ${conversation.id.slice(0, 6)}`,
           }),
         })
       ).json();
@@ -862,7 +862,7 @@ test('路由：统一检索排除待审核记忆', async () => {
 
     // 未审核：不出现在检索里
     const before = await (
-      await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
+      await call(`/api/search-all?q=${encodeURIComponent('注意力机制')}`)
     ).json();
     assert.equal(before.notes.length, 1);
     assert.equal(before.memories.length, 0, '待审核记忆不得进入检索');
@@ -873,7 +873,7 @@ test('路由：统一检索排除待审核记忆', async () => {
       body: JSON.stringify({ decision: 'approved' }),
     });
     const after = await (
-      await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
+      await call(`/api/search-all?q=${encodeURIComponent('注意力机制')}`)
     ).json();
     assert.equal(after.memories.length, 1);
   });
@@ -914,7 +914,7 @@ test('检索路由：有嵌入端点时走语义模式', async () => {
     });
 
     const res = await call(
-      '/api/search-all?q=' + encodeURIComponent('注意力机制笔记'),
+      `/api/search-all?q=${encodeURIComponent('注意力机制笔记')}`,
     );
     const body = await res.json();
     assert.equal(body.mode, 'semantic');
@@ -955,7 +955,7 @@ test('检索路由：嵌入端点不可用时降级为关键词，而不是整�
     });
 
     const res = await call(
-      '/api/search-all?q=' + encodeURIComponent('注意力机制'),
+      `/api/search-all?q=${encodeURIComponent('注意力机制')}`,
     );
     assert.equal(res.status, 200, '检索不应因为端点挂了而失败');
     const body = await res.json();
@@ -976,7 +976,7 @@ test('检索路由：未配置嵌入端点时用关键词并说明原因', async
       body: JSON.stringify({ title: '注意力机制笔记' }),
     });
     const body = await (
-      await call('/api/search-all?q=' + encodeURIComponent('注意力机制'))
+      await call(`/api/search-all?q=${encodeURIComponent('注意力机制')}`)
     ).json();
     assert.equal(body.mode, 'keyword');
     assert.match(body.reason, /未配置嵌入端点/);

@@ -1,6 +1,12 @@
 # 持久任务清单
 
-状态：`BACKLOG / READY / ACTIVE / BLOCKED / DONE / DROPPED`。
+状态：`BACKLOG / READY / ACTIVE / DONE`。
+
+> 这四个值是 `scripts/check-tasks.mjs` 的 `VALID_STATUS`，闸门会拒绝其它写法。
+> 此前这里写的是六个（多了 `BLOCKED` / `DROPPED`）—— 照文档写就会让闸门变红。
+> 「被阻塞」不是一个人填的状态，而是**由依赖算出来的**：
+> `check:tasks` 会报告哪些任务的前置还没完成，那个结论比手填的可信。
+> 没有 `PARTIAL`：做了一半的任务要**拆成两项**，各自有明确的验收边界。
 
 只有满足 Acceptance 并填入 Evidence/Commit 后才能标记 DONE。
 
@@ -31,6 +37,132 @@ Evidence：
 - `scripts/visual/serve.mjs` 的并行工作区改动未纳入本任务。
 
 Commit：本文件所在的 GOV-001 治理提交。
+
+### GOV-002 — 任务清单闸门
+
+- Status: DONE
+- Phase: G0
+- Priority: P0
+- Depends-On: GOV-001
+
+> 本条是**补记**：这项工作已完成，`docs/execution/RUN_LOG.md` 也有记录
+> （2026-09-17T01:20:00Z），但任务清单里一直没有条目 —— 于是「任务清单」
+> 与「运行日志」对不上。收口时把缺失的条目补上，而不是留着一个
+> 只有日志记得、清单不承认的完成项。
+
+Acceptance：任务清单可被机器校验 —— 重复 id、非法状态、悬空依赖、依赖成环都要报错。
+
+Delivered：`scripts/check-tasks.mjs`，接入 `npm run check:tasks`，并进入 CI 与 Stop hook。
+
+Evidence：
+
+- 该脚本会解析 `docs/execution/TASKS.md`，检查：id 重复、`Status` 不在允许词表内、
+  `Depends-On` 指向不存在的任务、依赖成环。
+- 首次运行时修掉了重复条目与 5 处不可解析的依赖（见 RUN_LOG）。
+- 当前输出：`✓ 任务清单：48 项，无重复、无悬空依赖、无环`。
+
+### GOV-003 — 部署必须依赖质量
+
+- Status: DONE
+- Phase: G0
+- Priority: P0
+- Depends-On: GOV-001
+
+Acceptance：Pages 部署以质量检查成功为前置；质量未跑完不得部署；
+`check:tasks` / `check:coverage` / `check:preview` 进入 CI。
+
+Delivered：`.github/workflows/deploy.yml`、`quality.yml`、`visual.yml`、`scripts/visual/chrome-path.mjs`。
+
+- **原先两个工作流互不相干**：`quality.yml` 与 `deploy.yml` 都监听 push 到 main，
+  各自跑各自的。于是「质量没过就上线」是可能的 —— 而且一次失败只会出现在
+  两条流水线中的一条上，很容易被忽略。
+- 现在 `quality.yml` 暴露 `workflow_call`，`deploy.yml` 用 `needs: quality` 依赖它。
+  检查不通过时 **build 与 deploy 两个 job 根本不会开始**。
+- `quality.yml` 的 `push` 触发已移除（改由 deploy 调用），避免同一次 push 跑两遍；
+  `pull_request` 保留。
+- CI 补上三项此前只在本地 `stop-commit.sh` 里跑的检查 ——
+  在那之前，「本地过 = 能合并」这个假设在 CI 上并不成立。
+- 无障碍与浏览器门禁拆为独立的 `visual.yml`（手动 + 每周一次）：它们要真实浏览器，
+  代价与噪声都比质量链高。`chrome-path.mjs` 原先只会找 macOS 路径，已补 Linux。
+
+Evidence：
+
+- `deploy.yml` 中 `build`/`deploy` 均为 `needs:` 依赖；`quality` job 复用 `quality.yml`。
+- `quality.yml` 步骤现为：format / lint / lint:md / check:tokens / check:content /
+  check:secrets / test / check / build / check:html / **check:tasks / check:coverage /
+  check:preview / check:assets**。
+- 全部命令本地通过（433 项测试，14 项门禁）。
+
+### GOV-004 — 自动化提交不再无条件 `git add -A`
+
+- Status: DONE
+- Phase: G0
+- Priority: P0
+- Depends-On: GOV-001
+
+Acceptance：Stop hook 不得在未知改动下无条件暂存；只暂存任务声明拥有的文件；
+检测到其它改动时跳过自动提交并报告。
+
+Delivered：`.claude/hooks/stop-commit.sh`（重写）。
+
+- 同一台机器上可能并行跑着别的会话／Agent，而 hook **看不到那些改动的来源**。
+  原实现会把它们一并提交：可能提交别人写到一半、没跑过任何校验的代码；
+  可能把 A 的改动裹进 B 的提交信息里；未跟踪文件尤其危险 ——
+  它们从没被 review 过，`add -A` 却照单全收。
+- 现在任务必须在 `$GIT_DIR/claude-task-files` 里**声明自己拥有的文件**；
+  hook 只在「工作区里恰好只有这些改动」时才提交，且用 `git add -- <path>`
+  逐个暂存。多出任何别的改动就跳过，并把未声明的路径写进
+  `$GIT_DIR/claude-stop-commit.err`。
+- 声明文件放在 git 目录内：不该被提交，也不该出现在 `git status` 里干扰判断。
+- 提交信息带上任务标识（`chore(<task>): …`），否则事后没人能看出这次自动提交属于哪件事。
+
+Evidence：
+
+- 重写后的 hook 在临时仓库里实测四个场景，**每个分支都 exit 0**
+  （Stop 上非零退出会形成死循环）：
+  1. 有改动、无声明 → 跳过并报告；
+  2. 有改动、已声明 → 提交，信息为 `chore(TEST-001): 自动提交 1 个文件`；
+  3. 声明了 a.txt 但 b.txt 也被改 → 跳过，报告里列出 `b.txt`；
+  4. **未跟踪文件**混入 → 同样拦下（这是原 `add -A` 最危险的一类）。
+- 实测中抓到自身缺陷：变量展开后紧跟全角字符时（`$DECL（`），bash 会把那些
+  字节当成变量名的一部分，在 `set -u` 下直接以 exit 1 结束 —— 而 Stop 上任何
+  非零退出都是噪音。已全部改为 `${VAR}` 写法。
+
+### GOV-005 — lint 零诊断
+
+- Status: DONE
+- Phase: G0
+- Priority: P1
+- Depends-On: GOV-001
+
+Acceptance：`npm run lint` 从「有 24 条 warning 也算通过」变为**零诊断**。
+
+Delivered：跨 20 个文件的清理 + `biome.json` 一处豁免。
+
+- 此前 `lint` 退出码为 0，同时输出 24 warnings + 24 infos。
+  **退出码为 0 而输出有内容，等于把「通过」定义成了「没到失败的程度」** ——
+  于是没人会去看那 48 条，新增的一条也不会被发现。
+- 三类修法：`useTemplate`（24 条 info，机械替换）；未使用的导入／变量／参数
+  （11 条，逐个人工确认后才删 —— biome 对 `noUnusedImports` 的修复标为
+  **unsafe**，CLAUDE.md 记过它在 `.astro` 上删掉真实 import 的事）；
+  `studio/web/studio.css` 的 `!important`（与 `src/styles/` 同理，是必要的显示
+  覆盖，加豁免而不是改代码）。
+- 清理中抓到并修掉两个**自己造成的**问题：
+  1. `server/index.mjs` 的 `const { port, token, home } = await start()` ——
+     我一度删掉了 `port` 而不是没用的 `token`，那会让下面那行
+     `` `http://${BIND_HOST}:${port}` `` 变成 `ReferenceError`。
+  2. `gateway.test.mjs` 里我用 `replace(…, 1)` 改名参数，命中的是**第一处**
+     同名代码（第 22 行，那个 handler 确实在用 `req`），而不是闸门指出的第 350 行 ——
+     三个用例因此挂在 `ReferenceError: req is not defined`。
+     非唯一模式上的 `replace(…, 1)` 与它要修的问题属于同一类：
+     看起来改对了，实际改的是别处。
+
+Evidence：
+
+- `npx biome lint .` → `Checked 131 files … No fixes applied.`，无任何诊断输出。
+- `npm test` → **433 项全过**（清理过程中曾出现 3 项失败，均已定位并修掉）。
+- 门禁 14 项全绿。
+
 
 ### WEB-006 — P5c Site Chrome 最终回归
 
@@ -1548,23 +1680,87 @@ Acceptance：缓存元数据、失败降级、速率限制、人工覆盖优先�
 
 Acceptance：Studio/结构化数据可维护；RSS 可选、失败不阻断构建；首页不自动聚合 Friends feed。
 
-### WEBDAV-001 — 官方能力验证
+### WEBDAV-001 — 官方资料研究与本地受控测试
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: I2
 - Priority: P0
 - Depends-On: STUDIO-001
 
-Acceptance：用当前官方资料/受控测试确认 PROPFIND、读写、Range、限额、直链、分片/直传和路径语义；记录日期与证据。
+Acceptance：核对当前官方资料，用受控测试确认**我方客户端**在真实 WebDAV 服务端上的行为；
+记录日期、来源与证据，并把**查不到的部分**逐条列为未知项。
+
+> ⚠️ 这一项的边界是「我们这边的代码与资料」，**不包含**对 123 云盘服务本身的实测 ——
+> 那需要真实凭据，是 WEBDAV-002。此前它同时以 BACKLOG 的形式存在、
+> 又有一个名为「官方能力验证」的提交，两者对不上；现在拆清楚了。
+
+Delivered：`docs/research/webdav-provider.md`（含日期、官方来源 URL、已确认能力与未知项清单）。
+
+- **官方资料部分已结**：官方文档里**只有 OpenAPI，没有 WebDAV 的协议说明**
+  （「WebDAV」一词在官方 API 文档中出现 0 次）。已确认 OpenAPI 的域名、鉴权、
+  token 有效期（30 天 / 同一 client_id 最多 3 个）与逐接口 QPS 上限（15/10/10/20/20/10/10）。
+- **受控测试**：服务端用 wsgidav 4.3.5（真实实现，非 mock），覆盖 ASCII /
+  中文 / 中文目录 / 空格 / `#` / `?` / `%` / `+` / `&` / emoji 十种路径形态。
+- **抓到的两个缺陷（已修）**：
+  1. `list()` 原先**先解码 href 再交给 `new URL()`** —— 顺序反了，
+     `hash#1.freesbk` 与 `q?mark.freesbk` 分别被列举成 `hash` 与 `q`。
+     保留策略按名字删除，两个文件双双报成同一个名字就会删错或删不掉，
+     而两种都不报错。
+  2. `%2F` 编码斜杠造成的**越界删除**，实测确认可利用：
+     `/backups/..%2Fevil` 通过 `startsWith` 检查后解码成 `../evil`，
+     被 HTTP 客户端规范化成 `/evil` —— **删到备份目录外面**。已用两道独立防线修掉。
+- **未知项（属 WEBDAV-002）**：PROPFIND 的 depth 语义与 href 形态、QPS/并发限制、
+  路径规范化（大小写 / NFC-NFD / 尾随空格与点）、专用密码的权限边界、
+  三个 endpoint 能否用独立凭据隔离、免费额度与会员过期后的数据可访问性。
+
+Evidence：
+
+- `docs/research/webdav-provider.md`（Checked on 2026-09-17，含官方来源与未知项）。
+- `studio/backup/webdav.test.mjs`：10 项，不连服务器，喂构造好的 PROPFIND 响应。
+  **敏感性已验证**：把「先解析再解码」改回错误顺序，恰好那两条相关用例失败，其余全过。
+- 路径穿越的利用与修复见提交 `17d5541`；研究文档见 `56efbc3`。
+
+### CRED-001 — 提供 WebDAV 三个 endpoint 与最小权限凭据
+
+- Status: BACKLOG
+- Phase: I2
+- Priority: P0
+- Depends-On: -
+
+Acceptance：用户提供 Public / Collection / Security 三个 endpoint 的地址与凭据，
+并为每个 endpoint 说明其应有的权限范围。
+
+Objective：**这一项的执行者是用户，不是自动化。** 它存在的理由是让「等凭据」
+在依赖图里可见。
+
+> 在此之前，WEBDAV-002 的依赖（WEBDAV-001、STUDIO-003）都已完成，
+> 于是 `check:tasks` 会把它报成**可开工** —— 而它其实一步也走不了。
+> 一个把「不可能」报成「可以做」的图比没有图更糟：下一轮会去试。
+> 把它接进依赖之后，WEBDAV-002 与它下游的六项会正确地显示为被阻塞。
+>
+> 相关的用户动作清单见 `docs/execution/PENDING_AUTHORIZATION.md`。
+
+Evidence：
+
+- 待用户提供。凭据本身**不进仓库**，只登记「已提供 / 未提供」与权限范围说明。
 
 ### WEBDAV-002 — Endpoint 能力探测与路径安全
 
 - Status: BACKLOG
 - Phase: I2
 - Priority: P0
-- Depends-On: WEBDAV-001, STUDIO-003
+- Depends-On: WEBDAV-001, STUDIO-003, CRED-001
 
-Acceptance：正确识别 read-only/read-write；canonical root 持久化；`..`/编码/大小写/分隔符/符号链接负向测试通过。
+Acceptance：**用真实凭据**实测并记录 —— 认证方式与凭据权限边界（专用密码能否越出指定目录）；
+PROPFIND 的 depth 语义与 href 形态；读写与 Range 支持；QPS/并发限制与超限返回；
+路径规范化（大小写 / NFC-NFD / 尾随空格与点）；配额与限额；
+三个 endpoint（Public / Collection / Security）能否用独立凭据可靠隔离。
+
+另需：正确识别 read-only/read-write；canonical root 持久化；
+`..`/编码/大小写/分隔符/符号链接负向测试通过。
+
+> 前置是**用户提供三个 endpoint 与最小权限凭据**。在那之前，本节每一项都是风险而非背景
+> （见 `docs/research/webdav-provider.md` 第五节）。
 
 ### VAULT-001 — Public Vault/Music 交付
 

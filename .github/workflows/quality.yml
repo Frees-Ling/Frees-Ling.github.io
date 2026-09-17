@@ -1,10 +1,17 @@
 name: Quality
 
+# ── 触发方式 ──
+#
+# push 到 main **不在这里**跑，而是由 deploy.yml 调用（见该文件的 quality job）。
+# 理由：质量与部署是同一件事的两半 —— 检查没跑完就不该部署，
+# 而两套独立的工作流之间没有任何强制关系，只能靠人盯着。
+# 改成被调用之后，依赖关系由 `needs:` 表达，是结构而非约定。
+#
+# pull_request 保留：PR 上仍然要跑，那时还不涉及部署。
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
@@ -62,6 +69,20 @@ jobs:
       # 必须在 build 之后：检查的是构建产物里 </html> 是否为最后一个非空白内容
       - name: Check HTML structure
         run: npm run check:html
+
+      # 下面四项都读 dist/，因此必须排在 build 之后。
+      #
+      # 它们此前只在本地的 stop-commit.sh 里跑，CI 上是缺的 ——
+      # 也就是说「本地过 = 能合并」这个假设在 CI 上并不成立：
+      # 换一台机器、换一个 Node 小版本，这些闸门没有任何人跑过。
+      - name: Check task list integrity
+        run: npm run check:tasks
+
+      - name: Check article coverage
+        run: npm run check:coverage
+
+      - name: Check preview parity
+        run: npm run check:preview
 
       # 同样在 build 之后：断言的是产物里的图片尺寸、体积与字体依赖。
       # 它会先比 src 与 dist 的 mtime —— Astro 会缓存渲染好的 markdown，

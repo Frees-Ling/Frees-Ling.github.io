@@ -6,12 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  validatePatch,
-  applyHunks,
-  applyPatch,
-  describePatch,
-} from './patch.mjs';
+import { applyHunks, applyPatch, describePatch } from './patch.mjs';
 import { collectBlocks } from '../../src/utils/blocks.mjs';
 
 const DOC = ['第一段。', '', '第二段。', '', '第三段。'].join('\n');
@@ -104,7 +99,7 @@ test('同一个块改两次被拒绝（哪一次生效取决于顺序）', async
 // ── 陈旧检测 ──
 
 test('before 与当前内容不符 → 拒绝（这份 patch 是对旧版本生成的）', async () => {
-  const { paragraphs, ids } = await setup();
+  const { ids } = await setup();
   const patch = {
     selection: [ids[0]],
     hunks: [{ blockId: ids[0], before: '这是旧的第一段。', after: '新的' }],

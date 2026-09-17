@@ -117,7 +117,7 @@ function headingsOf(prose) {
  */
 function newestMtime(dir) {
   let newest = 0;
-  let stack = [dir];
+  const stack = [dir];
   while (stack.length) {
     const cur = stack.pop();
     let entries;

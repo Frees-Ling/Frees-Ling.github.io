@@ -102,7 +102,7 @@ const statusText = await page.$eval('#mem-status', (el) => el.textContent);
 // 确认前：不出现在检索里
 const beforeApprove = await page.evaluate(async () => {
   const r = await fetch(
-    '/api/search-all?q=' + encodeURIComponent('注意力机制'),
+    `/api/search-all?q=${encodeURIComponent('注意力机制')}`,
   );
   return (await r.json()).memories.length;
 });
@@ -125,7 +125,7 @@ await page.waitForFunction(
 
 const afterApprove = await page.evaluate(async () => {
   const r = await fetch(
-    '/api/search-all?q=' + encodeURIComponent('注意力机制'),
+    `/api/search-all?q=${encodeURIComponent('注意力机制')}`,
   );
   return (await r.json()).memories.length;
 });

@@ -22,7 +22,6 @@ import { createMockWebdav } from './backup/mock-webdav.mjs';
 import { decrypt } from './backup/crypto.mjs';
 import { openDatabase } from './db/schema.mjs';
 import { createNote, proposeMemory, reviewMemory } from './db/store.mjs';
-import { exportAll } from './db/portable.mjs';
 import { loadOrCreateToken } from './server/index.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));

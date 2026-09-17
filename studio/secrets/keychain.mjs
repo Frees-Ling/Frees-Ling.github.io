@@ -76,7 +76,7 @@ function run(args, { service, account }) {
         },
       },
       (error, stdout) => {
-        if (error && error.killed) {
+        if (error?.killed) {
           // 脚本自己都超时了 —— 当作锁定处理，因为那是最可能的原因
           resolve({ status: 'locked', stdout: '' });
           return;

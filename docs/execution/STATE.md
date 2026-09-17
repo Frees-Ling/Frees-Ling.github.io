@@ -12,7 +12,11 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-PERF-001 已完成（图片与字体管线）。下一项见下方 Next READY task。
+无进行中的任务。
+
+本轮完成的是**治理收口**（GOV-003 / GOV-004 / GOV-005）：
+部署改为依赖质量、Stop hook 不再无条件 `add -A`、lint 归零。
+在此之前完成的是 MEDIA-001（本地媒体库）与 PERF-001（图片与字体管线）。
 
 ## Last known implementation state
 
@@ -111,11 +115,28 @@ PERF-001 已完成（图片与字体管线）。下一项见下方 Next READY ta
 
 ## Current objective
 
-AI-001 已完成。下一项见 NEXT READY task。
+W1 / W2 / W3 已完成；M1 差一项（公开派生物），W4 未开工。
+当前最高杠杆是 **WEBDAV 链**：`WEBDAV-001`（官方资料与受控测试）已完成，
+但它下游的 6 项全部卡在 `CRED-001`（用户提供三个 endpoint 与凭据）上。
 
 ## Next READY task
 
-EDITOR-001 — 统一文档模型与生产预览（依赖 STUDIO-002、RENDER-001；RENDER-001 已满足）。
+与 `docs/execution/TASKS.md` 一致（`npm run check:tasks` 可核验）。当前可开工的 7 项：
+
+| 任务 | 优先级 | 说明 |
+| --- | --- | --- |
+| `CRED-001` | P0 | **执行者是用户**：提供 WebDAV 三个 endpoint 与最小权限凭据 |
+| `CONTENT-001` | P1 | 内容发布契约（连带解锁 INTEG-001/002） |
+| `MEDIA-002` | P1 | 响应式公开派生物 |
+| `KNOW-002` | P1 | 研究与审查流水线 |
+| `MEDIA-003` | P2 | AI 生图适配器 |
+| `KNOW-003` | P2 | 公开批注与讨论 |
+
+> 这张表**不再手写下一步是什么** —— 上一版写的是 `EDITOR-001`，而它早已完成，
+> 于是文档在指向一个不存在的工作。现在只列由 `check:tasks` 算出来的可开工项，
+> 口径与任务清单同源。
+
+`WEBDAV-002` 及其下游 6 项**不在**此表：它们等 `CRED-001`。
 
 ## Blockers / human decisions
 

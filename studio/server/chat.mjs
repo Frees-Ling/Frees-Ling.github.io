@@ -80,7 +80,7 @@ async function route(req, res, deps, { path, method, readBody, send, url }) {
         available: models,
         baseUrl: provider.baseUrl,
       });
-    } catch (error) {
+    } catch {
       // 只回状态与提示，不回传底层错误详情（可能含主机路径）
       return send(res, 200, {
         ok: false,

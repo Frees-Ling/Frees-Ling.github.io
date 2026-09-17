@@ -1,0 +1,65 @@
+name: Visual Quality
+
+# ── 为什么这条链不跟着每次 push 跑 ──
+#
+# 它要跑真实浏览器（axe-core 审计 + 键盘走查 + 对比度/溢出/控制台断言）。
+# 断言类的检查在 CI 上是有意义的，但代价与噪声都比 quality.yml 高：
+# 浏览器版本、字体渲染、时序都可能让结果在本地与 CI 之间不一致。
+#
+# 所以它独立成一个工作流，**手动触发 + 每周一次**：
+# 日常靠 quality.yml 拦回归，视觉与无障碍靠它定期体检。
+# 出问题时可以随时手动跑一次，而不必等下一次 push。
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每周一 03:17 UTC。刻意避开整点 —— 整点是所有人的默认值，
+    # 排队最挤的时刻。
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # 浏览器质量门禁：对比度必须为 0 失败、无控制台错误、
+      # 无横向溢出、键盘不会聚焦到不可见元素、路由全部可达
+      - name: Browser quality gate
+        run: npm run gate
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
+      # 无障碍审计：axe-core 扫描 + 键盘走查
+      - name: Accessibility audit
+        run: npm run a11y
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
+      # 失败时把审计产物传出来 —— 否则只能看到「有 N 个问题」，
+      # 而看不到是哪一条
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-audit
+          path: |
+            _backups/**
+          retention-days: 14
+          if-no-files-found: ignore

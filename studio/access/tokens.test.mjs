@@ -232,7 +232,7 @@ test('只有 read:search 的身份：能搜，但读不到全文、读不到记�
     });
 
     assert.equal(
-      (await request('/api/search?q=' + encodeURIComponent('私人'), { token }))
+      (await request(`/api/search?q=${encodeURIComponent('私人')}`, { token }))
         .status,
       200,
       '搜是它被允许的',

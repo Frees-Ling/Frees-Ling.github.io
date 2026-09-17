@@ -61,7 +61,7 @@ export function loadOrCreateToken(home = studioHome()) {
   }
 
   const token = randomBytes(32).toString('base64url');
-  writeFileSync(tokenPath, token + '\n', { mode: 0o600 });
+  writeFileSync(tokenPath, `${token}\n`, { mode: 0o600 });
   return token;
 }
 
@@ -164,7 +164,7 @@ export async function start({
 
 // 作为脚本直接运行
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const { port, token, home } = await start();
+  const { port, home } = await start();
   // 刻意不打印 token —— 终端会被截图，也会进 scrollback。
   // 需要时从数据目录读：cat ~/.frees-studio/token
   console.log(`知识库服务已启动: http://${BIND_HOST}:${port}`);

@@ -23,7 +23,7 @@ import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { openDatabase, currentVersion, SCHEMA_VERSION } from './db/schema.mjs';
-import { studioHome, start, loadOrCreateToken } from './server/index.mjs';
+import { studioHome, start } from './server/index.mjs';
 import {
   exportToFile,
   importFromFile,
@@ -374,7 +374,7 @@ const commands = {
           console.log(`预设：${Object.keys(PRESETS).join(' / ')}`);
           return;
         }
-        console.log('  用途'.padEnd(24) + '能力'.padEnd(46) + '状态');
+        console.log(`${'  用途'.padEnd(24) + '能力'.padEnd(46)}状态`);
         for (const t of tokens) {
           const scopes = t.scopes.length ? t.scopes.join(',') : '（无）';
           console.log(

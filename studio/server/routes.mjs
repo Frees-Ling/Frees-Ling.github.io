@@ -7,9 +7,8 @@
 //     也没有能改变这个事实的参数
 //   · 错误响应不回显堆栈或内部路径
 
-import { join } from 'node:path';
 import { tokenMatches } from './index.mjs';
-import { hostAllowed, createLoginThrottle } from './guard.mjs';
+import { hostAllowed } from './guard.mjs';
 import { handleChat } from './chat.mjs';
 import { listSettings, setSetting } from '../db/settings.mjs';
 import { renderDocument } from '../../src/utils/blocks.mjs';

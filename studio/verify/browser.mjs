@@ -79,7 +79,7 @@ const focusOk = await page.evaluate(async () => {
   for (let i = 0; i < 8; i++) {
     const el = document.activeElement;
     if (el && el !== document.body)
-      seen.push(el.tagName + (el.id ? '#' + el.id : ''));
+      seen.push(el.tagName + (el.id ? `#${el.id}` : ''));
   }
   return seen.length;
 });
