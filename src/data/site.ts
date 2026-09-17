@@ -48,6 +48,19 @@ export const socials = [
   { label: 'Bilibili', href: 'https://space.bilibili.com/1066292128' },
 ];
 
+/**
+ * 项目。
+ *
+ * ── 两条自我约束 ──
+ *
+ * 1. **关联文章必须是真实存在的**。`articles` 里的 slug 会被
+ *    `npm run check:projects` 逐个对照 `dist/blog/` 校验 ——
+ *    写错一个 slug 就会红。项目页原先链不到任何地方，
+ *    而「链到不存在的东西」比「链不出去」更糟。
+ * 2. **仓库地址不许编造**。`repo: null` 表示「尚未核实」，
+ *    页面会如实显示 `repoStatus`，而不是拿 `#` 或首页地址冒充。
+ *    只有从 `git remote` 能核实到的才写实际地址。
+ */
 export const projects = [
   {
     name: 'Mahjong AI',
@@ -56,6 +69,10 @@ export const projects = [
     year: '2026',
     description: '围绕日麻决策、RankEV 与统计证据构建可复查的研究流程。',
     tags: ['AI', 'Decision Making', 'Mahjong'],
+    // 研究仍在进行，还没有可公开的成文记录 —— 如实留空，不编造
+    articles: [],
+    repo: null,
+    repoStatus: '尚未开源',
   },
   {
     name: 'Frees Blog',
@@ -64,6 +81,9 @@ export const projects = [
     year: '2026',
     description: '一座收纳技术文章、项目、音乐和生活片段的私人数字花园。',
     tags: ['Astro', 'Design', 'Writing'],
+    articles: ['competition-write'],
+    repo: 'https://github.com/Frees-Ling/Frees-Ling.github.io',
+    repoStatus: '公开仓库',
   },
   {
     name: 'Computer Vision Notes',
@@ -72,6 +92,9 @@ export const projects = [
     year: '2025—2026',
     description: '从 YOLO 训练、数据标注到反馈图表分析的一组实践笔记。',
     tags: ['YOLO', 'Python', 'Vision'],
+    articles: ['yolo-shubiao', 'yolo-train-recommand', 'qa', 'fankui'],
+    repo: null,
+    repoStatus: '仓库待确认',
   },
   {
     name: 'Robotics Playground',
@@ -80,8 +103,21 @@ export const projects = [
     year: '2026',
     description: '关于 Unitree Go2、控制系统与真实设备交互的实验记录。',
     tags: ['Robotics', 'Linux', 'Control'],
+    articles: ['unitree-go2-demo'],
+    repo: null,
+    repoStatus: '仓库待确认',
   },
 ];
+
+/** 文章 slug → 标题。供项目页显示关联文章的可读名称。 */
+export const articleTitles: Record<string, string> = {
+  'competition-write': '项目开发随笔 v1.0',
+  'yolo-shubiao': 'YOLO 新应用 · 数据标注篇',
+  'yolo-train-recommand': 'YOLO 训练推荐配置',
+  qa: 'YOLO 训练中产生的问题及解决方案',
+  fankui: 'YOLO 新应用 · 反馈图表解析',
+  'unitree-go2-demo': 'Unitree Go2 基础开发演示及配置',
+};
 
 export const researchTracks = [
   {
