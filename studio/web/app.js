@@ -103,6 +103,104 @@ async function open(id) {
   showEditor(note);
 }
 
+// ── 预览（EDITOR-001）──
+//
+// 渲染走服务端的 /api/preview，而服务端用的是公开站**同一个**管线。
+// 前端不自己渲染：那会立刻产生第二套实现，而预览的全部意义就是与发布一致。
+const preview = { on: false, timer: null, seq: 0 };
+
+function setPreview(on) {
+  preview.on = on;
+  $('preview-wrap').hidden = !on;
+  $('body').hidden = on;
+  $('toggle-preview').setAttribute('aria-pressed', String(on));
+  if (on) renderPreview();
+}
+
+async function renderPreview() {
+  if (!preview.on) return;
+  // 起一个序号：请求是异步的，先发的可能后回。不判序号的话，
+  // 快速输入时会看到旧内容覆盖新内容，而且不报错。
+  const seq = ++preview.seq;
+  try {
+    const { html } = await api('/api/preview', {
+      method: 'POST',
+      body: JSON.stringify({ markdown: $('body').value }),
+    });
+    if (seq !== preview.seq) return;
+    $('preview').innerHTML = html;
+  } catch (error) {
+    if (seq !== preview.seq) return;
+    $('preview').textContent = `渲染失败：${error.message}`;
+  }
+}
+
+function schedulePreview() {
+  if (!preview.on) return;
+  clearTimeout(preview.timer);
+  preview.timer = setTimeout(renderPreview, 200);
+}
+
+// ── 编辑会话（EDITOR-001）──
+//
+// 存服务端而不是 localStorage：需求的字面意思就是「重启后还在」，
+// 而浏览器存储扛不住换浏览器、清缓存与隐私窗口。
+const session = { timer: null, restoring: false };
+
+function scheduleSessionSave(dirty) {
+  if (session.restoring) return;
+  clearTimeout(session.timer);
+  session.timer = setTimeout(() => {
+    api('/api/editor-session', {
+      method: 'PUT',
+      body: JSON.stringify({
+        noteId: state.current?.id ?? null,
+        title: $('title').value,
+        body: $('body').value,
+        tags: $('tags')
+          .value.split(/[,，]/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+        dirty,
+      }),
+    }).catch(() => {}); // 存会话失败不该打断写作
+  }, 400);
+}
+
+async function restoreSession() {
+  let data;
+  try {
+    data = await api('/api/editor-session');
+  } catch {
+    return;
+  }
+  const s = data.session;
+  if (!s || (!s.noteId && !s.body.trim() && !s.title.trim())) return;
+
+  session.restoring = true;
+  try {
+    // 未保存的改动优先原样恢复；已保存过的则重新拉一次笔记
+    // （期间可能被别处改过，以库里的为准）
+    if (s.dirty || !s.noteId) {
+      showEditor({
+        id: s.noteId,
+        title: s.title,
+        body: s.body,
+        tags: s.tags,
+      });
+      say('已恢复上次未保存的内容');
+    } else {
+      const { note } = await api(`/api/notes/${s.noteId}`);
+      showEditor(note);
+      say('已回到上次编辑的笔记');
+    }
+  } catch {
+    say('恢复上次编辑状态失败');
+  } finally {
+    session.restoring = false;
+  }
+}
+
 async function save(event) {
   event.preventDefault();
   const payload = {
@@ -131,6 +229,9 @@ async function save(event) {
     showEditor(note);
     await refresh();
     say('已保存');
+    // 保存成功即不再是未保存状态，但会话本身留着 ——
+    // 下次打开应当回到这条笔记，而不是空白编辑器
+    scheduleSessionSave(false);
   } catch (error) {
     say(error.message);
   }
@@ -514,6 +615,14 @@ async function saveAsDraft(messageId) {
   }
 }
 
+$('toggle-preview').addEventListener('click', () => setPreview(!preview.on));
+$('body').addEventListener('input', () => {
+  schedulePreview();
+  scheduleSessionSave(true);
+});
+$('title').addEventListener('input', () => scheduleSessionSave(true));
+$('tags').addEventListener('input', () => scheduleSessionSave(true));
+
 $('tab-notes').addEventListener('click', () => setTab('notes'));
 $('tab-settings').addEventListener('click', () => setTab('settings'));
 $('tab-chat').addEventListener('click', () => setTab('chat'));
@@ -652,3 +761,7 @@ $('tab-memory').addEventListener('click', () => {
 });
 $('mem-pending').addEventListener('click', () => loadMemories('pending'));
 $('mem-approved').addEventListener('click', () => loadMemories('approved'));
+
+// 启动时恢复上次的编辑状态。放在最后：它依赖 showEditor / say 等都已就绪，
+// 而且要等初始的 refresh() 跑完，否则会被列表渲染覆盖掉
+restoreSession().catch(() => {});

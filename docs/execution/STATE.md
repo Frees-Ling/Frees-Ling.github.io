@@ -73,10 +73,10 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   而所有读取方按名字取最后一次 —— 于是 STUDIO-002 被判为未完成，
   连带堵住 EDITOR-001 → KNOW-001 → ACCESS-001 整条链。同一次检查还发现
   5 处依赖字段不可机器解析（中文顿号、散文）。
-- 渲染管线已抽取（EDITOR-001 进行中）：`src/utils/markdown-pipeline.mjs` 是公开站
-  与 Studio 预览的共用真相源；`npm run check:preview` 逐字比对预览与发布，
-  17 篇全部一致。稳定 block ID 已就绪（`src/utils/blocks.mjs`），
-  三种文档类型共用；ID 是算出来的，产物零影响。
+- 统一文档模型与生产预览（EDITOR-001 DONE）：渲染管线抽取为公开站与 Studio
+  预览的共用真相源；`npm run check:preview` 逐字比对预览与发布（17 篇一致）；
+  稳定 block ID 三种文档类型共用、产物零影响；Studio 侧预览接入，
+  编辑会话存库、**关掉服务再起来未保存的草稿一字不少**。
 - 长期记忆服务已建立（MEM-001 DONE，`docs/memory-service.md`）：三层分离、
   追加式纠正、去重与冲突标记、可见性、自动提取开关。31 项测试。
 - Studio 的 WebDAV 集成尚未接进界面（当前只有 CLI 路径）；
@@ -84,8 +84,7 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 
 ## Current objective
 
-EDITOR-001 进行中：渲染管线抽取与预览一致性闸门已完成，剩 block ID、预览界面、
-编辑状态恢复。
+EDITOR-001 已完成。下一项见 Next READY task。
 
 ## Next READY task
 

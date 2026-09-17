@@ -31,6 +31,22 @@ export const TOKENS_FILE = join(
   'styles',
   'tokens.css',
 );
+
+/**
+ * 项目的 prose.css —— **预览必须用它，不能另写一份**。
+ *
+ * 预览的全部意义是「看到什么就发布什么」。若 Studio 侧自己写一套正文样式，
+ * 两边迟早不一致，而那种不一致只有在稿子发出去之后才会被发现
+ * （RENDER-001 第四节：预览漂移是编辑器最昂贵的缺陷）。
+ */
+export const PROSE_FILE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'src',
+  'styles',
+  'prose.css',
+);
 import { tokenMatches } from './index.mjs';
 
 const COOKIE_NAME = 'frees_studio';

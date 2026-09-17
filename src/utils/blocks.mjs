@@ -94,8 +94,20 @@ async function renderToTree(markdown, overrides) {
       },
     ],
   });
-  await processor.render(markdown);
-  return captured;
+  const { code, metadata } = await processor.render(markdown);
+  return { tree: captured, code, metadata };
+}
+
+/**
+ * 一次渲染，同时拿到 HTML 与块信息。
+ *
+ * **编辑器必须走这个入口**，不要分别调 renderMarkdown 与 collectBlocks ——
+ * 那是两遍完整渲染。transformer 那篇的产物有 1.2 MB，
+ * 每敲一次键渲染两遍是能感觉到的卡顿，而两遍之间除了浪费时间没有任何区别。
+ */
+export async function renderDocument(markdown, overrides = {}) {
+  const { tree, code, metadata } = await renderToTree(markdown, overrides);
+  return { code, metadata, ...blocksFromTree(tree) };
 }
 
 /**
@@ -116,8 +128,8 @@ async function renderToTree(markdown, overrides) {
  * 它描述的应当是**预览里看到的样子**，否则编辑器的目录会和右边的预览对不上。
  *   startLine / endLine  在源文中的行号，**取不到时为 null**
  */
-export async function collectBlocks(markdown, overrides = {}) {
-  const tree = await renderToTree(markdown, overrides);
+/** 从已经渲染好的 hast 树里切块 —— 渲染与切块分开，便于一次渲染两用。 */
+function blocksFromTree(tree) {
   if (!tree) return { blocks: [], headings: [] };
 
   const blocks = [];
@@ -160,7 +172,13 @@ export async function collectBlocks(markdown, overrides = {}) {
   return { blocks, headings };
 }
 
-/** 只取标题，比 collectBlocks 便宜一点（仍然要跑一遍管线）。 */
+/** 切块（会自己渲染一遍）。只需要块信息时用它。 */
+export async function collectBlocks(markdown, overrides = {}) {
+  const { tree } = await renderToTree(markdown, overrides);
+  return blocksFromTree(tree);
+}
+
+/** 只取标题（仍然要跑一遍管线）。 */
 export async function collectHeadings(markdown, overrides = {}) {
   return (await collectBlocks(markdown, overrides)).headings;
 }

@@ -6,6 +6,8 @@
     <title>书房 · 知识库</title>
     <!-- 与公开站共用同一套设计变量，不复制一份 -->
     <link rel="stylesheet" href="/tokens.css" />
+    <!-- 正文样式取自项目本身，不复制一份：预览与公开站必须长得一样 -->
+    <link rel="stylesheet" href="/prose.css" />
     <link rel="stylesheet" href="/static/studio.css" />
   </head>
   <body>
@@ -83,8 +85,26 @@
             placeholder="用 Markdown 写…"
           ></textarea>
 
+          <!-- 预览用的是公开站同一套渲染管线与同一份 prose.css。
+               刻意**不做并排**：prose.css 的标题用 clamp(…, 4vw, …) 定尺寸，
+               而 vw 跟的是视口宽度不是容器宽度 —— 半宽面板里排出来的字号
+               与真正发布出去的并不一样，那种「预览」反而会误导。
+               全宽切换则与实际页面在同一视口宽度下，看到的才是真的。 -->
+          <div id="preview-wrap" class="preview-wrap" hidden>
+            <p class="preview-note">预览 · 与发布使用同一套渲染管线与样式</p>
+            <div id="preview" class="prose"></div>
+          </div>
+
           <div class="actions">
             <button type="submit" class="btn primary">保存</button>
+            <button
+              type="button"
+              id="toggle-preview"
+              class="btn"
+              aria-pressed="false"
+            >
+              预览
+            </button>
             <button type="button" id="delete" class="btn danger">删除</button>
             <span id="status" class="status" role="status"></span>
           </div>

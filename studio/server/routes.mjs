@@ -12,6 +12,8 @@ import { tokenMatches } from './index.mjs';
 import { hostAllowed, createLoginThrottle } from './guard.mjs';
 import { handleChat } from './chat.mjs';
 import { listSettings, setSetting } from '../db/settings.mjs';
+import { renderDocument } from '../../src/utils/blocks.mjs';
+import { getSession, saveSession, clearSession } from '../db/session.mjs';
 import {
   hasSession,
   serveFile,
@@ -19,6 +21,7 @@ import {
   LOGIN_PAGE,
   WEB_ROOT,
   TOKENS_FILE,
+  PROSE_FILE,
 } from './web.mjs';
 
 const COOKIE = 'frees_studio';
@@ -99,6 +102,37 @@ export async function handleRequest(req, res, deps) {
   // 设计变量直接取自项目的 tokens.css —— 单一真相源，界面与公开站不会漂移
   if (path === '/tokens.css' && method === 'GET') {
     serveFile(res, TOKENS_FILE);
+    return;
+  }
+
+  // 正文样式同样取自项目，**不复制一份** —— 预览与公开站必须长得一样
+  if (path === '/prose.css' && method === 'GET') {
+    serveFile(res, PROSE_FILE);
+    return;
+  }
+
+  // ── 预览渲染（EDITOR-001）──
+  //
+  // 用的是公开站**同一个**渲染管线（src/utils/markdown-pipeline.mjs）。
+  // 这不是「尽量复用」而是唯一路径：`npm run check:preview` 会逐字比对
+  // 这条路径的产出与公开站产物，任何分叉都会被那道闸门挡住。
+  if (path === '/api/preview' && method === 'POST') {
+    const body = await readBody(req);
+    if (typeof body.markdown !== 'string') {
+      send(res, 400, { error: '需要 { markdown }' });
+      return;
+    }
+    try {
+      // renderDocument 一次渲染同时给出 HTML 与块 ——
+      // 分别调 renderMarkdown 和 collectBlocks 会渲染两遍，
+      // 长文档上每敲一次键都能感觉到
+      const { code, blocks, headings } = await renderDocument(body.markdown);
+      send(res, 200, { html: code, blocks, headings });
+    } catch (error) {
+      // 渲染失败（例如 KaTeX 语法错）不该是 500 —— 那是用户正在编辑的
+      // 内容有问题，提示要能贴到编辑器旁边，而不是「内部错误」
+      send(res, 400, { error: `渲染失败：${error.message}` });
+    }
     return;
   }
 
@@ -201,6 +235,30 @@ export async function handleRequest(req, res, deps) {
     // ── 健康检查 ──
     if (path === '/api/health' && method === 'GET') {
       send(res, 200, { ok: true });
+      return;
+    }
+
+    // ── 编辑会话（EDITOR-001）──
+    //
+    // 重启后回到原来那一段。存服务端而不是浏览器：需求的字面意思就是
+    // 「重启后还在」，而浏览器存储扛不住换浏览器、清缓存与隐私窗口。
+    if (path === '/api/editor-session' && method === 'GET') {
+      send(res, 200, { session: getSession(db) });
+      return;
+    }
+
+    if (path === '/api/editor-session' && method === 'PUT') {
+      const body = await readBody(req);
+      try {
+        send(res, 200, { session: saveSession(db, body) });
+      } catch (error) {
+        send(res, 400, { error: error.message });
+      }
+      return;
+    }
+
+    if (path === '/api/editor-session' && method === 'DELETE') {
+      send(res, 200, { cleared: clearSession(db) });
       return;
     }
 

@@ -311,6 +311,38 @@ const MIGRATIONS = [
       );
     },
   },
+  {
+    version: 7,
+    name: 'editor-session',
+    up: (db) => {
+      // ── 编辑会话（EDITOR-001）──
+      //
+      // 存「上次在编辑什么」，重启后能回到原处。
+      //
+      // ── 为什么放库里而不是 localStorage ──
+      //
+      // 浏览器存储能扛住刷新，但扛不住换浏览器、清缓存、隐私窗口。
+      // 而这个需求的字面意思就是**重启后还在**。放在库里则由服务端保证，
+      // 与浏览器无关 —— 也顺带让「重启」这件事可以被测试真正验证
+      // （关掉库再打开，看还在不在）。
+      //
+      // 单用户本地服务，因此固定一行（id = 'current'）。
+      // 不做多行不是省事，是还没有第二个用户 —— 真需要时再加列。
+      db.exec(`
+        CREATE TABLE editor_sessions (
+          id         TEXT PRIMARY KEY,
+          note_id    TEXT REFERENCES notes(id) ON DELETE SET NULL,
+          title      TEXT NOT NULL DEFAULT '',
+          body       TEXT NOT NULL DEFAULT '',
+          tags       TEXT NOT NULL DEFAULT '[]',
+          -- 是否有未保存的改动。没有改动时不必提示「恢复」，
+          -- 直接打开那条笔记就行。
+          dirty      INTEGER NOT NULL DEFAULT 0,
+          updated_at TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
