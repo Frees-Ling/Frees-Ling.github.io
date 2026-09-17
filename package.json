@@ -16,6 +16,7 @@
     "check:content": "node scripts/check-content.mjs",
     "check:coverage": "node scripts/check-content-coverage.mjs",
     "check:tasks": "node scripts/check-tasks.mjs",
+    "check:preview": "node scripts/check-preview-parity.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "verify:secrets": "node studio/verify/secret-scan.mjs",
     "test": "node --test studio/",

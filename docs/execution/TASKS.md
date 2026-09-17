@@ -1153,12 +1153,49 @@ Commit：本文件所在提交。
 
 ### EDITOR-001 — 统一文档模型与生产预览
 
-- Status: BACKLOG
+- Status: ACTIVE
 - Phase: S3
 - Priority: P0
 - Depends-On: STUDIO-002, RENDER-001
 
 Acceptance：ARTICLE/KNOWLEDGE/PROJECT 共用稳定 block ID 和生产渲染预览；重启恢复编辑状态。
+
+**已完成的部分**（提交见下方）：渲染管线抽取 + 预览与发布的一致性闸门。
+
+Delivered：`src/utils/markdown-pipeline.mjs`（公开站与预览的共用真相源）+
+`scripts/check-preview-parity.mjs`（`npm run check:preview`）。
+
+Evidence：
+
+- **管线只有一份**。`astro.config.mjs` 不再定义插件链，改为引用
+  `markdownConfig()`；Studio 预览用 `createPreviewProcessor()`，
+  两者引用**同一个对象**。防漂移不能靠「两边都记得改」——
+  那是约定，而约定会失效。
+- **一致性是测出来的，不是承诺的**：`check:preview` 把 17 篇文章用预览管线
+  渲染一遍，与公开站产物里的正文**逐字**比对。当前 **17 篇全部一致**
+  （含 780 个标题）。
+- 比对用「两份集合整体比对」而不是按 slug 配对：源文件名到 slug 的转换
+  不是简单小写（`LOVEv1.0.md` → `lovev10`），在脚本里重新实现一遍这条规则
+  等于又造一个会漂移的实现 —— 而本任务存在的理由正是反对这个。
+
+**过程中犯了一个错，并被闸门抓住**：抽取管线时我把 `shikiConfig` 挪进了
+`unified()`，而它是 `markdown` 的**兄弟键**、不是 processor 的选项。
+放错位置不报错、构建照常成功，只是代码块主题掉回默认、`wrap` 失效 ——
+3 篇文章的产物字符数变了几个。是 `check:coverage` 报出来的。
+
+更值得记的是**我第一次的验证方式是错的**：我照着记忆重写了「旧配置」再比对，
+结果两版都带着同一个错误，于是「完全一致」。**要验回归，必须与真实的旧产物
+比对** —— 最后是用 `git worktree` 检出 RENDER-003 构建后比对才确认的。
+`check:preview` 的敏感性也已验证：故意把 `shikiConfig` 放回错误位置，
+它准确报出了码块主题差异。
+
+未完成（本任务剩下的部分）：
+
+- [ ] ARTICLE / KNOWLEDGE / PROJECT 共用稳定 block ID
+- [ ] Studio 侧的预览界面接入
+- [ ] 重启恢复编辑状态
+
+Commit：本文件所在提交。
 
 ### EDITOR-002 — AI 选区 diff 协议
 
