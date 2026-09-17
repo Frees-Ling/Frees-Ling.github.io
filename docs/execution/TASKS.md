@@ -1835,12 +1835,51 @@ Evidence：
 
 ### KNOW-002 — 研究与审查流水线
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: K2
 - Priority: P1
 - Depends-On: KNOW-001, AI-001
 
 Acceptance：已有知识查重、来源分级、冲突、claim/source 校验、review queue；AI 不可绕过人工发布。
+
+Delivered：迁移 v11（`claims` / `claim_sources` / `claim_conflicts`）+
+`studio/research/sources.mjs` + `studio/research/pipeline.mjs` + 25 项测试。
+
+**这一层解决的不是「让 AI 写研究」，是「哪些话有依据」。**
+一段没有出处的论断读起来和一段有出处的没有区别 —— 危险在那儿。
+
+- **来源分级按域名算，不由调用方填。** 「这条依据的是官方文档」是可核对的
+  事实，让调用方（包括 AI）自己填等级等于让被评价者自己打分。
+  五个等级：official / primary / secondary / unverified / unsourced，
+  门槛是 secondary（unverified 意味着我们连它是什么都不知道）。
+  后缀匹配做了防冒充：`evilw3.org` **不会**被当成 `w3.org`。
+- **查重复用 MEM-001 的 `dedupKeyOf`** —— 两套「什么算重复」的定义会让人
+  无从判断该信哪个。已知边界：它不规范化标点，尾句号会造成两条。这是
+  有意留着的噪音：放宽可能把 `a>b` 与 `a<b` 合并，那比多一条重复危险得多。
+- **冲突由人显式标记，不从文本推断**，与 MEM-001 的 `flagConflict` 同源。
+  猜出来的冲突会以假乱真。
+- **校验只报告，不修改。** 没来源的主张留在队列里等人处理，
+  而不是被自动删掉或改写。
+
+**「AI 不可绕过人工发布」是库层约束，不是这一层的约定：**
+
+    CHECK (status <> 'approved' OR decided_by IS 'human')
+
+写在应用层就只是约定 —— 谁绕过那个函数、或将来某条新路径忘了检查，
+都会静默放行。写成 CHECK 之后它成了库的性质：AI 写入的行**无论代码怎么写**
+都进不了 approved。用例专门测了「绕过 pipeline 直接 UPDATE」，数据库会拒绝。
+
+⚠️ 这里踩到一个 SQL 三值逻辑的坑，值得单独记：第一版写的是
+`decided_by = 'human'`，而 `decided_by` 为 NULL 时 `false OR NULL` 求值为
+NULL —— **而 NULL 不算违反约束**。「不写 decided_by 直接批准」于是畅通无阻，
+整个约束形同虚设。必须是空值安全的 `IS`。这是被自己的用例抓到的。
+
+Evidence：
+
+- `node --test studio/research/` → **25 项全过**。
+- **突变验证**：把 CHECK 里的 `IS` 改回 `=`，「即使绕过这一层直接写库」
+  这条用例立刻变红 —— 证明它守的正是那个约束。
+- 迁移 v11 与既有迁移同样在事务中执行、失败回滚。
 
 ### KNOW-003 — 公开批注与讨论
 

@@ -57,6 +57,11 @@ W1 收口 → W2 — Article Renderer
   桌面 51 KB / 手机 24 KB。OG 图独立生成（1200×630，102 KB，不带哈希的固定
   路径）。字体维持系统栈 0 字节，新增闸门守住「只许 KaTeX 一族、不许外链」。
   新增 `check:assets` 与 `check:offline`（断网真跑一次构建）。
+- 研究与审查流水线（KNOW-002 DONE，迁移 v11）：来源**按域名**分级
+  （不让调用方自填等级）、查重复用记忆层的 `dedupKeyOf`、冲突由人显式标记、
+  校验只报告不改动。「AI 不可绕过人工发布」写成库层 CHECK 约束而非应用层约定 ——
+  踩到 SQL 三值逻辑：`decided_by = 'human'` 在 NULL 时求值为 NULL、**不算违反约束**，
+  必须用空值安全的 `IS`，这是被自己的用例抓到的。
 - 命令行入口（KB-009 DONE）：status / start / export / import / rebuild，`npm run studio`。
 - 加密备份格式（KB-010 DONE）：AES-256-GCM + scrypt，口令不落盘。
 - 备份传输层（KB-011 DONE）：WebDAV 上传 → **回读校验** → 保留策略（默认 dry-run、

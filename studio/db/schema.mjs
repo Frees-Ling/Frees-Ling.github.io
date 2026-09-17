@@ -488,6 +488,87 @@ const MIGRATIONS = [
       );
     },
   },
+
+  {
+    version: 11,
+    name: 'research-review',
+    up: (db) => {
+      // ── 研究与审查流水线（KNOW-002）──
+      //
+      // ── 为什么把「AI 不能自己批准」写成 CHECK 约束 ──
+      //
+      // 验收里那句「AI 不可绕过人工发布」是一条**安全属性**，
+      // 而安全属性写在应用层就只是约定：任何人绕过那个函数、
+      // 或者将来某条新路径忘了检查，都会静默地放行。
+      //
+      // 写成 CHECK 之后它变成库的性质：
+      //
+      //     status <> 'approved' OR decided_by = 'human'
+      //
+      // 也就是「一条记录可以是待审的、可以是被否决的、但**只有**
+      // decided_by 为 human 时才可能是已批准的」。AI 写入的行
+      // 无论代码怎么写都进不了 approved 状态 —— 数据库会拒绝。
+      //
+      // 这个约束会连带影响删除与更新：想要把一条 AI 记录标成
+      // approved，唯一的办法是先把它标成 human（而那需要一次显式的、
+      // 可审计的人工动作），而不是「顺手」跳过一步。
+      db.exec(`
+        CREATE TABLE claims (
+          id          TEXT PRIMARY KEY,
+          text        TEXT NOT NULL,
+          origin      TEXT NOT NULL,
+          status      TEXT NOT NULL DEFAULT 'pending',
+          dedup_key   TEXT NOT NULL,
+          created_at  TEXT NOT NULL,
+          decided_at  TEXT,
+          decided_by  TEXT,
+          note        TEXT,
+          CHECK (origin IN ('human', 'ai')),
+          CHECK (status IN ('pending', 'approved', 'rejected')),
+          CHECK (decided_by IS NULL OR decided_by IN ('human', 'ai')),
+          -- 见上：AI 不能自己批准自己。
+          --
+          -- ⚠️ 必须用 IS 而不是等号。
+          -- SQL 的 CHECK 走三值逻辑：decided_by 为 NULL 时，
+          -- 前半是 false，后半求值为 NULL，false OR NULL 还是 NULL ——
+          -- 而 **NULL 不算违反约束**。所以写成等号的话，
+          -- 「不写 decided_by 直接批准」会**通过**，整个约束形同虚设。
+          -- IS 是空值安全的比较，才真正拦得住。
+          --
+          -- 这不是推理出来的：用它写的第一版就被用例抓到了
+          -- （UPDATE 只设 status 不设 decided_by，没有抛错）。
+          CHECK (status <> 'approved' OR decided_by IS 'human')
+        );
+      `);
+      db.exec(`CREATE INDEX idx_claims_status ON claims (status);`);
+      db.exec(`CREATE INDEX idx_claims_dedup ON claims (dedup_key);`);
+
+      // 来源。tier 由 studio/research/sources.mjs 按域名注册表判定 ——
+      // 不由调用方随便写，因为「这条是官方文档」是个可核对的事实。
+      db.exec(`
+        CREATE TABLE claim_sources (
+          claim_id TEXT NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+          title    TEXT NOT NULL,
+          url      TEXT,
+          tier     TEXT NOT NULL,
+          note     TEXT,
+          PRIMARY KEY (claim_id, title),
+          CHECK (tier IN ('official', 'primary', 'secondary', 'unverified', 'unsourced'))
+        );
+      `);
+
+      // 冲突分组。**由人或 AI 显式标记**，不从文本推断 ——
+      // 「两句话互相矛盾」需要语义判断，猜出来的冲突会以假乱真。
+      db.exec(`
+        CREATE TABLE claim_conflicts (
+          group_id   TEXT NOT NULL,
+          claim_id   TEXT NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (group_id, claim_id)
+        );
+      `);
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
