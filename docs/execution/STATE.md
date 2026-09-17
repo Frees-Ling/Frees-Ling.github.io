@@ -77,6 +77,10 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
   预览的共用真相源；`npm run check:preview` 逐字比对预览与发布（17 篇一致）；
   稳定 block ID 三种文档类型共用、产物零影响；Studio 侧预览接入，
   编辑会话存库、**关掉服务再起来未保存的草稿一字不少**。
+- 供应商中立网关（AI-001 DONE）：能力声明（必填，按能力挑供应商）、
+  重试（只重试可自愈的失败、带抖动、取消不重试）、用量按供应商累计
+  （端点不回 usage 时给 null 而不是 0）。两个行为不同的 fixture 验中立性。
+  尚未接进对话路由。
 - AI 选区 diff 协议（EDITOR-002 DONE）：边界权威（越界即整份作废、不做部分应用）、
   陈旧检测、source gap 结构化字段、422 拒绝理由。生成与界面仍未做。
 - 原始档案层（ARCH-001 DONE）：增量/去重/幂等的导入（Markdown、结构化 JSON、
@@ -97,7 +101,7 @@ KB-011 已完成（备份传输层）。下一项见下方 Next READY task。
 
 ## Current objective
 
-EDITOR-002 已完成。下一项见 Next READY task。
+AI-001 已完成。下一项见 NEXT READY task。
 
 ## Next READY task
 
