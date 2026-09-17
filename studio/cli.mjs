@@ -19,7 +19,7 @@
 // ── 为什么不打印令牌 ──
 // 终端会被截图，也会进 scrollback。需要时自己去读令牌文件。
 
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { openDatabase, currentVersion, SCHEMA_VERSION } from './db/schema.mjs';
@@ -35,6 +35,11 @@ import { createEmbedder } from './ai/embeddings.mjs';
 import { createWebdav, webdavConfigFromEnv } from './backup/webdav.mjs';
 import { runBackup, runRetention } from './backup/remote.mjs';
 import { decrypt } from './backup/crypto.mjs';
+import {
+  importFile,
+  importDirectory,
+  findConflicts,
+} from './archive/import.mjs';
 import {
   createToken,
   listTokens,
@@ -270,6 +275,84 @@ const commands = {
       }
     } catch (error) {
       fail(error.message);
+    }
+  },
+
+  // ── 原始档案导入（ARCH-001）──
+  //
+  // 只读用户**明确交进来**的路径。没有 URL 导入、没有账户同步、
+  // 没有自动发现 —— 验收里那句「未获确认不得抓取」在这里的落点是
+  // 根本没有那个函数，而不是默认关闭。
+  async archive() {
+    const db = openExisting();
+    if (!db) return;
+    try {
+      const sub = process.argv[3];
+
+      if (sub === 'import') {
+        const target = process.argv[4];
+        if (!target)
+          return fail(
+            '需要文件或目录路径',
+            'node studio/cli.mjs archive import <路径>',
+          );
+        if (!existsSync(target)) return fail(`路径不存在：${target}`);
+
+        const isDir = statSync(target).isDirectory();
+        const r = isDir
+          ? importDirectory(db, { dir: target })
+          : importFile(db, { path: target });
+
+        console.log(`✓ 导入完成${isDir ? `（扫描 ${r.files} 个文件）` : ''}`);
+        console.log(
+          `  新增 ${r.imported} · 已有 ${r.deduped} · 跳过 ${r.skipped}`,
+        );
+        if (r.errors.length) {
+          // 逐条列出来。这一层的失败方式是**静默丢失** ——
+          // 只说「跳过 3 条」等于让人自己去猜是哪 3 条
+          console.log(`\n  未导入（${r.errors.length} 条）：`);
+          for (const e of r.errors.slice(0, 20)) console.log(`    ${e}`);
+          if (r.errors.length > 20)
+            console.log(`    …还有 ${r.errors.length - 20} 条`);
+        }
+        return;
+      }
+
+      if (sub === 'conflicts') {
+        const rows = findConflicts(db);
+        if (rows.length === 0) {
+          console.log('没有「同一来源、内容却不同」的档案。');
+          return;
+        }
+        console.log('同一来源存在多个版本（哪一版是最新的只有你知道）：\n');
+        for (const c of rows) {
+          console.log(`  ${c.source}`);
+          console.log(`    ${c.versions} 个版本，${c.firstAt} → ${c.lastAt}`);
+        }
+        return;
+      }
+
+      if (sub === 'list') {
+        const n = db
+          .prepare('SELECT COUNT(*) AS c FROM archive_entries')
+          .get().c;
+        const sources = db
+          .prepare(
+            'SELECT source, COUNT(*) AS c FROM archive_entries GROUP BY source ORDER BY c DESC LIMIT 20',
+          )
+          .all();
+        console.log(`档案共 ${n} 条，来自 ${sources.length} 个来源：\n`);
+        for (const s of sources)
+          console.log(`  ${String(s.c).padStart(5)}  ${s.source}`);
+        return;
+      }
+
+      return fail(
+        `未知子命令：${sub}`,
+        '可用：import <路径> / conflicts / list',
+      );
+    } finally {
+      db.close();
     }
   },
 

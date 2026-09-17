@@ -17,8 +17,25 @@ import {
 const now = () => new Date().toISOString();
 
 /** 稳定内容哈希，用于导入去重（同一份文件重复导入必须幂等）。 */
+/**
+ * 档案内容的去重哈希。
+ *
+ * **先做一次传输层归一化，再算哈希。** 注意存的还是原文 ——
+ * 归一化只影响「算不算同一条」，不影响「存了什么」。
+ *
+ * 归一化的是两类**传输产生的差异**，不是内容差异：
+ *   · 行尾 CRLF / LF —— 同一份文件在不同系统间转手就会变
+ *   · 结尾的空白与换行 —— 编辑器与导出工具最常见的差异
+ *
+ * 实测踩过：不归一化时，同一份文档重导一次会多出一条「新版本」，
+ * 而 `findConflicts` 会把它报成一次冲突。**误报的冲突比不报更糟** ——
+ * 它让人去查一个根本不存在的问题，查几次之后就不再相信这个提示了。
+ *
+ * 刻意**不**归一化中间的空白与全角半角：那些是内容。
+ */
 export function contentHash(text) {
-  return createHash('sha256').update(text, 'utf8').digest('hex');
+  const normalized = String(text).replace(/\r\n?/g, '\n').replace(/\s+$/, '');
+  return createHash('sha256').update(normalized, 'utf8').digest('hex');
 }
 
 // ──────────────────────────────── 笔记 ────────────────────────────────
@@ -186,9 +203,11 @@ export function importArchiveEntry(db, { kind, source, content }) {
     throw new Error(`未知的 kind: ${kind}`);
   }
   const hash = contentHash(content);
+  // 判据是 **(来源, 内容)** 而不是只看内容 —— 见迁移 v9 的说明：
+  // 同一段文字来自两份不同文档时必须各留一条，否则来源与时间会无声消失。
   const existing = db
-    .prepare('SELECT id FROM archive_entries WHERE hash = ?')
-    .get(hash);
+    .prepare('SELECT id FROM archive_entries WHERE source = ? AND hash = ?')
+    .get(source, hash);
   if (existing) return { id: existing.id, deduped: true };
 
   const id = randomUUID();

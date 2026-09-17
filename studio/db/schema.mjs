@@ -393,6 +393,32 @@ const MIGRATIONS = [
       db.exec(`CREATE INDEX idx_access_log_at ON access_log (at DESC);`);
     },
   },
+  {
+    version: 9,
+    name: 'archive-source-scoped-dedup',
+    up: (db) => {
+      // ── 档案去重改成「按来源」──
+      //
+      // 原先的 UNIQUE 索引只建在 `hash`（内容哈希）上，于是
+      // **同一段文字来自两份不同文档时会塌成一条** —— 先导的那份赢了，
+      // 后一份的来源与时间**无声地消失**。
+      //
+      // 而底档的价值有一半在来源上：「这句话我说过」与
+      // 「这句话在某次对话里说过」是两件事。塌掉之后，
+      // 「完整保存历史及其来源」这条就不再成立。
+      //
+      // 改判据为 (source, hash)：同一份文件重复导入仍然幂等
+      // （来源与内容都没变），而同一段文字出现在两份文档里则各留一条。
+      //
+      // 旧索引要先删 —— 它会把跨来源的写入直接拒掉，
+      // 而那正是这次要允许的。
+      db.exec(`DROP INDEX IF EXISTS idx_archive_hash;`);
+      db.exec(
+        `CREATE UNIQUE INDEX idx_archive_source_hash
+           ON archive_entries (source, hash);`,
+      );
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
