@@ -12,7 +12,7 @@ W1 收口 → W2 — Article Renderer
 
 ## Current task
 
-MEDIA-001 已完成（本地媒体目录与索引）。下一项见下方 Next READY task。
+PERF-001 已完成（图片与字体管线）。下一项见下方 Next READY task。
 
 ## Last known implementation state
 
@@ -48,6 +48,11 @@ MEDIA-001 已完成（本地媒体目录与索引）。下一项见下方 Next R
   这台机器」。实测推翻三点：`.withMetadata(false)` 反而保留 EXIF、
   `withMetadata()` 往返会**造出** EXIF 块（使检测恒真）、GPS 不能靠搜字节判定
   （大端相机会漏报）。29 项测试，判据各自做过变异验证。
+- 图片与字体管线（PERF-001 DONE）：母版移入 `src/assets/` 不再进产物，改走
+  `astro:assets` 响应式多档 —— 照片墙宽图从「任何视口都下 1196 KB」变为
+  桌面 51 KB / 手机 24 KB。OG 图独立生成（1200×630，102 KB，不带哈希的固定
+  路径）。字体维持系统栈 0 字节，新增闸门守住「只许 KaTeX 一族、不许外链」。
+  新增 `check:assets` 与 `check:offline`（断网真跑一次构建）。
 - 命令行入口（KB-009 DONE）：status / start / export / import / rebuild，`npm run studio`。
 - 加密备份格式（KB-010 DONE）：AES-256-GCM + scrypt，口令不落盘。
 - 备份传输层（KB-011 DONE）：WebDAV 上传 → **回读校验** → 保留策略（默认 dry-run、

@@ -37,7 +37,7 @@ const toc = buildToc(headings as { depth: number; slug: string; text: string }[]
 // 与 ADR-019。没有声明时各块为空，页面上什么也不渲染。
 const knowledge = buildKnowledge(allPosts).get(post.id);
 ---
-<Layout title={post.data.title} description={post.data.description} image={post.data.image || '/images/banner.jpg'} article>
+<Layout title={post.data.title} description={post.data.description} image={post.data.image || undefined} article>
   <div class="reading-progress" aria-hidden="true"><span></span></div>
   <article data-pagefind-body>
     <header class="article-header container">

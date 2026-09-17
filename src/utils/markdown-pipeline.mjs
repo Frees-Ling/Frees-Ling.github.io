@@ -20,6 +20,7 @@ import { createMarkdownProcessor, unified } from '@astrojs/markdown-remark';
 import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
 
+import { rehypeLazyImages } from './rehype-lazy-images.mjs';
 import { rehypeNormalizeHeadings } from './rehype-normalize-headings.mjs';
 
 /**
@@ -41,6 +42,9 @@ export const MARKDOWN_PIPELINE = {
     [rehypeKatex, { strict: false }],
     // 让页面标题成为唯一的 h1；不改 .md，也不改任何 id
     rehypeNormalizeHeadings,
+    // 给正文图片补 loading="lazy" / decoding="async"；同样不改 .md，
+    // 也不动图片 URL。**不补 width/height** —— 理由见该文件顶部
+    rehypeLazyImages,
   ],
 };
 

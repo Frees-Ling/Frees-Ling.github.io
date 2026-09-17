@@ -931,12 +931,64 @@ Commit：本文件所在提交。
 
 ### PERF-001 — 图片与字体管线
 
-- Status: BACKLOG
+- Status: DONE
 - Phase: W3
 - Priority: P1
 - Depends-On: WEB-007
 
 Acceptance：响应式图像、固定尺寸、懒加载、OG 独立资产、字体体积/CLS 预算；构建不依赖不稳定网络。
+
+Delivered：`src/assets/` 母版 + `astro:assets` 响应式管线 + `scripts/build-og.mjs` +
+`scripts/check-assets.mjs` + `scripts/check-offline-build.mjs`；迁移到 astro:assets 的
+是 gallery 与 about 两页。
+
+**原图不再进产物。** `public/images/banner.jpg`（1196 KB）与 `avatar.jpg`（80 KB）
+移入 `src/assets/` 作母版，页面改用 `astro:assets`，产出带内容哈希的 WebP 多档派生物。
+实测各视口实际选中的那一档：桌面照片墙宽图 754px → 768w / **51 KB**，
+390px 手机 → 480w / **24 KB**（原先任何视口都是同一张 1196 KB）。
+`width`/`height`/`srcset`/`sizes`/`loading` 齐全，`sizes` 按**容器实际宽度**
+（1180px 容器、1.3fr/.7fr、gap 20px → 754px 与 406px）给，而不是写 `65vw` 估。
+
+**OG 图与展示图分开**（`public/og/banner.jpg`，1200×630，102 KB）。这两者要求相反：
+展示图要带哈希、要多档 srcset、产物最好是 WebP；og:image 必须是**不带哈希的固定
+绝对 URL**，且得是社交平台都认的 JPEG。首次把母版裁成 1.91:1，裁在哪由我们决定
+而不是由各平台决定。有自定义 `image:` 的文章（Unitree）保留自己的图。
+
+**字体管线维持现状并加闸门**：全站正文与标题用系统栈，**0 字节**。产物里有 59 个
+KaTeX 数学字体文件（1048 KB），实测**无公式的页面字体请求为 0**，
+transformer（499 个公式）请求 8 个。
+
+**新增 `scripts/check-assets.mjs`**：图片尺寸/体积/总量预算、字体只许 KaTeX 一族
+且不许外链、OG 图与母版哈希一致。**新增 `scripts/check-offline-build.mjs`**：
+在 `sandbox-exec`（macOS）或 `unshare -rn`（Linux）下断网跑一次完整构建，
+实测 2.5s 通过。
+
+**本任务实测推翻的四件事**（都属于「看起来对」）：
+
+1. **`astro build` 会缓存渲染好的 markdown，换 rehype 插件不会让它失效。**
+   我据此做的一次变异验证给出了「一切正常」的假结论 —— 清掉
+   `node_modules/.astro` 之后才看到真实差异。`check-assets` 因此先比 src 与
+   dist 的 mtime，在陈旧产物上直接拒绝出结论。
+2. **闸门最初把 `_astro/` 跳过了**（理由是「那是构建产物」），于是它只统计到
+   favicon 与 OG 图（104 KB），而用户真正下载的响应式派生物（432 KB）一个没算。
+   漏掉主要项的预算表比没有更糟 —— 它给出让人放心的数字。
+3. **「产物里有字体文件」≠「用户会下载字体」。** 最初断言「字体文件数必须为 0」，
+   一上来就红。红得对，但**道理是错的**：我一度把「无公式页面 0 请求」归因于
+   `unicode-range`，查过才发现 KaTeX 的 20 处 @font-face **一个都没有**
+   —— 真正的原因是没有元素引用那些字体族。守一个假机制等于没守。
+4. **`sandbox-exec --version` 不存在**，用它做能力探测会永远判定「本平台不支持」，
+   于是断网验证永远走「跳过」分支。改用一次真实调用（`-p <profile> true`）探测。
+   一个永远不会真正验证的验证器比没有更糟。
+
+**两项已知缺口，均已量化并设了封顶**（不是被忽略）：
+
+- 正文里 **40 张图**托管在第三方（`vip.123pan.cn`），没有 width/height。
+  尺寸只能去取，而构建期不许依赖网络；猜一个宽高比又比不猜更糟（竖图猜成横图
+  会把下面整段推更远）。已在渲染期为它们补上 `loading="lazy"` + `decoding="async"`
+  （`src/utils/rehype-lazy-images.mjs`，走共用管线，`.md` 与图片 URL 一个字节未改），
+  并把数量封顶：**涨到 41 就失败**。真正的解法是把它们收进本地媒体库，
+  那要改写文章里的 URL，需要作者决定。
+- **`.md` 一律未改**，文章原始内容、URL 与代码不动。
 
 ### CONTENT-001 — 内容发布契约
 

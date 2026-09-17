@@ -15,10 +15,15 @@ interface Props {
   article?: boolean;
 }
 
+// og:image 默认指向**专门生成的分享图**，不是页面上展示的那张。
+//
+// 这两者要求相反：展示图要带内容哈希、要多档 srcset、产物最好是 WebP；
+// 而 og:image 必须是一个**不带哈希的固定绝对 URL**，且得是社交平台
+// 都认的 JPEG。用同一张图会同时踩中三条（见 scripts/build-og.mjs）。
 const {
   title,
   description = site.description,
-  image = '/images/banner.jpg',
+  image = '/og/banner.jpg',
   article = false,
 } = Astro.props;
 const pageTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site.description}`;

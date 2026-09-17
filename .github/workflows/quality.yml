@@ -62,3 +62,9 @@ jobs:
       # 必须在 build 之后：检查的是构建产物里 </html> 是否为最后一个非空白内容
       - name: Check HTML structure
         run: npm run check:html
+
+      # 同样在 build 之后：断言的是产物里的图片尺寸、体积与字体依赖。
+      # 它会先比 src 与 dist 的 mtime —— Astro 会缓存渲染好的 markdown，
+      # 改管线后只跑 build 可能拿到旧产物，那种情况下比对没有意义。
+      - name: Check asset budget
+        run: npm run check:assets
