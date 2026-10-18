@@ -40,6 +40,13 @@ const github = `https://github.com/${site.repo.split('/')[0]}`;
       <span>© {year}</span>
       <span>UTC+8</span>
       <span>由 Astro 构建</span>
+      <button
+        type="button"
+        class="privacy-pref-button"
+        onclick="if (typeof window.openPrivacyPreferences === 'function') window.openPrivacyPreferences();"
+      >
+        隐私偏好
+      </button>
       <a class="to-top" href="#top">↑ 回到顶部</a>
     </div>
   </div>
@@ -117,6 +124,21 @@ const github = `https://github.com/${site.repo.split('/')[0]}`;
     text-decoration: none;
   }
   .colophon-meta .to-top:hover {
+    color: var(--accent-text);
+  }
+  .colophon-meta .privacy-pref-button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: color 140ms ease;
+  }
+  .colophon-meta .privacy-pref-button:hover {
     color: var(--accent-text);
   }
 
