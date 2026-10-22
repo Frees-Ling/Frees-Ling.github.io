@@ -35,7 +35,7 @@
     "studio": "node studio/cli.mjs"
   },
   "dependencies": {
-    "@astrojs/markdown-remark": "^7.3.0",
+    "@astrojs/markdown-remark": "^7.3.3",
     "@astrojs/rss": "^4.0.17",
     "@astrojs/sitemap": "^3.6.1",
     "astro": "^7.3.1",
@@ -44,12 +44,12 @@
     "remark-math": "^6.0.0"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
-    "@biomejs/biome": "^2.5.13",
+    "@astrojs/check": "^0.9.11",
+    "@biomejs/biome": "^2.5.15",
     "axe-core": "^4.13.0",
-    "markdownlint-cli2": "^0.23.2",
+    "markdownlint-cli2": "^0.23.3",
     "pagefind": "^1.4.0",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.10",
     "puppeteer-core": "^25.11.0",
     "typescript": "^5.9.2"
   },
