@@ -30,3 +30,6 @@ GitHub默认分支31项依赖告警含11高危，已读取官方Dependabot元数
 
 
 远端审查41501843775：当前候选锁文件npm audit为9高危（与Dependabot按条数/数据库统计不同，不混为同一计数）；既有范围更新降至1高危，唯一剩余markdown-it15.0.1被markdownlint-cli2 0.23.3精确固定。官方GHSA-gfr2-rv44-r23c修复范围为15.0.3及以上。审查策略仅为同一15.0.x补丁加入override，不回退/force/弱化阈值；仍保留smol-toml override。先云端生成/复审最终候选再应用。完整Quality依赖安全门禁成功后执行，避免已知高危重复消耗构建额度。
+
+
+最终远端候选41502462957已审阅：只有package.json overrides新增markdown-it同一15.0.x安全补丁范围，其余字段不变、无新增直接依赖；178个已解析包版本变化、16个新增传递包，全部resolved仍为registry.npmjs.org。候选audit为0高/0严重/0中，仍有6低危，未声称零漏洞。本机未安装这些更新。应用候选后仍须最新精确SHA完整Quality通过，先前41501475056不能替代更新后的测试。
