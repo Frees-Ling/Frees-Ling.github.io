@@ -30,7 +30,12 @@ try {
         const vendors = [];
         await page.setRequestInterception(true);
         page.on('request', (req) => {
-          if (new URL(req.url()).origin !== base) {
+          const target = new URL(req.url());
+          // Embedded data: artwork is not a transmission to a third party.
+          if (
+            ['http:', 'https:'].includes(target.protocol) &&
+            target.origin !== base
+          ) {
             vendors.push(req.url());
             void req.abort();
           } else void req.continue();
