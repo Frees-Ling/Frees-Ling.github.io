@@ -27,3 +27,6 @@ Hub专项总证据位于/Users/freesling/Develop/Google/docs/adsense-remediation
 签名候选9327a75后，仅将与6c48c35完全相同文件树的远端主线隐私基线3f7b343合入开发分支，解决历史add/add冲突；合并提交072b296没有代码树差异，不改写历史。PR119当前可合并但未合并。完整Quality [41501475056](https://github.com/Frees-Ling/Frees-Ling.github.io/actions/runs/41501475056)已成功，包括真实构建与新增HTML门禁；不代表新增依赖安全门禁已通过。
 
 GitHub默认分支31项依赖告警含11高危，已读取官方Dependabot元数据并对照当前锁文件：Astro7.3.1、undici8.10.2、vite8.2.2、devalue5.9.2、sharp0.35.4等确实处于报告范围。新增现有Quality中的独立只读依赖审查：审当前精确锁文件，若失败则仅在GitHub内生成既有版本范围的锁文件候选与audit证据，不执行生命周期/安装、不自动写仓库、不降低high阈值。原始失败仍阻止通过。候选需独立审阅后再应用；默认分支告警与静态生产实际可利用性也不能混为一谈。
+
+
+远端审查41501843775：当前候选锁文件npm audit为9高危（与Dependabot按条数/数据库统计不同，不混为同一计数）；既有范围更新降至1高危，唯一剩余markdown-it15.0.1被markdownlint-cli2 0.23.3精确固定。官方GHSA-gfr2-rv44-r23c修复范围为15.0.3及以上。审查策略仅为同一15.0.x补丁加入override，不回退/force/弱化阈值；仍保留smol-toml override。先云端生成/复审最终候选再应用。完整Quality依赖安全门禁成功后执行，避免已知高危重复消耗构建额度。

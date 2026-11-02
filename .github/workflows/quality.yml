@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   quality:
+    needs: dependency-review
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -106,7 +107,9 @@ jobs:
         run: npm audit --package-lock-only --audit-level=high --json > dependency-baseline-audit.json
       - name: Prepare a review-only update within existing dependency ranges
         if: failure() && steps.baseline.conclusion == 'failure'
-        run: npm update --package-lock-only --ignore-scripts --no-audit
+        run: |
+          npm pkg set 'overrides.markdown-it=^15.0.3'
+          npm update --package-lock-only --ignore-scripts --no-audit
       - name: Audit the review candidate without lowering the threshold
         if: failure() && steps.baseline.conclusion == 'failure'
         run: npm audit --package-lock-only --audit-level=high --json > dependency-candidate-audit.json
