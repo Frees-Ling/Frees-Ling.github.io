@@ -89,3 +89,36 @@ jobs:
       # 改管线后只跑 build 可能拿到旧产物，那种情况下比对没有意义。
       - name: Check asset budget
         run: npm run check:assets
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - name: Audit the exact candidate lockfile
+        id: baseline
+        run: npm audit --package-lock-only --audit-level=high --json > dependency-baseline-audit.json
+      - name: Prepare a review-only update within existing dependency ranges
+        if: failure() && steps.baseline.conclusion == 'failure'
+        run: npm update --package-lock-only --ignore-scripts --no-audit
+      - name: Audit the review candidate without lowering the threshold
+        if: failure() && steps.baseline.conclusion == 'failure'
+        run: npm audit --package-lock-only --audit-level=high --json > dependency-candidate-audit.json
+      - name: Preserve metadata for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-review-${{ github.sha }}
+          path: |
+            package.json
+            package-lock.json
+            dependency-baseline-audit.json
+            dependency-candidate-audit.json
+          retention-days: 7
+          if-no-files-found: error
