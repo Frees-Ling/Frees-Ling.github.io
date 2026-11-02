@@ -28,6 +28,12 @@ export const nav = [
 
 /** 页脚承载的低频页面 —— 与一级导航互补，两者合计覆盖全站，不留孤岛。 */
 export const secondaryNav = [
+  { href: '/privacy/', label: '隐私说明', latin: 'PRIVACY' },
+  {
+    href: 'https://hub.frees-ling.dev/',
+    label: '本地工具箱',
+    latin: 'WEB HUB',
+  },
   // research 与 notes 在五区导航里并入 WORK / NOTES 标签之下，
   // 但作为独立页面仍然存在，必须在页脚可到达 —— 否则成为孤儿页。
   { href: '/topics/', label: '主题', latin: 'TOPICS' },

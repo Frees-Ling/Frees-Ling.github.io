@@ -12,6 +12,27 @@
 
 ## 当前队列
 
+### SEOADS-001 — 根域真实隐私与搜索元数据整改
+
+- Status: ACTIVE
+- Phase: F1
+- Priority: P0
+- Depends-On: -
+
+Objective：为AdSense根域审查修复未验收广告SDK、自制授权误导与文章/搜索元数据缺口，保留全部作者原文与归档。
+
+Acceptance：
+
+- 未Ready/CMP时无广告SDK，保留真实验证信息；隐私面板不冒充认证CMP。
+- 文章结构化数据与真实作者/日期/URL一致；search/404为noindex且排出sitemap。
+- 17篇原文/历史归档无改动；当前分支保留；完整质量CI及浏览器验证通过。
+- 维护者独立批准push/发布，不能把本地修改视为线上已修复。
+
+Evidence：本地受影响格式/语法、token和内容契约结果记录在docs/adsense-remediation-20261103.md；Biome缺平台模块失败，完整CI NOT_RUN。未满足Acceptance，不标DONE。
+
+Commit：本条所在签名提交；所有者已批准仅开发分支推送/PR/云端CI，测试尚未完成。
+
+
 ### GOV-001 — 建立长期计划真相源
 
 - Status: DONE

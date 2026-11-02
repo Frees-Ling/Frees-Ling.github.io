@@ -44,6 +44,57 @@ for (const file of files) {
     continue;
   }
 
+  // Real generated HTML is the boundary: metadata must survive the build.
+  const canonical = /<link[^>]*rel="canonical"[^>]*href="([^"]+)"/.exec(
+    html,
+  )?.[1];
+  if (
+    !canonical ||
+    !canonical.startsWith('https://frees-ling.dev/') ||
+    /[?#]/.test(canonical)
+  ) {
+    violations.push(`${rel}  canonical 缺失、跨站或含查询串`);
+  }
+  if (!/<meta[^>]*name="description"[^>]*content="[^"\s][^"]*"/.test(html)) {
+    violations.push(`${rel}  description 为空`);
+  }
+  if (
+    /pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js/.test(html)
+  ) {
+    violations.push(`${rel}  站点/CMP未验收前不得加载广告SDK`);
+  }
+  const jsonLd =
+    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/.exec(
+      html,
+    )?.[1];
+  try {
+    const data = JSON.parse(jsonLd || 'null');
+    if (
+      !data ||
+      data.url !== canonical ||
+      !['WebPage', 'BlogPosting'].includes(data['@type'])
+    ) {
+      violations.push(`${rel}  结构化数据与canonical不一致`);
+    }
+    if (
+      rel.startsWith('blog/') &&
+      rel !== 'blog/index.html' &&
+      (data?.['@type'] !== 'BlogPosting' ||
+        !data.datePublished ||
+        !data.author?.name)
+    ) {
+      violations.push(`${rel}  文章缺少真实作者/发布时间`);
+    }
+  } catch {
+    violations.push(`${rel}  JSON-LD 无法解析`);
+  }
+  if (
+    ['search/index.html', '404.html', '404/index.html'].includes(rel) &&
+    !/<meta[^>]*name="robots"[^>]*content="noindex, follow"/.test(html)
+  ) {
+    violations.push(`${rel}  搜索或错误页面必须noindex`);
+  }
+
   const trailing = html.slice(index + '</html>'.length).trim();
   if (trailing) {
     violations.push(

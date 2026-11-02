@@ -1,3 +1,13 @@
+# 2026-11-03专项现场更新
+
+当前实际分支 `gemini/blog-consent-ads-hardening-20261018`，审查起点6c48c35。下方9月历史记录保留，不能当作当前分支/验收状态。
+
+所有者授权该目录参与Hub/根域AdSense低价值内容整改。当前本地候选：移除无条件广告SDK（保留验证meta/ads.txt）、自制授权弹窗改为原生隐私说明、补隐私与Hub入口、文章原始日期/作者结构化数据、搜索/404索引排除。17篇原始Markdown及历史归档未改。完整状态见[专项报告](../adsense-remediation-20261103.md)。所有者已单独批准推送当前开发分支、创建PR与云端检查；未批准生产发布。
+
+轻量格式/语法、token与内容契约检查已执行；token/内容存在基线警告，未称零诊断。Biome因缺少本机cli-darwin-arm64模块失败，未安装依赖绕过。完整质量/浏览器/构建NOT_RUN，按所有者Local-Lite+Remote-Heavy要求由已获批准的开发分支PR在GitHub验证。
+
+---
+
 # Current Project State
 
 Updated: 2026-09-17
