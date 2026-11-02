@@ -12,6 +12,11 @@ name: Visual Quality
 
 on:
   workflow_dispatch:
+    inputs:
+      privacy_only:
+        description: 'Run only the focused privacy dialog and no-vendor-request checks'
+        type: boolean
+        default: false
   schedule:
     # 每周一 03:17 UTC。刻意避开整点 —— 整点是所有人的默认值，
     # 排队最挤的时刻。
@@ -39,15 +44,22 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Privacy dialog regression
+        run: node scripts/visual/privacy.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
       # 浏览器质量门禁：对比度必须为 0 失败、无控制台错误、
       # 无横向溢出、键盘不会聚焦到不可见元素、路由全部可达
       - name: Browser quality gate
+        if: ${{ !inputs.privacy_only }}
         run: npm run gate
         env:
           CHROME_PATH: /usr/bin/google-chrome
 
       # 无障碍审计：axe-core 扫描 + 键盘走查
       - name: Accessibility audit
+        if: ${{ !inputs.privacy_only }}
         run: npm run a11y
         env:
           CHROME_PATH: /usr/bin/google-chrome
