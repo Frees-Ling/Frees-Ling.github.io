@@ -39,6 +39,16 @@ for (const file of files) {
   const index = html.lastIndexOf('</html>');
   const rel = relative(DIST, file);
 
+  // Google ownership proofs are plain-text resources with an .html suffix.
+  // Only this exact official file/content pair uses that protocol; all pages
+  // still require the complete HTML and metadata checks below.
+  if (rel === 'google560aa8c3dc5028e1.html') {
+    if (html !== `google-site-verification: ${rel}\n`) {
+      violations.push(`${rel}  Google 所有权验证内容不匹配`);
+    }
+    continue;
+  }
+
   if (index === -1) {
     violations.push(`${rel}  缺少 </html>`);
     continue;
