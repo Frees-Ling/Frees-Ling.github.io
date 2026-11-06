@@ -24,6 +24,12 @@ const index = allPosts.findIndex((item) => item.id === post.id);
 const newer = index > 0 ? allPosts[index - 1] : undefined;
 const older = index < allPosts.length - 1 ? allPosts[index + 1] : undefined;
 const tags = normalizeTags(post.data.tags);
+const articleId = post.id.replace(/\.(md|mdx)$/i, '').toLowerCase();
+const scopeNotice = articleId === 'qa'
+  ? '适用范围提醒：原文记录 Windows 11、RTX 5060 Laptop 和 Ryzen 9 8945HX 环境。文中的“百分百解决”不是跨设备或软件版本的保证；请先对照环境再复现，不要把历史记录当作当前所有组合的验证结论。'
+  : articleId === 'yolo-train-recommand'
+    ? '这是一篇简短的配置随记，未提供完整训练参数或硬件性能对照，不能单凭本文做购买或性能判断。'
+    : null;
 
 // 「参见」与主题总览同源（utils/relations.ts），因此不会互相矛盾。
 // 只列真实共享标签的文章，不显示无法核对的相关度数字。
@@ -46,6 +52,7 @@ const knowledge = buildKnowledge(allPosts).get(post.id);
       {post.data.updated && <p class="article-meta">更新于 <time datetime={post.data.updated.toISOString()}>{formatDate(post.data.updated)}</time></p>}
       <h1 data-pagefind-meta="title">{post.data.title}</h1>
       {post.data.description && <p class="article-description" data-pagefind-meta="description">{post.data.description}</p>}
+      {scopeNotice && <aside class="article-description" aria-label="阅读范围说明"><p>{scopeNotice} <a href="/topics/#reading-path-title">查看标注到排错的阅读路线</a>。</p></aside>}
       <ul class="tag-list">{tags.map((tag) => <li><a class="tag" href={`/tags/${encodeURIComponent(tag)}/`} data-pagefind-filter={`tag:${tag}`}>{tag}</a></li>)}</ul>
     </header>
     <div class="article-layout container">

@@ -28,7 +28,7 @@ Acceptance：
 - 17篇原文/历史归档无改动；当前分支保留；完整质量CI及浏览器验证通过。
 - 维护者独立批准push/发布，不能把本地修改视为线上已修复。
 
-Evidence：本地受影响格式/语法、token和内容契约结果记录在docs/adsense-remediation-20261103.md；Biome缺平台模块失败，完整CI NOT_RUN。未满足Acceptance，不标DONE。
+Evidence：此前候选3fab6cc的云端Quality 41505250516及隐私浏览器41505465318通过。本批新增阅读路线与环境局限说明，轻量内容契约通过（17篇原文未改，保留4项栏目警告），新候选完整CI待运行。AdSense 2026-11-06仍低价值内容，未发布生产；未满足Acceptance，不标DONE。
 
 Commit：本条所在签名提交；所有者已批准仅开发分支推送/PR/云端CI，测试尚未完成。
 

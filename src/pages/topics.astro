@@ -22,6 +22,15 @@ const topics = buildTopicOverview(posts);
 // 混在多条目主题里会让读者误以为那里已经有内容可读。
 const main = topics.filter((topic) => topic.count > 1);
 const single = topics.filter((topic) => topic.count === 1);
+const readingSteps = [
+  { id: 'yolo-shubiao', purpose: '先整理标注流程', detail: '原文以 X-AnyLabeling 为例介绍图片、标注与导出目录。阅读时先辨认输入图片和输出标签分别在哪里；完成一小组样本后检查类别名称及导出格式，再考虑扩大数据量。旧版下载地址属于当时的记录，不代表当前推荐版本。' },
+  { id: 'yolo-train-recommand', purpose: '分清配置随记与完整教程', detail: '这篇是简短的工具与硬件随记，适合作为了解作者当时选择的补充。它没有给出完整训练参数、性能测试或不同显卡的对照，不能单凭其中的推荐决定购买硬件或预计训练速度。' },
+  { id: 'qa', purpose: '带着具体环境看训练排错', detail: '原文记录的是 Windows 11、RTX 5060 Laptop 与 Ryzen 9 8945HX 的环境。先对照操作系统、解释器、框架与硬件，再看错误重现和处理过程。文中的“百分百解决”不是跨设备、跨版本的兼容保证；与原文环境不同的故障需要重新定位。' },
+].map((step) => {
+  const post = posts.find((item) => item.id.replace(/\.(md|mdx)$/i, '').toLowerCase() === step.id);
+  if (!post) throw new Error(`Reading path references a missing published post: ${step.id}`);
+  return { ...step, post };
+});
 ---
 <Layout title="主题" description="按主题浏览全部记录：每个主题下有几篇、哪些主题经常一起出现。">
   <header class="page-hero container">
@@ -32,6 +41,22 @@ const single = topics.filter((topic) => topic.count === 1);
       它们都在这里，不假装已经成体系。
     </p>
   </header>
+
+  <section class="container topic-section prose" aria-labelledby="reading-path-title">
+    <h2 id="reading-path-title">从数据标注读到训练排错</h2>
+    <p>如果你是为计算机视觉项目来到这里，可以按下面的顺序阅读。这里把已有笔记串成一条路线，同时标出每篇能回答和不能回答的问题；不是一套已经在所有环境验证过的课程。</p>
+    <ol>
+      {readingSteps.map((step) => (
+        <li>
+          <h3>{step.purpose}：<a href={postHref(step.post)}>{step.post.data.title}</a></h3>
+          <p>{step.detail}</p>
+        </li>
+      ))}
+    </ol>
+    <h3>遇到错误时，先留下可复查的记录</h3>
+    <p>把报错发生的步骤、完整错误信息和环境版本放在一起，区分“安装失败”“数据读取失败”和“开始训练后失败”。每次只改变一个条件，保留改动前后的输出；不要把另一台机器上的结果当作本机验证。分享记录前删除访问令牌、个人目录和敏感数据。</p>
+    <p>这组文章保留原始发布日期和正文。阅读路线新增的说明是对范围与局限的整理，不代表原文命令、第三方下载或所有软件组合已经重新实测。发现错误可通过<a href="/about/">关于页的联系方式</a>提供文章地址、相关段落与可复查的更正依据。</p>
+  </section>
 
   <section class="container topic-section" aria-labelledby="grouped-title">
     <h2 id="grouped-title" class="section-title">已成形</h2>
