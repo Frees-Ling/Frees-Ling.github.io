@@ -13,6 +13,9 @@ interface Props {
   description?: string;
   image?: string;
   article?: boolean;
+  noindex?: boolean;
+  published?: Date;
+  updated?: Date;
 }
 
 // og:image 默认指向**专门生成的分享图**，不是页面上展示的那张。
@@ -25,10 +28,26 @@ const {
   description = site.description,
   image = '/og/banner.jpg',
   article = false,
+  noindex = false,
+  published,
+  updated,
 } = Astro.props;
 const pageTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site.description}`;
 const canonical = new URL(Astro.url.pathname, site.url);
 const socialImage = new URL(image, site.url);
+const pageDescription = description.trim() || title || site.description;
+const structuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': article ? 'BlogPosting' : 'WebPage',
+  '@id': `${canonical.href}#content`,
+  url: canonical.href,
+  name: title || site.name,
+  ...(article ? { headline: title, author: { '@type': 'Person', name: site.owner, url: new URL('/about/', site.url).href }, ...(published ? { datePublished: published.toISOString() } : {}), ...(updated ? { dateModified: updated.toISOString() } : {}) } : {}),
+  description: pageDescription,
+  inLanguage: 'zh-CN',
+  image: socialImage.href,
+  isPartOf: { '@type': 'WebSite', name: site.name, url: site.url },
+}).replace(/</g, '\\u003c');
 ---
 
 <!doctype html>
@@ -44,12 +63,6 @@ const socialImage = new URL(image, site.url);
       content="ca-pub-7664861039692373"
     />
     <script is:inline src="/google-consent-init.js"></script>
-    <script
-      is:inline
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7664861039692373"
-      crossorigin="anonymous"
-    ></script>
     <meta
       name="theme-color"
       content="#06171d"
@@ -60,15 +73,23 @@ const socialImage = new URL(image, site.url);
       content="#ebe6d9"
       media="(prefers-color-scheme: light)"
     />
-    <meta name="description" content={description} />
+    <meta name="description" content={pageDescription} />
     <meta name="generator" content={Astro.generator} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/png" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="alternate" type="application/rss+xml" title={site.name} href="/rss.xml" />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <script type="application/ld+json" set:html={structuredData} />
+    {article && published && <meta property="article:published_time" content={published.toISOString()} />}
+    {article && updated && <meta property="article:modified_time" content={updated.toISOString()} />}
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={socialImage} />
     <meta property="og:type" content={article ? 'article' : 'website'} />
     <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={description} />
+    <meta property="og:description" content={pageDescription} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={socialImage} />
     <meta property="og:site_name" content={site.name} />
@@ -92,6 +113,13 @@ const socialImage = new URL(image, site.url);
       <Header />
       <main id="main-content"><slot /></main>
       <Footer />
+      <dialog id="fl-privacy-modal" class="privacy-notice" aria-labelledby="privacy-notice-title" data-pagefind-ignore>
+        <h2 id="privacy-notice-title">隐私与广告状态</h2>
+        <p>当前版本未启用 Google 广告或分析 SDK。本面板不提供广告同意授权，也不能替代 Google 认证 CMP。</p>
+        <p>主题偏好保存在浏览器本地。文章评论会连接 Giscus / GitHub，外部链接、音乐及其他嵌入服务可能接收必要的连接信息。</p>
+        <p><a href="/privacy/">阅读隐私说明</a></p>
+        <form method="dialog"><button class="button" autofocus>关闭</button></form>
+      </dialog>
     </div>
     <!-- 页面级 body 末尾脚本注入点 -->
     <slot name="scripts" />

@@ -174,3 +174,26 @@
     padding-top: 64px;
   }
 }
+
+/* Shared privacy disclosure; this is not an advertising CMP. */
+.privacy-notice {
+  width: min(480px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 24px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.privacy-notice::backdrop {
+  background: var(--canvas-deep);
+  opacity: 0.8;
+}
+.privacy-notice h2 {
+  margin-top: 0;
+}
+.privacy-notice p {
+  line-height: 1.7;
+}

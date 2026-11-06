@@ -10,7 +10,12 @@ import { markdownConfig } from './src/utils/markdown-pipeline.mjs';
 export default defineConfig({
   site: 'https://frees-ling.dev',
   trailingSlash: 'always',
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      filter: (page) =>
+        !['/search/', '/404/', '/404.html'].includes(new URL(page).pathname),
+    }),
+  ],
 
   // ── 图片管线（PERF-001）──
   //

@@ -51,6 +51,8 @@ const DEFAULT_ROUTES = [
   '/history/',
   '/search/',
   '/blog/thinking/',
+  '/blog/qa/',
+  '/blog/yolo-train-recommand/',
   '/tags/AI/',
 ];
 

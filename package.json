@@ -57,6 +57,7 @@
     "esbuild": true
   },
   "overrides": {
-    "smol-toml": "^1.7.1"
+    "smol-toml": "^1.7.1",
+    "markdown-it": "^15.0.3"
   }
 }

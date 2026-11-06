@@ -1,0 +1,20 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { site } from '../data/site';
+---
+<Layout title="隐私与广告说明" description="Frees Blog 当前的广告状态、本地主题偏好、第三方评论及联系渠道。">
+  <header class="page-hero container"><p class="eyebrow">隐私说明</p><h1 class="page-title">了解页面连接了什么。</h1><p class="lede">本页描述当前代码版本的行为；更新日期：2026 年 11 月 3 日。</p></header>
+  <section class="section reading-container prose">
+    <h2>本站与工具箱</h2>
+    <p>本博客发布个人技术记录与学习笔记。<a href="https://hub.frees-ling.dev/">Frees Web Hub 工具箱</a>是单独的子域应用，其账户、支付和统计设置以<a href="https://hub.frees-ling.dev/privacy/">工具箱隐私说明</a>为准；两者的浏览量不可混为一谈。</p>
+    <h2>广告与分析</h2>
+    <p>当前主站模板不加载 Google AdSense 广告 SDK 或 Google Analytics 分析 SDK。历史展馆保留独立旧版快照，其资源和第三方连接需要另行核对。保留的发布商验证标签及 ads.txt 仅声明发布商身份，不代表广告审核通过或已有收益。</p>
+    <p>页脚隐私面板只用于说明状态，不收集或授予广告同意。过去版本的本地“接受”值不用于授权未来广告。启用广告前仍须完成实际站点审核、适用地区的认证 CMP 配置和独立上线验收。</p>
+    <h2>本地存储与站内搜索</h2>
+    <p>主题选择使用浏览器本地存储。站内搜索使用构建时生成的 Pagefind 索引，在浏览器中查找公开文章；下载索引和网页仍会产生 HTTP 请求。托管和网络服务可能处理 IP、请求路径、浏览器信息及访问时间，本站不将网络请求数等同于真实读者人数。</p>
+    <h2>评论及外部服务</h2>
+    <p>文章和留言功能连接 Giscus / GitHub Discussions。访问相关页面时，评论脚本会连接第三方；登录、发表、修改或删除评论遵循 GitHub 的账户及隐私规则。音乐、外部媒体及站外链接也可能涉及相应服务商；请避免在评论中公开密码、密钥或私人资料。</p>
+    <h2>联系与更正</h2>
+    <p>内容归属、隐私问题或更正请求可联系 <a href={`mailto:${site.email}`}>{site.email}</a>。请说明涉及的页面和问题，无需发送账户密码或私钥。本人可处理博客源码中的内容；GitHub 评论或托管日志的删除能力受相应平台约束。</p>
+  </section>
+</Layout>
