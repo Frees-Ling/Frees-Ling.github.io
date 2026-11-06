@@ -1,3 +1,9 @@
+# 2026-11-06 品牌名称完整性续修
+
+b7c4f41的Quality 42167193142通过，Visual 42167232635的浏览器质量通过，但axe仍在14个页面报告brand名称不匹配；项目仓库链接已不再报错。先前只对齐作者名的修正不完整。新候选让brand可访问名称直接来自完整可见内容F/L及Frees Ling，移除覆盖名称的aria-label及标记上的aria-hidden；“返回首页”改为补充title。保留原有可见排版与链接、axe规则及所有路由，待新精确提交云端验证。
+
+---
+
 # 2026-11-06 读屏名称修复候选
 
 76fb507完整Quality 42166535889通过；Visual 42166548507的浏览器质量门禁通过，但axe发现14个路由报告label-content-name-mismatch，主要是共用brand把可见Frees Ling替换为Frees Blog，项目仓库链接也有不匹配。候选将brand标签与实际可见作者名对齐，仓库说明改为title以保留可见文字作为链接名称。不屏蔽规则，待新候选完整Quality/Visual复验。GitHub compare已确认本PR未修改17篇原文与只读历史；本地缺少main对象，不用无效本地比较冒充证据。
