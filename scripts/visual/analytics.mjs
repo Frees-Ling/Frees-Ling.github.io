@@ -96,6 +96,27 @@ try {
           return result.violations.map((v) => v.id);
         });
         assert.deepEqual(violations, []);
+        const session = await page.createCDPSession();
+        try {
+          await session.send('DOM.enable');
+          await session.send('CSS.enable');
+          const { root } = await session.send('DOM.getDocument');
+          const { nodeId } = await session.send('DOM.querySelector', {
+            nodeId: root.nodeId,
+            selector: '[data-blog-analytics-banner] h2',
+          });
+          const { fonts } = await session.send('CSS.getPlatformFontsForNode', {
+            nodeId,
+          });
+          assert.ok(
+            fonts.some(
+              (font) => /Noto.*CJK/i.test(font.familyName) && font.glyphCount > 0,
+            ),
+            'The Chinese consent heading must render with real CJK glyphs',
+          );
+        } finally {
+          await session.detach();
+        }
         await page.screenshot({
           path: `test-results/analytics/choice-${width}-${theme}.png`,
           fullPage: true,

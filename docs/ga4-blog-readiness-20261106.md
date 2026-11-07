@@ -26,3 +26,8 @@
 - [同意状态设置](https://developers.google.com/tag-platform/security/guides/consent)：先默认拒绝，再根据选择更新。
 - [隐私参数与停用](https://developers.google.com/tag-platform/security/guides/privacy)：指定衡量ID停用、关闭Google Signals/广告个性化及自动page_view。
 - [Cookie参数](https://developers.google.com/tag-platform/security/guides/customize-cookies)：前缀、域、期限与更新行为。
+
+
+## 云端中文字体验收补充
+
+5eed49d的完整Quality 42350165533、Visual 42350177589虽通过，人工查看截图发现中文方框，不能据此标记中文视觉验收成功。所有者已单独批准仅在GitHub Actions临时测试机安装fonts-noto-cjk及复验。工作流增加该安装与字体匹配检查，统计浏览器测试通过Chrome平台字体接口断言中文标题实际使用CJK字形；本机及网站依赖不变。新精确候选须重跑完整Quality/Visual并人工核对四张截图，真实SDK收数仍待获准生产发布后验收。
