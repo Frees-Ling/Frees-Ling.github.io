@@ -30,7 +30,10 @@
 
   function safeGetStorage() {
     try {
-      if (typeof window.localStorage === 'undefined' || window.localStorage === null) {
+      if (
+        typeof window.localStorage === 'undefined' ||
+        window.localStorage === null
+      ) {
         isStorageBlocked = true;
         return null;
       }
@@ -43,7 +46,10 @@
 
   function safeSetStorage(val) {
     try {
-      if (typeof window.localStorage === 'undefined' || window.localStorage === null) {
+      if (
+        typeof window.localStorage === 'undefined' ||
+        window.localStorage === null
+      ) {
         isStorageBlocked = true;
         return false;
       }
@@ -57,7 +63,10 @@
 
   function safeRemoveStorage() {
     try {
-      if (typeof window.localStorage !== 'undefined' && window.localStorage !== null) {
+      if (
+        typeof window.localStorage !== 'undefined' &&
+        window.localStorage !== null
+      ) {
         window.localStorage.removeItem(STORAGE_KEY);
       }
     } catch (e) {
@@ -70,8 +79,10 @@
     try {
       var parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return null;
-      if (parsed.choice !== 'granted' && parsed.choice !== 'denied') return null;
-      if (typeof parsed.expires !== 'number' || !isFinite(parsed.expires)) return null;
+      if (parsed.choice !== 'granted' && parsed.choice !== 'denied')
+        return null;
+      if (typeof parsed.expires !== 'number' || !isFinite(parsed.expires))
+        return null;
 
       var now = Date.now();
       if (parsed.expires <= now) return null;
@@ -93,7 +104,9 @@
       if (raw && !isStorageBlocked) {
         safeRemoveStorage();
       }
-      return isStorageBlocked ? parseConsentRecord(JSON.stringify(memoryChoice)) : null;
+      return isStorageBlocked
+        ? parseConsentRecord(JSON.stringify(memoryChoice))
+        : null;
     }
     return record;
   }
@@ -123,7 +136,11 @@
     var statusText = '';
     var shouldHideBanner = false;
 
-    if (!isEligibleToLoad && statusKey !== 'denied' && statusKey !== 'granted') {
+    if (
+      !isEligibleToLoad &&
+      statusKey !== 'denied' &&
+      statusKey !== 'granted'
+    ) {
       statusText = '当前页面不包含访问统计。';
     }
 
@@ -204,7 +221,7 @@
       ad_storage: 'denied',
       ad_user_data: 'denied',
       ad_personalization: 'denied',
-      analytics_storage: 'denied'
+      analytics_storage: 'denied',
     });
     gtag('consent', 'update', { analytics_storage: 'granted' });
     gtag('js', new Date());
@@ -214,7 +231,7 @@
 
     gtag('set', {
       page_location: cleanLocation,
-      page_referrer: cleanReferrer
+      page_referrer: cleanReferrer,
     });
 
     gtag('config', measurementId, {
@@ -227,13 +244,13 @@
       cookie_expires: 180 * 24 * 60 * 60,
       cookie_update: false,
       page_location: cleanLocation,
-      page_referrer: cleanReferrer
+      page_referrer: cleanReferrer,
     });
 
     gtag('event', 'page_view', {
       page_location: cleanLocation,
       page_referrer: cleanReferrer,
-      page_title: document.title
+      page_title: document.title,
     });
 
     var script = document.createElement('script');
@@ -250,7 +267,11 @@
     };
     script.onload = function () {
       var consent = getEffectiveConsent();
-      if (consent && consent.choice === 'granted' && !window['ga-disable-' + measurementId]) {
+      if (
+        consent &&
+        consent.choice === 'granted' &&
+        !window['ga-disable-' + measurementId]
+      ) {
         updateUi('granted');
       }
     };
@@ -397,7 +418,10 @@
     }
   }
 
-  if (document.readyState === 'loading' && typeof document.addEventListener === 'function') {
+  if (
+    document.readyState === 'loading' &&
+    typeof document.addEventListener === 'function'
+  ) {
     document.addEventListener('DOMContentLoaded', function () {
       bindButtons();
       syncState();

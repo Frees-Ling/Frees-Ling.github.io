@@ -67,9 +67,12 @@ try {
         }
       });
       try {
-        await page.goto(`${origin}/topics/?email=test@example.invalid#private`, {
-          waitUntil: 'networkidle0',
-        });
+        await page.goto(
+          `${origin}/topics/?email=test@example.invalid#private`,
+          {
+            waitUntil: 'networkidle0',
+          },
+        );
         assert.equal(sdkRequests.length, 0, 'legacy consent cannot load GA4');
         assert.equal(
           await page.$eval('[data-blog-analytics-banner]', (el) => el.hidden),
@@ -97,7 +100,9 @@ try {
           path: `test-results/analytics/choice-${width}-${theme}.png`,
           fullPage: true,
         });
-        await page.focus('[data-blog-analytics-banner] [data-blog-analytics-choice="granted"]');
+        await page.focus(
+          '[data-blog-analytics-banner] [data-blog-analytics-choice="granted"]',
+        );
         await page.keyboard.press('Enter');
         await page.waitForFunction(() => window.__analyticsSdkFixture === true);
         assert.equal(sdkRequests.length, 1);
@@ -119,8 +124,14 @@ try {
         assert.ok(!JSON.stringify(commands).includes('#private'));
         await page.focus('.privacy-pref-button');
         await page.keyboard.press('Enter');
-        await page.click('#fl-privacy-modal [data-blog-analytics-choice="granted"]');
-        assert.equal(sdkRequests.length, 1, 'repeated consent must not duplicate the SDK');
+        await page.click(
+          '#fl-privacy-modal [data-blog-analytics-choice="granted"]',
+        );
+        assert.equal(
+          sdkRequests.length,
+          1,
+          'repeated consent must not duplicate the SDK',
+        );
         await page.evaluate(() => {
           document.cookie = 'fl_blog_ga=fixture; path=/; Secure';
           document.cookie = '_ga=hub-fixture; path=/; Secure';
@@ -129,17 +140,26 @@ try {
           page.waitForNavigation({ waitUntil: 'networkidle0' }),
           page.click('#fl-privacy-modal [data-blog-analytics-choice="denied"]'),
         ]);
-        assert.equal(sdkRequests.length, 1, 'withdrawal reload must not restart GA4');
-        const after = await page.evaluate((key) => ({
-          consent: JSON.parse(localStorage.getItem(key)),
-          cookie: document.cookie,
-        }), consentKey);
+        assert.equal(
+          sdkRequests.length,
+          1,
+          'withdrawal reload must not restart GA4',
+        );
+        const after = await page.evaluate(
+          (key) => ({
+            consent: JSON.parse(localStorage.getItem(key)),
+            cookie: document.cookie,
+          }),
+          consentKey,
+        );
         assert.equal(after.consent.choice, 'denied');
         assert.ok(!after.cookie.includes('fl_blog_ga='));
         assert.ok(after.cookie.includes('_ga=hub-fixture'));
         assert.deepEqual(unexpected, []);
         assert.deepEqual(errors, []);
-        console.log(`PASS analytics SDK fixture contract: ${width}px ${theme}, opt-in, sanitization, dedupe, withdrawal, axe`);
+        console.log(
+          `PASS analytics SDK fixture contract: ${width}px ${theme}, opt-in, sanitization, dedupe, withdrawal, axe`,
+        );
       } finally {
         await context.close();
       }
