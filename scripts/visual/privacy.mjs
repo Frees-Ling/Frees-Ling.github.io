@@ -52,7 +52,7 @@ try {
         );
         assert.equal(
           await page.$eval(
-            '#fl-privacy-modal button',
+            '#fl-privacy-modal button[autofocus]',
             (el) => document.activeElement === el,
           ),
           true,
