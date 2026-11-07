@@ -110,7 +110,8 @@ try {
           });
           assert.ok(
             fonts.some(
-              (font) => /Noto.*CJK/i.test(font.familyName) && font.glyphCount > 0,
+              (font) =>
+                /Noto.*CJK/i.test(font.familyName) && font.glyphCount > 0,
             ),
             'The Chinese consent heading must render with real CJK glyphs',
           );
