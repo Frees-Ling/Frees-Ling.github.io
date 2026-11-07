@@ -41,6 +41,11 @@ try {
   await page.setViewport({ width: 1280, height: 900 });
   const requests = [];
   const collections = [];
+  const responses = [];
+  const failures = [];
+  evidence.googleRequests = requests;
+  evidence.googleResponses = responses;
+  evidence.networkFailures = failures;
   let phase = 'before-consent';
   const googleHost = (host) =>
     /(^|\.)(googletagmanager\.com|google-analytics\.com|analytics\.google\.com|googleadservices\.com|googlesyndication\.com|google\.com)$/.test(host);
@@ -65,6 +70,14 @@ try {
     const url = new URL(request.url());
     if (googleHost(url.hostname)) requests.push({ phase, host: url.hostname, path: url.pathname });
     if (isCollect(request)) collections.push(...records(request));
+  });
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (googleHost(url.hostname)) responses.push({ phase, host: url.hostname, path: url.pathname, status: response.status() });
+  });
+  page.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    failures.push({ phase, host: url.hostname, path: url.pathname, error: request.failure()?.errorText });
   });
   await page.goto(`${origin}/topics/?qa=analytics-release#verification`, {
     waitUntil: 'networkidle0',
