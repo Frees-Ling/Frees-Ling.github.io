@@ -115,7 +115,7 @@ jobs:
         run: npm audit --package-lock-only --audit-level=high --json > dependency-candidate-audit.json
       - name: Preserve metadata for independent review
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-review-${{ github.sha }}
           path: |
