@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import AnalyticsPreferences from '../components/AnalyticsPreferences.astro';
 import { site } from '../data/site';
 import '../styles/tokens.css';
 import '../styles/base.css';
@@ -34,6 +35,7 @@ const {
 } = Astro.props;
 const pageTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site.description}`;
 const canonical = new URL(Astro.url.pathname, site.url);
+const analyticsEligible = !noindex && !/^\/(privacy|search|history)(\/|$)/.test(Astro.url.pathname);
 const socialImage = new URL(image, site.url);
 const pageDescription = description.trim() || title || site.description;
 const structuredData = JSON.stringify({
@@ -112,10 +114,17 @@ const structuredData = JSON.stringify({
     <div class="site-shell">
       <Header />
       <main id="main-content"><slot /></main>
+      <AnalyticsPreferences eligible={analyticsEligible} />
       <Footer />
       <dialog id="fl-privacy-modal" class="privacy-notice" aria-labelledby="privacy-notice-title" data-pagefind-ignore>
         <h2 id="privacy-notice-title">隐私与广告状态</h2>
-        <p>当前版本未启用 Google 广告或分析 SDK。本面板不提供广告同意授权，也不能替代 Google 认证 CMP。</p>
+        <p>广告保持关闭。本面板提供独立的访问统计选择，不授予广告同意，也不能替代广告所需的 Google 认证 CMP。</p>
+        <p data-blog-analytics-status role="status" aria-live="polite">访问统计尚未启用。</p>
+        <p>允许后会连接 Google Analytics，使用 Cookie 统计页面访问与设备信息。拒绝或撤回后停止统计；撤回已启用的统计会刷新当前页面。</p>
+        <div>
+          <button type="button" class="button" data-blog-analytics-choice="granted">允许访问统计</button>
+          <button type="button" class="button" data-blog-analytics-choice="denied">拒绝或撤回访问统计</button>
+        </div>
         <p>主题偏好保存在浏览器本地。文章评论会连接 Giscus / GitHub，外部链接、音乐及其他嵌入服务可能接收必要的连接信息。</p>
         <p><a href="/privacy/">阅读隐私说明</a></p>
         <form method="dialog"><button class="button" autofocus>关闭</button></form>

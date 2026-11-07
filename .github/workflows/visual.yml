@@ -17,6 +17,10 @@ on:
         description: 'Run only the focused privacy dialog and no-vendor-request checks'
         type: boolean
         default: false
+      prepare_format_patch:
+        description: 'Prepare a formatting review artifact only; does not validate or deploy'
+        type: boolean
+        default: false
   schedule:
     # 每周一 03:17 UTC。刻意避开整点 —— 整点是所有人的默认值，
     # 排队最挤的时刻。
@@ -26,7 +30,34 @@ permissions:
   contents: read
 
 jobs:
+  format-review:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_format_patch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - name: Prepare affected-file formatting patch for review
+        run: |
+          mkdir -p /tmp/format-review
+          git rev-parse HEAD > /tmp/format-review/base-sha.txt
+          npx --no-install prettier --write public/blog-analytics.js src/utils/blog-analytics.test.mjs scripts/visual/analytics.mjs scripts/visual/privacy.mjs .github/workflows/visual.yml
+          git diff --binary > /tmp/format-review/format.patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blog-analytics-format-review
+          path: /tmp/format-review/
+          retention-days: 7
+          if-no-files-found: error
+
   visual:
+    if: ${{ !inputs.prepare_format_patch }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,11 +72,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install owner-approved Chinese fonts on the temporary runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-list :lang=zh-cn family | grep -F 'Noto Sans CJK'
+
       - name: Build
         run: npm run build
 
       - name: Privacy dialog regression
         run: node scripts/visual/privacy.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
+      - name: Analytics consent browser contract (isolated SDK fixture)
+        run: node scripts/visual/analytics.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
 
@@ -73,5 +115,6 @@ jobs:
           name: visual-audit
           path: |
             _backups/**
+            test-results/analytics/**
           retention-days: 14
           if-no-files-found: ignore

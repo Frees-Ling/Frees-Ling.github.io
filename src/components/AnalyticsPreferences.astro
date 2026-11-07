@@ -1,0 +1,32 @@
+---
+interface Props {
+  eligible: boolean;
+}
+
+const { eligible } = Astro.props;
+---
+
+<section class="analytics-choice container" data-blog-analytics-banner hidden aria-labelledby="analytics-choice-title" data-pagefind-ignore>
+  <div>
+    <h2 id="analytics-choice-title">访问统计由你选择</h2>
+    <p>允许后，Google Analytics 会使用 Cookie 统计页面访问及设备信息。允许或拒绝都可以继续阅读，你也可以在页脚的隐私偏好中撤回选择。广告保持关闭。</p>
+    <a href="/privacy/">了解统计数据的用途</a>
+  </div>
+  <div class="analytics-actions">
+    <button type="button" class="button" data-blog-analytics-choice="granted">允许访问统计</button>
+    <button type="button" class="button" data-blog-analytics-choice="denied">拒绝访问统计</button>
+  </div>
+</section>
+<script is:inline defer src="/blog-analytics.js" data-enabled="true" data-eligible={String(eligible)} data-measurement-id="G-005T1QD6Z3"></script>
+
+<style>
+  .analytics-choice {
+    border: 1px solid var(--line);
+    padding: 24px;
+    margin-block: 24px;
+  }
+  .analytics-choice[hidden] { display: none; }
+  .analytics-choice h2 { font-size: 1.2rem; }
+  .analytics-choice p { max-width: 65ch; }
+  .analytics-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+</style>
