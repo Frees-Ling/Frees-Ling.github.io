@@ -49,7 +49,7 @@ jobs:
           git rev-parse HEAD > /tmp/format-review/base-sha.txt
           npx --no-install prettier --write public/blog-analytics.js src/utils/blog-analytics.test.mjs scripts/visual/analytics.mjs scripts/visual/privacy.mjs .github/workflows/visual.yml
           git diff --binary > /tmp/format-review/format.patch
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: blog-analytics-format-review
           path: /tmp/format-review/
@@ -110,7 +110,7 @@ jobs:
       # 而看不到是哪一条
       - name: Upload audit reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-audit
           path: |
