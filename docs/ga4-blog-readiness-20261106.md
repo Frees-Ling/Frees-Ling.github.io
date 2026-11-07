@@ -38,3 +38,10 @@
 公开站点地图66个唯一URL已逐页完整读取，HTTP、标题非空且不重复、描述非空、canonical精确匹配、单一h1、站点地图不含noindex及广告SDK未启用检查通过。最初21次Python读取发生IncompleteRead，切换完整传输校验的HTTP/1.1客户端重试后完成，初次失败保留在私有报告；不将客户端传输问题宣称为站点缺陷。
 
 发现首页、friends、guestbook、now共用站点默认description。候选为后三页补充与实际可见内容一致的独立摘要，now保留2026年9月时间切片边界，避免伪装实时更新。未改原文、日期、路由或归档。此公开HTML检查不证明Google收录或AdSense通过，新候选仍须云端完整检查及独立发布批准。
+
+
+## 已批准发布与真实SDK诊断边界
+
+PR122的4cd1672已获所有者专项批准并合并为9b605b667b031989a97c8b8aafb4207a1fad1a56；生产流水线42352768947成功。上线脚本SHA256为6c5abbaa259bd8f4e97ef490943cb8af82ce051fac69fa15a9901799b47ef906，与获批源码一致；三页独立摘要已线上生效，privacy的data-eligible为false。Chrome原生控制仍不可靠，不能声明已手动验收。
+
+新增production_analytics输入仅显式手动触发，在云端Google Chrome访问固定自有公开页面。真实Google SDK与收集HTTP回执不使用夹具；同意前与撤回重载后要求无Google请求。输出删除CID、SID、Cookie和原始URL查询，限制为主机/路径、公开衡量ID、事件名和净化页面地址。测试一次明确同意会产生诊断page_view，不能算作自然增长；HTTP回执不证明GA4后台入库或Google审核通过。默认不运行；不使用账号密钥、生产D1、支付或广告，未开通新资源。此测试代码无需再次部署网站，仍走开发分支完整质量检查。
