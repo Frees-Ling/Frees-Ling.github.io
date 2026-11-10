@@ -21,6 +21,14 @@ on:
         description: 'Prepare a formatting review artifact only; does not validate or deploy'
         type: boolean
         default: false
+      production_analytics:
+        description: 'Owner-authorized real SDK diagnostic on the approved public blog; no deployment or ads'
+        type: boolean
+        default: false
+      sdk_investigation:
+        description: 'Isolated real SDK comparison; all collection requests intercepted, no production visit'
+        type: boolean
+        default: false
   schedule:
     # 每周一 03:17 UTC。刻意避开整点 —— 整点是所有人的默认值，
     # 排队最挤的时刻。
@@ -47,7 +55,7 @@ jobs:
         run: |
           mkdir -p /tmp/format-review
           git rev-parse HEAD > /tmp/format-review/base-sha.txt
-          npx --no-install prettier --write public/blog-analytics.js src/utils/blog-analytics.test.mjs scripts/visual/analytics.mjs scripts/visual/privacy.mjs .github/workflows/visual.yml
+          npx --no-install prettier --write public/blog-analytics.js src/utils/blog-analytics.test.mjs scripts/visual/analytics.mjs scripts/visual/analytics-production.mjs scripts/visual/analytics-sdk-investigation.mjs scripts/visual/privacy.mjs .github/workflows/visual.yml
           git diff --binary > /tmp/format-review/format.patch
       - uses: actions/upload-artifact@v4
         with:
@@ -56,8 +64,33 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  sdk-investigation:
+    if: ${{ inputs.sdk_investigation && !inputs.prepare_format_patch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Diagnostic only - all collection requests intercepted
+        run: node scripts/visual/analytics-sdk-investigation.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          ANALYTICS_SDK_INVESTIGATION: 'true'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analytics-sdk-investigation
+          path: test-results/analytics-sdk-investigation/**
+          retention-days: 7
+          if-no-files-found: error
+
   visual:
-    if: ${{ !inputs.prepare_format_patch }}
+    if: ${{ !inputs.prepare_format_patch && !inputs.sdk_investigation }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -108,6 +141,13 @@ jobs:
 
       # 失败时把审计产物传出来 —— 否则只能看到「有 N 个问题」，
       # 而看不到是哪一条
+      - name: Real production analytics SDK diagnostic
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_analytics }}
+        run: node scripts/visual/analytics-production.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          ANALYTICS_PRODUCTION_CHECK: 'true'
+
       - name: Upload audit reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -116,5 +156,7 @@ jobs:
           path: |
             _backups/**
             test-results/analytics/**
+            test-results/analytics-production/**
+            test-results/analytics-sdk-investigation/**
           retention-days: 14
           if-no-files-found: ignore
