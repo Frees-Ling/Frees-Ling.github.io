@@ -20,7 +20,8 @@ const evidence = {
   approvedCandidate: '4cd16724884e1107cce42021d232368a5215a168',
   startedAt: new Date().toISOString(),
   status: 'NOT_RUN',
-  interpretation: 'SDK/HTTP evidence only; GA4 ingestion and Google review are separate. This diagnostic is not organic traffic.',
+  interpretation:
+    'SDK/HTTP evidence only; GA4 ingestion and Google review are separate. This diagnostic is not organic traffic.',
 };
 let browser;
 try {
@@ -29,7 +30,11 @@ try {
   const hash = createHash('sha256')
     .update(Buffer.from(await script.arrayBuffer()))
     .digest('hex');
-  assert.equal(hash, approvedScriptHash, 'Only the approved deployed script may be tested');
+  assert.equal(
+    hash,
+    approvedScriptHash,
+    'Only the approved deployed script may be tested',
+  );
   evidence.scriptHash = hash;
   browser = await puppeteer.launch({
     executablePath: resolveChrome().path,
@@ -48,16 +53,23 @@ try {
   evidence.networkFailures = failures;
   let phase = 'before-consent';
   const googleHost = (host) =>
-    /(^|\.)(googletagmanager\.com|google-analytics\.com|analytics\.google\.com|googleadservices\.com|googlesyndication\.com|google\.com)$/.test(host);
+    /(^|\.)(googletagmanager\.com|google-analytics\.com|analytics\.google\.com|googleadservices\.com|googlesyndication\.com|google\.com)$/.test(
+      host,
+    );
   const isCollect = (request) => {
     const url = new URL(request.url());
-    return /(^|\.)(google-analytics\.com|analytics\.google\.com)$/.test(url.hostname) && url.pathname === '/g/collect';
+    return (
+      /(^|\.)(google-analytics\.com|analytics\.google\.com)$/.test(
+        url.hostname,
+      ) && url.pathname === '/g/collect'
+    );
   };
   const records = (request) => {
     const base = new URL(request.url()).searchParams;
     return (request.postData() || '').split('\n').map((line) => {
       const params = new URLSearchParams(base);
-      for (const [key, value] of new URLSearchParams(line)) params.set(key, value);
+      for (const [key, value] of new URLSearchParams(line))
+        params.set(key, value);
       // Keep only public diagnostic fields; never retain CID, SID or cookies.
       return {
         event: params.get('en'),
@@ -68,41 +80,93 @@ try {
   };
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (googleHost(url.hostname)) requests.push({ phase, host: url.hostname, path: url.pathname });
+    if (googleHost(url.hostname))
+      requests.push({ phase, host: url.hostname, path: url.pathname });
     if (isCollect(request)) collections.push(...records(request));
   });
   page.on('response', (response) => {
     const url = new URL(response.url());
-    if (googleHost(url.hostname)) responses.push({ phase, host: url.hostname, path: url.pathname, status: response.status() });
+    if (googleHost(url.hostname))
+      responses.push({
+        phase,
+        host: url.hostname,
+        path: url.pathname,
+        status: response.status(),
+      });
   });
   page.on('requestfailed', (request) => {
     const url = new URL(request.url());
-    failures.push({ phase, host: url.hostname, path: url.pathname, error: request.failure()?.errorText });
+    failures.push({
+      phase,
+      host: url.hostname,
+      path: url.pathname,
+      error: request.failure()?.errorText,
+    });
   });
   await page.goto(`${origin}/topics/?qa=analytics-release#verification`, {
     waitUntil: 'networkidle0',
   });
   assert.equal(requests.length, 0, 'No Google request before explicit consent');
-  assert.equal((await context.cookies()).some((cookie) => cookie.name.startsWith('fl_blog_')), false);
-  await page.screenshot({ path: `${folder}/before-consent.png`, fullPage: true });
-  const acknowledgement = page.waitForResponse((response) =>
-    isCollect(response.request()) && records(response.request()).some((record) =>
-      record.measurementId === measurementId && record.event === 'page_view'),
+  assert.equal(
+    (await context.cookies()).some((cookie) =>
+      cookie.name.startsWith('fl_blog_'),
+    ),
+    false,
+  );
+  await page.screenshot({
+    path: `${folder}/before-consent.png`,
+    fullPage: true,
+  });
+  const acknowledgement = page.waitForResponse(
+    (response) =>
+      isCollect(response.request()) &&
+      records(response.request()).some(
+        (record) =>
+          record.measurementId === measurementId &&
+          record.event === 'page_view',
+      ),
     { timeout: 30000 },
   );
   phase = 'after-explicit-consent';
   const [receipt] = await Promise.all([
     acknowledgement,
-    page.click('[data-blog-analytics-banner] [data-blog-analytics-choice="granted"]'),
+    page.click(
+      '[data-blog-analytics-banner] [data-blog-analytics-choice="granted"]',
+    ),
   ]);
-  assert.ok([200, 204].includes(receipt.status()), 'Real Google collection endpoint must acknowledge the request');
+  assert.ok(
+    [200, 204].includes(receipt.status()),
+    'Real Google collection endpoint must acknowledge the request',
+  );
   await page.waitForNetworkIdle({ idleTime: 500, timeout: 15000 });
-  const views = collections.filter((record) => record.measurementId === measurementId && record.event === 'page_view');
-  assert.equal(views.length, 1, 'A diagnostic visit must not duplicate page_view');
+  const views = collections.filter(
+    (record) =>
+      record.measurementId === measurementId && record.event === 'page_view',
+  );
+  assert.equal(
+    views.length,
+    1,
+    'A diagnostic visit must not duplicate page_view',
+  );
   assert.equal(views[0].pageLocation, `${origin}/topics/`);
-  assert.equal(requests.some((request) => /googleadservices|googlesyndication/.test(request.host)), false);
-  assert.ok(requests.some((request) => request.host === 'www.googletagmanager.com' && request.path === '/gtag/js'));
-  assert.ok((await context.cookies()).some((cookie) => cookie.name.startsWith('fl_blog_ga')));
+  assert.equal(
+    requests.some((request) =>
+      /googleadservices|googlesyndication/.test(request.host),
+    ),
+    false,
+  );
+  assert.ok(
+    requests.some(
+      (request) =>
+        request.host === 'www.googletagmanager.com' &&
+        request.path === '/gtag/js',
+    ),
+  );
+  assert.ok(
+    (await context.cookies()).some((cookie) =>
+      cookie.name.startsWith('fl_blog_ga'),
+    ),
+  );
   evidence.explicitConsent = 'PASS';
   evidence.collectionHttpStatus = receipt.status();
   evidence.sanitizedPageView = views[0];
@@ -116,9 +180,23 @@ try {
     page.click('#fl-privacy-modal [data-blog-analytics-choice="denied"]'),
   ]);
   await page.waitForNetworkIdle({ idleTime: 1000, timeout: 15000 });
-  assert.deepEqual(requests.filter((request) => request.phase === 'after-withdrawal-reload'), []);
-  assert.equal((await context.cookies()).some((cookie) => cookie.name.startsWith('fl_blog_ga')), false);
-  assert.equal(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).choice, consentKey), 'denied');
+  assert.deepEqual(
+    requests.filter((request) => request.phase === 'after-withdrawal-reload'),
+    [],
+  );
+  assert.equal(
+    (await context.cookies()).some((cookie) =>
+      cookie.name.startsWith('fl_blog_ga'),
+    ),
+    false,
+  );
+  assert.equal(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).choice,
+      consentKey,
+    ),
+    'denied',
+  );
   await page.click('.privacy-pref-button');
   await page.screenshot({ path: `${folder}/withdrawn.png`, fullPage: true });
   evidence.withdrawal = 'PASS';
@@ -131,6 +209,9 @@ try {
   throw error;
 } finally {
   evidence.finishedAt = new Date().toISOString();
-  await writeFile(`${folder}/evidence.json`, JSON.stringify(evidence, null, 2) + '\n');
+  await writeFile(
+    `${folder}/evidence.json`,
+    JSON.stringify(evidence, null, 2) + '\n',
+  );
   await browser?.close();
 }
