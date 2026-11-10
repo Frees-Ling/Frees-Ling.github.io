@@ -128,7 +128,8 @@
             name +
             '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
           document.cookie = deletion;
-          if (isExactHost) document.cookie = deletion + '; Domain=frees-ling.dev';
+          if (isExactHost)
+            document.cookie = deletion + '; Domain=frees-ling.dev';
         }
       }
     } catch (e) {}

@@ -131,7 +131,10 @@ try {
       if (variant === 'candidate') {
         assert.equal(result.cleanPageView, true);
         assert.equal(result.ownCookie, true);
-        assert.equal(result.pageViews[0].pageReferrer, 'https://referrer.example');
+        assert.equal(
+          result.pageViews[0].pageReferrer,
+          'https://referrer.example',
+        );
         assert.equal(result.sdkRequests, 1);
         assert.equal(result.error, undefined);
         for (const cookie of result.cookies) {
@@ -143,8 +146,10 @@ try {
           assert.ok(cookie.expires <= Date.now() / 1000 + 180 * 86400 + 5);
         }
         await page.evaluate(() => {
-          document.cookie = '_ga=preserved-fixture; Path=/; Domain=frees-ling.dev; Secure';
-          document.cookie = '_ga_005T1QD6Z3=legacy-fixture; Path=/; Domain=frees-ling.dev; Secure';
+          document.cookie =
+            '_ga=preserved-fixture; Path=/; Domain=frees-ling.dev; Secure';
+          document.cookie =
+            '_ga_005T1QD6Z3=legacy-fixture; Path=/; Domain=frees-ling.dev; Secure';
         });
         await page.click('.privacy-pref-button');
         await page.waitForSelector('#fl-privacy-modal[open]');
@@ -155,8 +160,13 @@ try {
         ]);
         await page.waitForNetworkIdle({ idleTime: 1000, timeout: 15000 });
         assert.equal(result.sdkRequests, 1);
-        assert.deepEqual(result.collections.filter((entry) => entry.phase === phase), []);
-        const remaining = (await context.cookies()).map((cookie) => cookie.name);
+        assert.deepEqual(
+          result.collections.filter((entry) => entry.phase === phase),
+          [],
+        );
+        const remaining = (await context.cookies()).map(
+          (cookie) => cookie.name,
+        );
         assert.ok(remaining.includes('_ga'));
         assert.ok(!remaining.includes('_ga_005T1QD6Z3'));
         assert.ok(!remaining.some((name) => name.startsWith('fl_blog_ga')));
@@ -167,7 +177,10 @@ try {
     }
   }
   assert.ok(
-    results.some((result) => result.variant === 'candidate' && result.withdrawal === 'PASS'),
+    results.some(
+      (result) =>
+        result.variant === 'candidate' && result.withdrawal === 'PASS',
+    ),
     'The exact candidate must satisfy the privacy and withdrawal requirements',
   );
 } finally {
