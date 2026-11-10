@@ -51,6 +51,7 @@ try {
   evidence.googleRequests = requests;
   evidence.googleResponses = responses;
   evidence.networkFailures = failures;
+  evidence.backendIngestion = 'NOT_VERIFIED';
   let phase = 'before-consent';
   const googleHost = (host) =>
     /(^|\.)(googletagmanager\.com|google-analytics\.com|analytics\.google\.com|googleadservices\.com|googlesyndication\.com|google\.com)$/.test(
@@ -117,6 +118,7 @@ try {
     path: `${folder}/before-consent.png`,
     fullPage: true,
   });
+  evidence.beforeConsent = 'PASS';
   const acknowledgement = page.waitForResponse(
     (response) =>
       isCollect(response.request()) &&
@@ -148,7 +150,17 @@ try {
     1,
     'A diagnostic visit must not duplicate page_view',
   );
-  assert.equal(views[0].pageLocation, `${origin}/topics/`);
+  evidence.sanitizedLocation =
+    views[0].pageLocation === `${origin}/topics/` ? 'PASS' : 'FAIL';
+  evidence.queuedPageViews = await page.evaluate(() =>
+    (window.dataLayer || [])
+      .map((entry) => Array.from(entry))
+      .filter((entry) => entry[0] === 'event' && entry[1] === 'page_view')
+      .map((entry) => ({
+        pageLocation: entry[2]?.page_location,
+        pageReferrer: entry[2]?.page_referrer,
+      })),
+  );
   assert.equal(
     requests.some((request) =>
       /googleadservices|googlesyndication/.test(request.host),
@@ -202,6 +214,7 @@ try {
   evidence.withdrawal = 'PASS';
   evidence.googleRequests = requests;
   evidence.backendIngestion = 'NOT_VERIFIED';
+  assert.equal(views[0].pageLocation, `${origin}/topics/`);
   evidence.status = 'PASS';
 } catch (error) {
   evidence.status = 'FAIL';
