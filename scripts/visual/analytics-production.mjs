@@ -11,13 +11,13 @@ const origin = 'https://frees-ling.dev';
 const measurementId = 'G-005T1QD6Z3';
 const consentKey = 'fl-blog-analytics-consent-v1';
 const approvedScriptHash =
-  '6c5abbaa259bd8f4e97ef490943cb8af82ce051fac69fa15a9901799b47ef906';
+  'bb02fbc9a2ed37b14bd0dd6431a60ef888a27bd0d0fcb2d637f1b0c44df0ff8a';
 const folder = 'test-results/analytics-production';
 await mkdir(folder, { recursive: true });
 const evidence = {
   target: origin,
   measurementId,
-  approvedCandidate: '4cd16724884e1107cce42021d232368a5215a168',
+  approvedCandidate: 'cd40424d42a0f17514db24335b78d06cf245f915',
   startedAt: new Date().toISOString(),
   status: 'NOT_RUN',
   interpretation:
