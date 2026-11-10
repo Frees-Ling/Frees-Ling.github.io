@@ -37,10 +37,18 @@ try {
     gtag('set', {`,
   );
   assert.notEqual(scalar, original);
+  const early = scalar
+    .replace("    gtag('js', new Date());\n", '')
+    .replace(
+      "    gtag('config', measurementId, {",
+      "    gtag('js', new Date());\n\n    gtag('config', measurementId, {",
+    );
+  assert.notEqual(early, scalar);
   for (const [variant, source] of [
     ['current', original],
     ['granted-only-after-explicit-choice', granted],
     ['explicit-global-overrides', scalar],
+    ['global-overrides-before-js', early],
   ]) {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
