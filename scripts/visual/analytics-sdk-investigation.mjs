@@ -23,7 +23,10 @@ try {
   const original = await (await fetch(`${base}/blog-analytics.js`)).text();
   const granted = original
     .replace("analytics_storage: 'denied',", "analytics_storage: 'granted',")
-    .replace("    gtag('consent', 'update', { analytics_storage: 'granted' });", '');
+    .replace(
+      "    gtag('consent', 'update', { analytics_storage: 'granted' });",
+      '',
+    );
   assert.notEqual(granted, original);
   for (const [variant, source] of [
     ['current', original],
@@ -63,7 +66,8 @@ try {
         } else if (
           /(^|\.)(google-analytics\.com|analytics\.google\.com)$/.test(
             url.hostname,
-          ) && url.pathname === '/g/collect'
+          ) &&
+          url.pathname === '/g/collect'
         ) {
           for (const line of (request.postData() || '').split('\n')) {
             const params = new URLSearchParams(url.searchParams);
@@ -98,7 +102,9 @@ try {
         '[data-blog-analytics-banner] [data-blog-analytics-choice="granted"]',
       );
       await page.waitForNetworkIdle({ idleTime: 1500, timeout: 30000 });
-      result.cookieNames = (await context.cookies()).map((cookie) => cookie.name);
+      result.cookieNames = (await context.cookies()).map(
+        (cookie) => cookie.name,
+      );
       result.pageViews = result.collections.filter(
         (entry) => entry.event === 'page_view',
       );
@@ -119,7 +125,8 @@ try {
 } finally {
   await writeFile(
     `${folder}/evidence.json`,
-    JSON.stringify({ collection: 'INTERCEPTED_NOT_SENT', results }, null, 2) + '\n',
+    JSON.stringify({ collection: 'INTERCEPTED_NOT_SENT', results }, null, 2) +
+      '\n',
   );
   await browser?.close();
   server.close();
