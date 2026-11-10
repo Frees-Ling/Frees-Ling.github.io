@@ -57,7 +57,7 @@ jobs:
           git rev-parse HEAD > /tmp/format-review/base-sha.txt
           npx --no-install prettier --write public/blog-analytics.js src/utils/blog-analytics.test.mjs scripts/visual/analytics.mjs scripts/visual/analytics-production.mjs scripts/visual/analytics-sdk-investigation.mjs scripts/visual/privacy.mjs .github/workflows/visual.yml
           git diff --binary > /tmp/format-review/format.patch
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: blog-analytics-format-review
           path: /tmp/format-review/
@@ -81,7 +81,7 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
           ANALYTICS_SDK_INVESTIGATION: 'true'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: analytics-sdk-investigation
@@ -150,7 +150,7 @@ jobs:
 
       - name: Upload audit reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-audit
           path: |
