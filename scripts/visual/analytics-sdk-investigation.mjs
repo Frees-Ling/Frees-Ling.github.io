@@ -28,9 +28,19 @@ try {
       '',
     );
   assert.notEqual(granted, original);
+  const scalar = original.replace(
+    "    gtag('set', {",
+    `    gtag('set', 'send_page_view', false);
+    gtag('set', 'page_location', cleanLocation);
+    gtag('set', 'page_referrer', cleanReferrer);
+    gtag('set', 'cookie_prefix', COOKIE_PREFIX);
+    gtag('set', {`,
+  );
+  assert.notEqual(scalar, original);
   for (const [variant, source] of [
     ['current', original],
     ['granted-only-after-explicit-choice', granted],
+    ['explicit-global-overrides', scalar],
   ]) {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
@@ -104,6 +114,20 @@ try {
       await page.waitForNetworkIdle({ idleTime: 1500, timeout: 30000 });
       result.cookieNames = (await context.cookies()).map(
         (cookie) => cookie.name,
+      );
+      result.commands = await page.evaluate(() =>
+        (window.dataLayer || [])
+          .map((entry) => Array.from(entry))
+          .filter((entry) =>
+            ['config', 'event', 'set', 'consent'].includes(entry[0]),
+          )
+          .map((entry) => ({
+            command: entry[0],
+            name: typeof entry[1] === 'string' ? entry[1] : 'object',
+            pageLocation: entry[2]?.page_location || entry[1]?.page_location,
+            cookiePrefix: entry[2]?.cookie_prefix,
+            sendPageView: entry[2]?.send_page_view,
+          })),
       );
       result.pageViews = result.collections.filter(
         (entry) => entry.event === 'page_view',
