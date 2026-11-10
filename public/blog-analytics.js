@@ -120,10 +120,15 @@
         var pair = pairs[i].trim();
         var eqIdx = pair.indexOf('=');
         var name = eqIdx > -1 ? pair.slice(0, eqIdx) : pair;
-        if (/^fl_blog_(ga|gid|gat)(_|$)/.test(name)) {
-          document.cookie =
+        if (
+          /^fl_blog_(ga|gid|gat)(_|$)/.test(name) ||
+          (isValidId && name === '_ga_' + measurementId.slice(2))
+        ) {
+          var deletion =
             name +
             '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+          document.cookie = deletion;
+          if (isExactHost) document.cookie = deletion + '; Domain=frees-ling.dev';
         }
       }
     } catch (e) {}
@@ -224,17 +229,11 @@
       analytics_storage: 'denied',
     });
     gtag('consent', 'update', { analytics_storage: 'granted' });
-    gtag('js', new Date());
 
     var cleanLocation = getSanitizedLocation();
     var cleanReferrer = getSanitizedReferrer();
 
-    gtag('set', {
-      page_location: cleanLocation,
-      page_referrer: cleanReferrer,
-    });
-
-    gtag('config', measurementId, {
+    var configuration = {
       send_page_view: false,
       allow_google_signals: false,
       allow_ad_personalization_signals: false,
@@ -245,7 +244,14 @@
       cookie_update: false,
       page_location: cleanLocation,
       page_referrer: cleanReferrer,
+    };
+    // The SDK can initialize its destination while processing the js command.
+    // Establish all privacy defaults before that initialization can happen.
+    Object.keys(configuration).forEach(function (key) {
+      gtag('set', key, configuration[key]);
     });
+    gtag('js', new Date());
+    gtag('config', measurementId, configuration);
 
     gtag('event', 'page_view', {
       page_location: cleanLocation,

@@ -20,35 +20,11 @@ try {
     headless: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
-  const original = await (await fetch(`${base}/blog-analytics.js`)).text();
-  const granted = original
-    .replace("analytics_storage: 'denied',", "analytics_storage: 'granted',")
-    .replace(
-      "    gtag('consent', 'update', { analytics_storage: 'granted' });",
-      '',
-    );
-  assert.notEqual(granted, original);
-  const scalar = original.replace(
-    "    gtag('set', {",
-    `    gtag('set', 'send_page_view', false);
-    gtag('set', 'page_location', cleanLocation);
-    gtag('set', 'page_referrer', cleanReferrer);
-    gtag('set', 'cookie_prefix', COOKIE_PREFIX);
-    gtag('set', {`,
-  );
-  assert.notEqual(scalar, original);
-  const early = scalar
-    .replace("    gtag('js', new Date());\n", '')
-    .replace(
-      "    gtag('config', measurementId, {",
-      "    gtag('js', new Date());\n\n    gtag('config', measurementId, {",
-    );
-  assert.notEqual(early, scalar);
+  const candidate = await (await fetch(`${base}/blog-analytics.js`)).text();
+  const baseline = await (await fetch(`${origin}/blog-analytics.js`)).text();
   for (const [variant, source] of [
-    ['current', original],
-    ['granted-only-after-explicit-choice', granted],
-    ['explicit-global-overrides', scalar],
-    ['global-overrides-before-js', early],
+    ['production-baseline', baseline],
+    ['candidate', candidate],
   ]) {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
@@ -112,6 +88,7 @@ try {
     try {
       await page.goto(`${origin}/topics/?qa=sdk-investigation#verification`, {
         waitUntil: 'networkidle0',
+        referer: 'https://referrer.example/source?qa=private',
       });
       assert.equal(result.sdkRequests, 0);
       assert.equal(result.collections.length, 0);
@@ -120,9 +97,14 @@ try {
         '[data-blog-analytics-banner] [data-blog-analytics-choice="granted"]',
       );
       await page.waitForNetworkIdle({ idleTime: 1500, timeout: 30000 });
-      result.cookieNames = (await context.cookies()).map(
-        (cookie) => cookie.name,
-      );
+      result.cookies = (await context.cookies()).map((cookie) => ({
+        name: cookie.name,
+        domain: cookie.domain,
+        secure: cookie.secure,
+        sameSite: cookie.sameSite,
+        expires: cookie.expires,
+      }));
+      result.cookieNames = result.cookies.map((cookie) => cookie.name);
       result.commands = await page.evaluate(() =>
         (window.dataLayer || [])
           .map((entry) => Array.from(entry))
@@ -146,13 +128,47 @@ try {
       result.ownCookie = result.cookieNames.some((name) =>
         name.startsWith('fl_blog_ga'),
       );
+      if (variant === 'candidate') {
+        assert.equal(result.cleanPageView, true);
+        assert.equal(result.ownCookie, true);
+        assert.equal(result.pageViews[0].pageReferrer, 'https://referrer.example');
+        assert.equal(result.sdkRequests, 1);
+        assert.equal(result.error, undefined);
+        for (const cookie of result.cookies) {
+          assert.ok(cookie.name.startsWith('fl_blog_ga'));
+          assert.equal(cookie.domain, 'frees-ling.dev');
+          assert.equal(cookie.secure, true);
+          assert.equal(cookie.sameSite, 'Lax');
+          assert.ok(cookie.expires > Date.now() / 1000);
+          assert.ok(cookie.expires <= Date.now() / 1000 + 180 * 86400 + 5);
+        }
+        await page.evaluate(() => {
+          document.cookie = '_ga=preserved-fixture; Path=/; Domain=frees-ling.dev; Secure';
+          document.cookie = '_ga_005T1QD6Z3=legacy-fixture; Path=/; Domain=frees-ling.dev; Secure';
+        });
+        await page.click('.privacy-pref-button');
+        await page.waitForSelector('#fl-privacy-modal[open]');
+        phase = 'after-withdrawal';
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'networkidle0' }),
+          page.click('#fl-privacy-modal [data-blog-analytics-choice="denied"]'),
+        ]);
+        await page.waitForNetworkIdle({ idleTime: 1000, timeout: 15000 });
+        assert.equal(result.sdkRequests, 1);
+        assert.deepEqual(result.collections.filter((entry) => entry.phase === phase), []);
+        const remaining = (await context.cookies()).map((cookie) => cookie.name);
+        assert.ok(remaining.includes('_ga'));
+        assert.ok(!remaining.includes('_ga_005T1QD6Z3'));
+        assert.ok(!remaining.some((name) => name.startsWith('fl_blog_ga')));
+        result.withdrawal = 'PASS';
+      }
     } finally {
       await context.close();
     }
   }
   assert.ok(
-    results.some((result) => result.cleanPageView && result.ownCookie),
-    'At least one initialization must satisfy both original privacy requirements',
+    results.some((result) => result.variant === 'candidate' && result.withdrawal === 'PASS'),
+    'The exact candidate must satisfy the privacy and withdrawal requirements',
   );
 } finally {
   await writeFile(
