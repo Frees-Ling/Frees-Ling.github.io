@@ -426,14 +426,28 @@ test('2. Grant request dedupes SDK and sanitizes URL and referrer fields', () =>
       dl.findIndex((args) => args[0] === 'config'),
   );
 
-  // Check set command for URL sanitization
-  const setCall = dl.find((args) => args[0] === 'set');
-  assert.ok(setCall, 'gtag set must be called for global URL sanitization');
+  // The real SDK initializes defaults at js; later queue values are too late.
+  const initIndex = dl.findIndex((args) => args[0] === 'js');
+  assert.ok(initIndex >= 0);
+  const globals = {};
+  for (const args of dl.slice(0, initIndex)) {
+    if (args[0] !== 'set') continue;
+    if (typeof args[1] === 'string') globals[args[1]] = args[2];
+    else Object.assign(globals, args[1]);
+  }
   assert.equal(
-    setCall[1].page_location,
+    globals.page_location,
     'https://frees-ling.dev/posts/transformer/',
   );
-  assert.equal(setCall[1].page_referrer, 'https://search.engine.com');
+  assert.equal(globals.page_referrer, 'https://search.engine.com');
+  assert.equal(globals.send_page_view, false);
+  assert.equal(globals.allow_google_signals, false);
+  assert.equal(globals.allow_ad_personalization_signals, false);
+  assert.equal(globals.cookie_prefix, 'fl_blog');
+  assert.equal(globals.cookie_domain, 'none');
+  assert.equal(globals.cookie_flags, 'SameSite=Lax;Secure');
+  assert.equal(globals.cookie_expires, 180 * 86400);
+  assert.equal(globals.cookie_update, false);
 
   // Check config command
   const configCall = dl.find((args) => args[0] === 'config');
