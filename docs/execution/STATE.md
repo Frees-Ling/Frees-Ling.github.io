@@ -1,3 +1,13 @@
+# 2026-11-10 SDK 队列与网络差异的隔离调查
+
+真实诊断 42749812594 仍 FAIL：应用队列中的页面地址已净化，SDK 网络输出未净化，且没有预期的本博客统计 Cookie。尚未证明根因，不能据 SDK 内部配置布尔值推断真实收集行为，也不能降低断言。生产脚本没有修改。
+
+新增仅手动触发的 sdk_investigation：云端真实 Google Chrome 使用已构建页面和官方公开 SDK，对比现有初始化与仅在明确同意后设置默认分析授权的实验方案。所有收集请求在发送前拦截并本地响应 204，其余第三方请求拒绝；仅公开 SDK 可联网。无真实生产访问、无统计写入、无账号凭据。结果记录参数和 Cookie 名称，不保存身份标识或 Cookie 值。这是诊断，不是生产或后台入库验收；保留既有完整检查。
+
+核对官方文档：基本同意模式在同意前阻止标签；手动 page_view 需禁用自动 page_view，增强型衡量历史事件还须单独关闭。资料为 https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic 与 https://developers.google.com/analytics/devguides/collection/ga4/views?technology=websites 。当前新调查等待云端执行，不含生产发布。
+
+---
+
 # 2026-11-10 Google 真实验收发现隐私门禁失败
 
 PR122 已获准发布且部署成功；开发分支 3915d34 的 Quality 42748630336 通过。实际生产诊断 42749020765 的构建、隐私、SDK 夹具、浏览器及无障碍步骤通过，但真实 SDK 阶段 FAIL：同意后官方 SDK 返回 200、收集接口返回 204，page_view 却包含公开诊断参数 ?qa=analytics-release，不符合去除查询参数的承诺。不得用夹具结果覆盖该失败，GA4 后台入库仍 NOT_VERIFIED。
