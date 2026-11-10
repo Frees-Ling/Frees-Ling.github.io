@@ -64,8 +64,33 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  sdk-investigation:
+    if: ${{ inputs.sdk_investigation && !inputs.prepare_format_patch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Diagnostic only - all collection requests intercepted
+        run: node scripts/visual/analytics-sdk-investigation.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          ANALYTICS_SDK_INVESTIGATION: 'true'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analytics-sdk-investigation
+          path: test-results/analytics-sdk-investigation/**
+          retention-days: 7
+          if-no-files-found: error
+
   visual:
-    if: ${{ !inputs.prepare_format_patch }}
+    if: ${{ !inputs.prepare_format_patch && !inputs.sdk_investigation }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -88,13 +113,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Isolated real SDK investigation (collection intercepted)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sdk_investigation }}
-        run: node scripts/visual/analytics-sdk-investigation.mjs
-        env:
-          CHROME_PATH: /usr/bin/google-chrome
-          ANALYTICS_SDK_INVESTIGATION: 'true'
 
       - name: Privacy dialog regression
         run: node scripts/visual/privacy.mjs
